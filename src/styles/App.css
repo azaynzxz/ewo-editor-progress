@@ -427,6 +427,40 @@ select.input {
   font-size: 0.813rem;
 }
 
+/* Scene Toast */
+.scene-toast {
+  position: absolute;
+  top: -2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gray-900);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.813rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: var(--shadow-lg);
+  animation: popIn 0.3s ease;
+  z-index: 100;
+}
+
+@keyframes popIn {
+  0% {
+    transform: translateX(-50%) scale(0.5);
+    opacity: 0;
+  }
+
+  70% {
+    transform: translateX(-50%) scale(1.1);
+  }
+
+  100% {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+}
+
 /* Loading Overlay */
 .loading-overlay {
   position: fixed;

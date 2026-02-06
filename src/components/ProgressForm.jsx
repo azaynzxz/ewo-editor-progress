@@ -64,6 +64,32 @@ function ProgressForm({ onSubmit, isSubmitting }) {
         }
     }
 
+    // Fun scale messages for scene count
+    const getSceneMessage = (count) => {
+        const num = parseInt(count, 10)
+        if (isNaN(num) || num <= 0) return null
+        if (num >= 1 && num <= 10) return '😅 Njir dikit amat'
+        if (num >= 11 && num <= 20) return '👍 Oke mayan lah'
+        if (num >= 21 && num <= 35) return '🎉 Well done cik!'
+        if (num >= 36 && num <= 50) return '🔥 GC banget si!'
+        if (num >= 51 && num <= 80) return '💪 Ga sakit tah punggung?'
+        if (num >= 81 && num <= 100) return '☕ Udh ngopi berapa gelas?'
+        if (num >= 101) return '🚀 BUJUG! Deadliners!'
+        return null
+    }
+
+    const [sceneToast, setSceneToast] = useState(null)
+
+    const handleSceneChange = (value) => {
+        handleChange('jumlah_scene', value)
+
+        const message = getSceneMessage(value)
+        if (message) {
+            setSceneToast(message)
+            setTimeout(() => setSceneToast(null), 2500)
+        }
+    }
+
     const handleScreenshotChange = (file) => {
         if (file && file.type.startsWith('image/')) {
             setFormData(prev => ({ ...prev, screenshot: file }))
@@ -213,11 +239,14 @@ function ProgressForm({ onSubmit, isSubmitting }) {
                         type="number"
                         className="input"
                         value={formData.jumlah_scene}
-                        onChange={(e) => handleChange('jumlah_scene', e.target.value)}
+                        onChange={(e) => handleSceneChange(e.target.value)}
                         placeholder="0"
                         min="0"
                         required
                     />
+                    {sceneToast && (
+                        <div className="scene-toast">{sceneToast}</div>
+                    )}
                 </div>
 
                 {/* Comment */}
