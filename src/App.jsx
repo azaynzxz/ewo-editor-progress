@@ -21,13 +21,18 @@ function App() {
             }
 
             // Prepare payload for Apps Script
+            const formatDate = (date) => {
+                const d = new Date(date)
+                return d.toISOString().split('T')[0] // YYYY-MM-DD format
+            }
+
             const payload = {
-                tanggal: formData.tanggal,
-                editor: formData.editor,
-                judul: formData.judul,
-                klien: formData.klien,
-                jumlah_scene: formData.jumlah_scene,
-                comment: formData.comment,
+                tanggal: formatDate(formData.tanggal),
+                editor: formData.editor || '',
+                judul: formData.judul || '',
+                klien: formData.klien || '',
+                jumlah_scene: formData.jumlah_scene || '',
+                comment: formData.comment || '',
                 screenshot: screenshotData
             }
 
