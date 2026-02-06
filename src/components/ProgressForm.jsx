@@ -39,7 +39,6 @@ function ProgressForm({ onSubmit, isSubmitting }) {
         tanggal: new Date(),
         editor: '',
         judul: '',
-        project: '',
         klien: '',
         jumlah_scene: '',
         comment: '',
@@ -133,7 +132,6 @@ function ProgressForm({ onSubmit, isSubmitting }) {
             tanggal: new Date(),
             editor: '',
             judul: '',
-            project: '',
             klien: '',
             jumlah_scene: '',
             comment: '',
@@ -191,34 +189,6 @@ function ProgressForm({ onSubmit, isSubmitting }) {
                     />
                 </div>
 
-                {/* Project Title */}
-                <div className="form-group">
-                    <label htmlFor="judul">Project Title</label>
-                    <input
-                        id="judul"
-                        type="text"
-                        className="input"
-                        value={formData.judul}
-                        onChange={(e) => handleChange('judul', e.target.value)}
-                        placeholder="Project title"
-                        required
-                    />
-                </div>
-
-                {/* Project Name */}
-                <div className="form-group">
-                    <label htmlFor="project">Project Name</label>
-                    <input
-                        id="project"
-                        type="text"
-                        className="input"
-                        value={formData.project}
-                        onChange={(e) => handleChange('project', e.target.value)}
-                        placeholder="Project name"
-                        required
-                    />
-                </div>
-
                 {/* Client Dropdown */}
                 <div className="form-group">
                     <label htmlFor="klien">Client</label>
@@ -249,6 +219,20 @@ function ProgressForm({ onSubmit, isSubmitting }) {
                     )}
                 </div>
 
+                {/* Project Title */}
+                <div className="form-group full-width">
+                    <label htmlFor="judul">Project Title</label>
+                    <input
+                        id="judul"
+                        type="text"
+                        className="input"
+                        value={formData.judul}
+                        onChange={(e) => handleChange('judul', e.target.value)}
+                        placeholder="Project title"
+                        required
+                    />
+                </div>
+
                 {/* Comment */}
                 <div className="form-group full-width">
                     <label htmlFor="comment">Comment</label>
@@ -258,7 +242,7 @@ function ProgressForm({ onSubmit, isSubmitting }) {
                         value={formData.comment}
                         onChange={(e) => handleChange('comment', e.target.value)}
                         placeholder="Add notes or comments"
-                        rows="3"
+                        rows="2"
                     />
                 </div>
 

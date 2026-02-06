@@ -25,7 +25,6 @@ function App() {
                 tanggal: formData.tanggal,
                 editor: formData.editor,
                 judul: formData.judul,
-                project: formData.project,
                 klien: formData.klien,
                 jumlah_scene: formData.jumlah_scene,
                 comment: formData.comment,
