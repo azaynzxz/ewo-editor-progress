@@ -9,11 +9,12 @@ dist-ssr
 # Apps Script (private)
 appscript/
 
-# SOP and Brief documents (external files)
-*.pdf
-*.docx
-*.md
+# SOP and Brief documents (external files in root)
+/*.pdf
+/*.docx
+/*.md
 !README.md
+!/public/*.pdf
 
 # Editor
 .vscode/*
