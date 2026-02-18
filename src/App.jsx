@@ -6,6 +6,7 @@ import './styles/variables.css'
 import './styles/components.css'
 import './styles/layout.css'
 import './styles/wiki.css'
+import './styles/dashboard.css'
 import './styles/App.css'
 
 function App() {

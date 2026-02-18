@@ -23,7 +23,7 @@ const CLIENT_LIST = [
     'Zheng'
 ]
 
-const DEFAULT_EDITORS = ['Zayn', 'Dadan', 'Faqih']
+export const DEFAULT_EDITORS = ['Zayn', 'Dadan', 'Faqih']
 
 function ProgressForm({ onSubmit, isSubmitting }) {
     // Get custom editors from localStorage

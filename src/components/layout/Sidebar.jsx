@@ -28,7 +28,10 @@ const NAV_ITEMS = [
 
 const QUICK_LINKS = [
     { label: 'Schedule Sheet', url: 'https://docs.google.com/spreadsheets/d/1ZV3DZ_0OrV-84eoYEqaYOJ1zdVXPuWCkfEMy1MDbHas/edit?gid=2092016313#gid=2092016313' },
-    { label: 'Animation Projects', url: 'https://drive.google.com/drive/folders/19BoWkrIwu7MbAN0s35B5Q_9cqE-LffYy' }
+    { label: 'Animation Projects', url: 'https://drive.google.com/drive/folders/19BoWkrIwu7MbAN0s35B5Q_9cqE-LffYy' },
+    { label: 'Word Level Subtitle Generator', url: 'https://colab.research.google.com/drive/12b2KXuxV6NzG5gyoEwaLwfvn1y0p2Jg1#scrollTo=hDm__dyMryUG' },
+    { label: 'Audio Replacer', url: 'https://colab.research.google.com/drive/1TGf-cJ2K78IWmA9G-4VWMXCIWAFxHCjm#scrollTo=RIrOyTGiPRPy' },
+    { label: '4K Converter', url: 'https://colab.research.google.com/drive/1z7svRvMnOKYsRkf1-Q_9CfchcDnJCEOH' }
 ]
 
 function Sidebar({ isOpen, onClose }) {
@@ -43,8 +46,7 @@ function Sidebar({ isOpen, onClose }) {
                         position: 'fixed',
                         inset: 0,
                         background: 'rgba(0,0,0,0.5)',
-                        zIndex: 199,
-                        display: 'none'
+                        zIndex: 199
                     }}
                 />
             )}
@@ -53,7 +55,7 @@ function Sidebar({ isOpen, onClose }) {
                 <div className="sidebar-header">
                     <img src="/logo.jpg" alt="EWO Logo" className="sidebar-logo" />
                     <div>
-                        <h1 className="sidebar-title">EWO Hub</h1>
+                        <h1 className="sidebar-title">EWO Editor Hub</h1>
                         <p className="sidebar-subtitle">Editor Resources</p>
                     </div>
                 </div>

@@ -4,7 +4,7 @@ import { PageHeader } from '../components/layout'
 import { Card, CardBody, SearchInput, Button, Badge } from '../components/ui'
 
 // Wiki articles data based on SOP content
-const WIKI_ARTICLES = [
+export const WIKI_ARTICLES = [
     {
         id: 'export-settings',
         title: 'Export Settings',
@@ -354,6 +354,29 @@ Proper Sound Effects (SFX) integration is mandatory for completing animations an
 | **Fast movements** | Quick whoosh |
 
 > **Tip:** Always preview the final mix with headphones to ensure proper balance.
+        `
+    },
+    {
+        id: 'animation-standards',
+        title: 'Animation Standards',
+        category: 'Guidelines',
+        description: 'Access standard animation presets and resources',
+        lastUpdated: '2026-02-18',
+        author: 'EWO Team',
+        content: `
+# Animation Standards
+
+Official resource for EWO Animation Standards.
+
+## Quick Link
+**[Access Animation Standards (s.id/AN-STD-EWO)](http://s.id/AN-STD-EWO)**
+
+## Contents
+This resource includes:
+- Character Walk Cycles
+- Standard Transitions
+- Text Animation Presets
+- Motion Graphics Elements
         `
     }
 ]

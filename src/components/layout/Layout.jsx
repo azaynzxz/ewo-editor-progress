@@ -16,11 +16,11 @@ function Layout() {
 
             {/* Mobile Header */}
             <header className="mobile-header">
-                <IconButton onClick={() => setSidebarOpen(true)}>
+                <IconButton onClick={() => setSidebarOpen(prev => !prev)}>
                     <Menu size={24} />
                 </IconButton>
                 <img src="/logo.jpg" alt="EWO Logo" className="mobile-header-logo" />
-                <span style={{ fontWeight: 600 }}>EWO Hub</span>
+                <span style={{ fontWeight: 600 }}>EWO Editor Hub</span>
             </header>
 
             <main className="main-content">

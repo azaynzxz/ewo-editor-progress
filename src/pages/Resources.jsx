@@ -20,7 +20,7 @@ const CATEGORIES = [
     { id: 'bookmarks', label: 'Bookmarks', icon: Bookmark }
 ]
 
-const RESOURCES = [
+export const RESOURCES = [
     {
         id: 1,
         name: 'Expression Panel',
