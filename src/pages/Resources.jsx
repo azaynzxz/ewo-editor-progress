@@ -23,6 +23,17 @@ const CATEGORIES = [
 export const RESOURCES = [
     {
         id: 1,
+        name: 'Animation Root Folder',
+        category: 'assets',
+        type: 'Google Drive',
+        description: 'Main folder for animation projects and assets',
+        url: 'https://drive.google.com/drive/folders/13zsPXKORIA6SSglH5Va-AdF1GytSzmB1?usp=sharing',
+        icon: FolderOpen,
+        color: 'blue',
+        tags: ['animation', 'assets', 'drive']
+    },
+    {
+        id: 2,
         name: 'Expression Panel',
         category: 'assets',
         type: 'AE Script',
@@ -34,6 +45,28 @@ export const RESOURCES = [
     },
     {
         id: 3,
+        name: 'Frequently used Plugin',
+        category: 'assets',
+        type: 'Google Drive',
+        description: 'Collection of frequently used After Effects plugins',
+        url: 'https://drive.google.com/drive/folders/13FS-au5sJEcvKjgtOn0h2IuNKFCcmB-Y?usp=drive_link',
+        icon: FolderOpen,
+        color: 'blue',
+        tags: ['plugin', 'ae', 'assets']
+    },
+    {
+        id: 4,
+        name: 'Sound Effect',
+        category: 'assets',
+        type: 'Google Drive',
+        description: 'Collection of premium sound effects for EWO projects',
+        url: 'https://drive.google.com/drive/folders/13zsPXKORIA6SSglH5Va-AdF1GytSzmB1?usp=sharing',
+        icon: Music,
+        color: 'teal',
+        tags: ['audio', 'sfx', 'assets']
+    },
+    {
+        id: 5,
         name: 'Client Drive - Alex',
         category: 'links',
         type: 'Google Drive',
@@ -42,28 +75,6 @@ export const RESOURCES = [
         icon: FolderOpen,
         color: 'blue',
         tags: ['client', 'drive']
-    },
-    {
-        id: 4,
-        name: 'Free Sound Effects',
-        category: 'bookmarks',
-        type: 'Website',
-        description: 'Freesound.org - Free sound effects library',
-        url: 'https://freesound.org',
-        icon: Music,
-        color: 'teal',
-        tags: ['audio', 'sfx', 'free']
-    },
-    {
-        id: 5,
-        name: 'Google Fonts',
-        category: 'bookmarks',
-        type: 'Website',
-        description: 'Free fonts for all projects',
-        url: 'https://fonts.google.com',
-        icon: FileType,
-        color: 'blue',
-        tags: ['fonts', 'typography', 'free']
     },
     {
         id: 6,
@@ -78,14 +89,14 @@ export const RESOURCES = [
     },
     {
         id: 7,
-        name: 'Frequently used Plugin',
-        category: 'assets',
-        type: 'Google Drive',
-        description: 'Collection of frequently used After Effects plugins',
-        url: 'https://drive.google.com/drive/folders/13FS-au5sJEcvKjgtOn0h2IuNKFCcmB-Y?usp=drive_link',
-        icon: FolderOpen,
+        name: 'Google Fonts',
+        category: 'bookmarks',
+        type: 'Website',
+        description: 'Free fonts for all projects',
+        url: 'https://fonts.google.com',
+        icon: FileType,
         color: 'blue',
-        tags: ['plugin', 'ae', 'assets']
+        tags: ['fonts', 'typography', 'free']
     }
 ]
 
