@@ -398,6 +398,44 @@ select.input {
   color: var(--blue-600);
 }
 
+/* Option item with delete button */
+.option-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.option-item span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.option-delete-btn {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  cursor: pointer;
+  color: var(--gray-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.option-item:hover .option-delete-btn {
+  opacity: 1;
+}
+
+.option-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+}
+
 .no-results {
   padding: 1.5rem;
   text-align: center;

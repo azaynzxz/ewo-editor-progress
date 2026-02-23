@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { ChevronDown, Search, X, Plus } from 'lucide-react'
+import { ChevronDown, Search, X, Plus, Trash2 } from 'lucide-react'
 
-function SearchableDropdown({ value, onChange, options, placeholder = 'Select...', label, allowCustom = false }) {
+function SearchableDropdown({ value, onChange, options, placeholder = 'Select...', label, allowCustom = false, customItems = [], onDelete }) {
     const [isOpen, setIsOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
     const dropdownRef = useRef(null)
@@ -118,7 +118,20 @@ function SearchableDropdown({ value, onChange, options, placeholder = 'Select...
                                     className={`option-item ${value === option ? 'selected' : ''}`}
                                     onClick={() => handleSelect(option)}
                                 >
-                                    {option}
+                                    <span>{option}</span>
+                                    {customItems.includes(option) && onDelete && (
+                                        <button
+                                            type="button"
+                                            className="option-delete-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                onDelete(option)
+                                            }}
+                                            aria-label={`Delete ${option}`}
+                                        >
+                                            <Trash2 size={13} />
+                                        </button>
+                                    )}
                                 </div>
                             ))
                         ) : (

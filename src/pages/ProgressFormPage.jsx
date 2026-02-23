@@ -9,7 +9,7 @@ import Toast from '../components/Toast'
 // CONFIGURATION - UPDATE THIS WITH YOUR APPS SCRIPT WEB APP URL
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwyVSu5z5B_jKx8qjFLkS9pDjMbc2SHf8IY53JY5zG4s934-QWgjNLMRx3-zRYNVJ-F/exec'
 
-const CLIENT_LIST = [
+const DEFAULT_CLIENTS = [
     'Alex',
     'Allan',
     'Amanda',
@@ -25,7 +25,8 @@ const CLIENT_LIST = [
     'Simon',
     'Wing',
     'Yannick',
-    'Zheng'
+    'Zheng',
+    'Internal'
 ]
 
 const DEFAULT_EDITORS = ['Zayn', 'Dadan', 'Faqih']
@@ -40,7 +41,14 @@ function ProgressFormPage() {
         return saved ? JSON.parse(saved) : []
     })
 
+    // Get custom clients from localStorage
+    const [customClients, setCustomClients] = useState(() => {
+        const saved = localStorage.getItem('customClients')
+        return saved ? JSON.parse(saved) : []
+    })
+
     const editorList = [...DEFAULT_EDITORS, ...customEditors]
+    const clientList = [...DEFAULT_CLIENTS, ...customClients]
 
     const [formData, setFormData] = useState({
         tanggal: new Date(),
@@ -66,6 +74,29 @@ function ProgressFormPage() {
             setCustomEditors(newCustomEditors)
             localStorage.setItem('customEditors', JSON.stringify(newCustomEditors))
         }
+    }
+
+    const handleClientChange = (value) => {
+        handleChange('klien', value)
+        if (value && !clientList.includes(value)) {
+            const newCustomClients = [...customClients, value]
+            setCustomClients(newCustomClients)
+            localStorage.setItem('customClients', JSON.stringify(newCustomClients))
+        }
+    }
+
+    const handleDeleteEditor = (name) => {
+        const newCustomEditors = customEditors.filter(e => e !== name)
+        setCustomEditors(newCustomEditors)
+        localStorage.setItem('customEditors', JSON.stringify(newCustomEditors))
+        if (formData.editor === name) handleChange('editor', '')
+    }
+
+    const handleDeleteClient = (name) => {
+        const newCustomClients = customClients.filter(c => c !== name)
+        setCustomClients(newCustomClients)
+        localStorage.setItem('customClients', JSON.stringify(newCustomClients))
+        if (formData.klien === name) handleChange('klien', '')
     }
 
     const getSceneMessage = (count) => {
@@ -246,6 +277,8 @@ function ProgressFormPage() {
                                     options={editorList}
                                     placeholder="Select or add editor"
                                     allowCustom={true}
+                                    customItems={customEditors}
+                                    onDelete={handleDeleteEditor}
                                 />
                             </div>
 
@@ -254,9 +287,12 @@ function ProgressFormPage() {
                                 <label htmlFor="klien">Client</label>
                                 <SearchableDropdown
                                     value={formData.klien}
-                                    onChange={(value) => handleChange('klien', value)}
-                                    options={CLIENT_LIST}
-                                    placeholder="Select client"
+                                    onChange={handleClientChange}
+                                    options={clientList}
+                                    placeholder="Select or add client"
+                                    allowCustom={true}
+                                    customItems={customClients}
+                                    onDelete={handleDeleteClient}
                                 />
                             </div>
 
