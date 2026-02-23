@@ -33,17 +33,6 @@ export const RESOURCES = [
         tags: ['after effects', 'script', 'expressions', 'plugin', 'animation']
     },
     {
-        id: 2,
-        name: 'Cinematic LUTs Pack',
-        category: 'assets',
-        type: 'LUT',
-        description: '15 cinematic color grading LUTs',
-        url: '#',
-        icon: Palette,
-        color: 'orange',
-        tags: ['color', 'grading', 'cinematic']
-    },
-    {
         id: 3,
         name: 'Client Drive - Alex',
         category: 'links',
@@ -86,6 +75,17 @@ export const RESOURCES = [
         icon: FolderOpen,
         color: 'blue',
         tags: ['client', 'drive']
+    },
+    {
+        id: 7,
+        name: 'Frequently used Plugin',
+        category: 'assets',
+        type: 'Google Drive',
+        description: 'Collection of frequently used After Effects plugins',
+        url: 'https://drive.google.com/drive/folders/13FS-au5sJEcvKjgtOn0h2IuNKFCcmB-Y?usp=drive_link',
+        icon: FolderOpen,
+        color: 'blue',
+        tags: ['plugin', 'ae', 'assets']
     }
 ]
 
