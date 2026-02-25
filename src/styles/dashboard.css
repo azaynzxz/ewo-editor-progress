@@ -105,6 +105,25 @@
     font-weight: 500;
 }
 
+/* Quick Access + Deadlines Layout */
+.dashboard-quick-section {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--space-5);
+    align-items: stretch;
+}
+
+.dashboard-quick-cards {
+    min-width: 0;
+    grid-template-rows: 1fr 1fr;
+}
+
+@media (max-width: 900px) {
+    .dashboard-quick-section {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Quick Access Cards */
 .quick-access-card {
     height: 100%;

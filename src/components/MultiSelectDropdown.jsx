@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, Search, X, Plus, Trash2 } from 'lucide-react'
 
-function SearchableDropdown({ value, onChange, options, placeholder = 'Select...', label, allowCustom = false, customItems = [], onDelete }) {
+function MultiSelectDropdown({ selectedItems = [], onChange, options, placeholder = 'Select...', allowCustom = false, customItems = [], onDelete }) {
     const [isOpen, setIsOpen] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
     const dropdownRef = useRef(null)
@@ -41,41 +41,72 @@ function SearchableDropdown({ value, onChange, options, placeholder = 'Select...
     }, [isOpen])
 
     const handleSelect = (option) => {
-        onChange(option)
-        setIsOpen(false)
+        if (selectedItems.includes(option)) {
+            // Remove if already selected
+            onChange(selectedItems.filter(item => item !== option))
+        } else {
+            // Add to selection
+            onChange([...selectedItems, option])
+        }
         setSearchTerm('')
     }
 
     const handleAddCustom = () => {
         if (searchTerm.trim()) {
-            onChange(searchTerm.trim())
+            const newItem = searchTerm.trim()
+            if (!selectedItems.includes(newItem)) {
+                onChange([...selectedItems, newItem])
+            }
             setIsOpen(false)
             setSearchTerm('')
         }
     }
 
-    const handleClear = (e) => {
+    const handleRemoveItem = (item, e) => {
         e.stopPropagation()
-        onChange('')
+        onChange(selectedItems.filter(i => i !== item))
+    }
+
+    const handleClearAll = (e) => {
+        e.stopPropagation()
+        onChange([])
         setSearchTerm('')
     }
 
     return (
-        <div className="searchable-dropdown" ref={dropdownRef}>
+        <div className="searchable-dropdown multi-select-dropdown" ref={dropdownRef}>
             <div
                 className={`dropdown-trigger ${isOpen ? 'open' : ''}`}
                 onClick={() => setIsOpen(!isOpen)}
             >
-                <span className={value ? 'selected' : 'placeholder'}>
-                    {value || placeholder}
-                </span>
+                <div className="multi-select-display">
+                    {selectedItems.length > 0 ? (
+                        <div className="selected-tags">
+                            {selectedItems.map(item => (
+                                <span key={item} className="selected-tag">
+                                    {item}
+                                    <button
+                                        type="button"
+                                        className="tag-remove"
+                                        onClick={(e) => handleRemoveItem(item, e)}
+                                        aria-label={`Remove ${item}`}
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                    ) : (
+                        <span className="placeholder">{placeholder}</span>
+                    )}
+                </div>
                 <div className="dropdown-icons">
-                    {value && (
+                    {selectedItems.length > 0 && (
                         <button
                             type="button"
                             className="clear-btn"
-                            onClick={handleClear}
-                            aria-label="Clear selection"
+                            onClick={handleClearAll}
+                            aria-label="Clear all selections"
                         >
                             <X size={14} />
                         </button>
@@ -118,10 +149,19 @@ function SearchableDropdown({ value, onChange, options, placeholder = 'Select...
                             filteredOptions.map((option) => (
                                 <div
                                     key={option}
-                                    className={`option-item ${value === option ? 'selected' : ''}`}
+                                    className={`option-item ${selectedItems.includes(option) ? 'selected' : ''}`}
                                     onClick={() => handleSelect(option)}
                                 >
-                                    <span>{option}</span>
+                                    <div className="option-check">
+                                        <div className={`checkbox ${selectedItems.includes(option) ? 'checked' : ''}`}>
+                                            {selectedItems.includes(option) && (
+                                                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                                                    <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            )}
+                                        </div>
+                                        <span>{option}</span>
+                                    </div>
                                     {customItems.includes(option) && onDelete && (
                                         <button
                                             type="button"
@@ -147,4 +187,4 @@ function SearchableDropdown({ value, onChange, options, placeholder = 'Select...
     )
 }
 
-export default SearchableDropdown
+export default MultiSelectDropdown

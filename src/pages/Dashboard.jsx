@@ -17,6 +17,7 @@ import { Card, CardBody, Modal, Button } from '../components/ui'
 import { WIKI_ARTICLES } from './Wiki'
 import { RESOURCES } from './Resources'
 import { DEFAULT_EDITORS } from '../components/ProgressForm'
+import UpcomingDeadlines from '../components/UpcomingDeadlines'
 
 const QUICK_ACCESS = [
     {
@@ -114,33 +115,36 @@ function Dashboard() {
                 ))}
             </div>
 
-            {/* Quick Access Grid */}
+            {/* Quick Access + Upcoming Deadlines */}
             <div className="section-title">
                 <Zap size={20} className="text-primary-500" />
                 Quick Access
             </div>
 
-            <div className="grid grid-2">
-                {QUICK_ACCESS.map((item) => (
-                    <Link
-                        key={item.path}
-                        to={item.path}
-                        style={{ textDecoration: 'none' }}
-                    >
-                        <Card hoverable className="quick-access-card">
-                            <CardBody>
-                                <div className="quick-access-header">
-                                    <div className={`quick-access-icon ${item.bgClass}`}>
-                                        <item.icon size={20} />
+            <div className="dashboard-quick-section">
+                <div className="grid grid-2 dashboard-quick-cards">
+                    {QUICK_ACCESS.map((item) => (
+                        <Link
+                            key={item.path}
+                            to={item.path}
+                            style={{ textDecoration: 'none' }}
+                        >
+                            <Card hoverable className="quick-access-card">
+                                <CardBody>
+                                    <div className="quick-access-header">
+                                        <div className={`quick-access-icon ${item.bgClass}`}>
+                                            <item.icon size={20} />
+                                        </div>
+                                        <ArrowRight size={20} style={{ color: 'var(--gray-300)' }} />
                                     </div>
-                                    <ArrowRight size={20} style={{ color: 'var(--gray-300)' }} />
-                                </div>
-                                <h3 className="quick-access-title">{item.title}</h3>
-                                <p className="quick-access-desc">{item.description}</p>
-                            </CardBody>
-                        </Card>
-                    </Link>
-                ))}
+                                    <h3 className="quick-access-title">{item.title}</h3>
+                                    <p className="quick-access-desc">{item.description}</p>
+                                </CardBody>
+                            </Card>
+                        </Link>
+                    ))}
+                </div>
+                <UpcomingDeadlines />
             </div>
 
             {/* Existing Modal logic */}
