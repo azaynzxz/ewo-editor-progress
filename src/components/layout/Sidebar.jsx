@@ -35,6 +35,15 @@ const QUICK_LINKS = [
 ]
 
 function Sidebar({ isOpen, onClose }) {
+    const userRole = localStorage.getItem('userRole') || 'video_editor'
+
+    const filteredNavItems = NAV_ITEMS.filter(section => {
+        if (userRole === 'illustrator' && section.section === 'Resources') {
+            return false
+        }
+        return true
+    })
+
     return (
         <>
             {/* Backdrop for mobile */}
@@ -51,17 +60,19 @@ function Sidebar({ isOpen, onClose }) {
                 />
             )}
 
-            <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+            <aside className={`sidebar ${isOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
                 <div className="sidebar-header">
                     <img src="/logo.jpg" alt="EWO Logo" className="sidebar-logo" />
                     <div>
                         <h1 className="sidebar-title">EWO Editor Hub</h1>
-                        <p className="sidebar-subtitle">Editor Resources</p>
+                        <p className="sidebar-subtitle">
+                            {userRole === 'illustrator' ? 'Illustrator Resources' : 'Editor Resources'}
+                        </p>
                     </div>
                 </div>
 
-                <nav className="sidebar-nav">
-                    {NAV_ITEMS.map((section) => (
+                <nav className="sidebar-nav" style={{ flex: 1, overflowY: 'auto' }}>
+                    {filteredNavItems.map((section) => (
                         <div key={section.section} className="nav-section">
                             <h2 className="nav-section-title">{section.section}</h2>
                             <ul className="nav-list">
@@ -104,6 +115,34 @@ function Sidebar({ isOpen, onClose }) {
                         </ul>
                     </div>
                 </nav>
+
+                {/* Switch Role Footer */}
+                <div className="sidebar-footer" style={{ padding: 'var(--space-4)', borderTop: '1px solid var(--gray-200)' }}>
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', margin: '0 0 var(--space-2)' }}>
+                        Logged in as: <strong style={{ textTransform: 'capitalize' }}>{userRole.replace('_', ' ')}</strong>
+                    </p>
+                    <button
+                        onClick={() => {
+                            localStorage.removeItem('userRole');
+                            window.location.href = '/role-selection';
+                        }}
+                        style={{
+                            width: '100%',
+                            padding: 'var(--space-2)',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--gray-300)',
+                            background: 'transparent',
+                            color: 'var(--gray-700)',
+                            cursor: 'pointer',
+                            fontSize: 'var(--text-sm)',
+                            transition: 'background 0.2s',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--gray-50)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                        Switch Role
+                    </button>
+                </div>
             </aside>
         </>
     )

@@ -18,6 +18,7 @@ import { WIKI_ARTICLES } from './Wiki'
 import { RESOURCES } from './Resources'
 import { DEFAULT_EDITORS } from '../components/ProgressForm'
 import UpcomingDeadlines from '../components/UpcomingDeadlines'
+import AttendanceCard from '../components/AttendanceCard'
 
 const QUICK_ACCESS = [
     {
@@ -25,34 +26,39 @@ const QUICK_ACCESS = [
         description: 'Submit daily editing progress',
         icon: FileEdit,
         bgClass: 'stat-icon-blue',
-        path: '/progress'
+        path: '/progress',
+        roleRestricted: false
     },
     {
         title: 'Wiki',
         description: 'Export settings & guides',
         icon: BookOpen,
         bgClass: 'stat-icon-purple',
-        path: '/wiki'
+        path: '/wiki',
+        roleRestricted: true // video editor only
     },
     {
         title: 'Resources',
         description: 'Assets & useful links',
         icon: FolderOpen,
         bgClass: 'stat-icon-orange',
-        path: '/resources'
+        path: '/resources',
+        roleRestricted: true // video editor only
     },
     {
         title: 'Onboarding',
         description: 'New member guide & SOP',
         icon: UserPlus,
         bgClass: 'stat-icon-teal',
-        path: '/onboarding'
+        path: '/onboarding',
+        roleRestricted: true // video editor only
     }
 ]
 
 function Dashboard() {
     const navigate = useNavigate()
     const [greeting, setGreeting] = useState('Welcome back')
+    const userRole = localStorage.getItem('userRole') || 'video_editor'
 
     useEffect(() => {
         const hours = new Date().getHours()
@@ -63,10 +69,13 @@ function Dashboard() {
 
     // Auto-computed stats
     const STATS = [
-        { label: 'Wiki Articles', value: WIKI_ARTICLES.length, icon: BookOpen, color: 'stat-icon-purple' },
-        { label: 'Resources', value: RESOURCES.length, icon: Layers, color: 'stat-icon-orange' },
-        { label: 'Team Members', value: DEFAULT_EDITORS.length, icon: Users, color: 'stat-icon-blue' }
+        { label: 'Wiki Articles', value: WIKI_ARTICLES.length, icon: BookOpen, color: 'stat-icon-purple', roleRestricted: true },
+        { label: 'Resources', value: RESOURCES.length, icon: Layers, color: 'stat-icon-orange', roleRestricted: true },
+        { label: 'Team Members', value: DEFAULT_EDITORS.length, icon: Users, color: 'stat-icon-blue', roleRestricted: false }
     ]
+
+    const filteredStats = STATS.filter(stat => userRole === 'illustrator' ? !stat.roleRestricted : true)
+    const filteredQuickAccess = QUICK_ACCESS.filter(item => userRole === 'illustrator' ? !item.roleRestricted : true)
 
     // Welcome modal state
     const [showWelcome, setShowWelcome] = useState(() => {
@@ -89,16 +98,19 @@ function Dashboard() {
             {/* Hero Section */}
             <div className="dashboard-hero">
                 <div className="dashboard-hero-content">
-                    <h1 className="hero-greeting">{greeting}, Editor!</h1>
+                    <h1 className="hero-greeting">{greeting}, {userRole === 'illustrator' ? 'Illustrator' : 'Editor'}!</h1>
                     <p className="hero-subtitle">
                         Ready to create some magic today? accessing your tools and resources has never been easier.
                     </p>
                 </div>
             </div>
 
+            {/* Attendance Section */}
+            <AttendanceCard />
+
             {/* Stats Overview */}
-            <div className="grid grid-3" style={{ marginBottom: 'var(--space-8)' }}>
-                {STATS.map((stat) => (
+            <div className={`grid grid-${filteredStats.length}`} style={{ marginBottom: 'var(--space-8)' }}>
+                {filteredStats.map((stat) => (
                     <Card key={stat.label} className="stat-card">
                         <CardBody>
                             <div className="stat-card-body">
@@ -123,7 +135,7 @@ function Dashboard() {
 
             <div className="dashboard-quick-section">
                 <div className="grid grid-2 dashboard-quick-cards">
-                    {QUICK_ACCESS.map((item) => (
+                    {filteredQuickAccess.map((item) => (
                         <Link
                             key={item.path}
                             to={item.path}
@@ -151,20 +163,22 @@ function Dashboard() {
             <Modal
                 isOpen={showWelcome}
                 onClose={handleCloseWelcome}
-                title="Welcome to EWO Editor Hub!"
+                title="Welcome to EWO Hub!"
                 size="md"
                 footer={
                     <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'flex-end' }}>
                         <Button variant="secondary" onClick={handleCloseWelcome}>
                             Explore Dashboard
                         </Button>
-                        <Button
-                            variant="primary"
-                            icon={<Rocket size={18} />}
-                            onClick={handleStartOnboarding}
-                        >
-                            Start Onboarding
-                        </Button>
+                        {userRole !== 'illustrator' && (
+                            <Button
+                                variant="primary"
+                                icon={<Rocket size={18} />}
+                                onClick={handleStartOnboarding}
+                            >
+                                Start Onboarding
+                            </Button>
+                        )}
                     </div>
                 }
             >
@@ -195,7 +209,7 @@ function Dashboard() {
                         color: 'var(--gray-700)',
                         margin: '0 0 var(--space-3)'
                     }}>
-                        EWO Editor Hub matches the premium quality of your edits. Everything in one place:
+                        EWO Hub matches the premium quality of your work. Everything in one place:
                     </p>
 
                     <ul style={{
@@ -208,8 +222,12 @@ function Dashboard() {
                         gap: 'var(--space-2)'
                     }}>
                         <li><strong>Progress Form</strong> — Streamlined daily reporting</li>
-                        <li><strong>Wiki</strong> — Your editing knowledge base</li>
-                        <li><strong>Resources</strong> — Assets at your fingertips</li>
+                        {userRole !== 'illustrator' && (
+                            <>
+                                <li><strong>Wiki</strong> — Your editing knowledge base</li>
+                                <li><strong>Resources</strong> — Assets at your fingertips</li>
+                            </>
+                        )}
                     </ul>
                 </div>
             </Modal>

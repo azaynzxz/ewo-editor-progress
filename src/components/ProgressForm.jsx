@@ -24,16 +24,22 @@ const CLIENT_LIST = [
 ]
 
 export const DEFAULT_EDITORS = ['Zayn', 'Dadan', 'Faqih']
+export const DEFAULT_ILLUSTRATORS = ['Vanda', 'Rosdiana', 'Dayah']
 
 function ProgressForm({ onSubmit, isSubmitting }) {
+    const userRole = localStorage.getItem('userRole') || 'video_editor'
+    const isIllustrator = userRole === 'illustrator'
+    const defaultList = isIllustrator ? DEFAULT_ILLUSTRATORS : DEFAULT_EDITORS
+    const roleLabel = isIllustrator ? 'Illustrator' : 'Editor'
+
     // Get custom editors from localStorage
     const [customEditors, setCustomEditors] = useState(() => {
-        const saved = localStorage.getItem('customEditors')
+        const saved = localStorage.getItem(isIllustrator ? 'customIllustrators' : 'customEditors')
         return saved ? JSON.parse(saved) : []
     })
 
     // Combined editor list
-    const editorList = [...DEFAULT_EDITORS, ...customEditors]
+    const editorList = [...defaultList, ...customEditors]
 
     const [formData, setFormData] = useState({
         tanggal: new Date(),
@@ -59,7 +65,7 @@ function ProgressForm({ onSubmit, isSubmitting }) {
         if (value && !editorList.includes(value)) {
             const newCustomEditors = [...customEditors, value]
             setCustomEditors(newCustomEditors)
-            localStorage.setItem('customEditors', JSON.stringify(newCustomEditors))
+            localStorage.setItem(isIllustrator ? 'customIllustrators' : 'customEditors', JSON.stringify(newCustomEditors))
         }
     }
 
@@ -177,14 +183,14 @@ function ProgressForm({ onSubmit, isSubmitting }) {
                     />
                 </div>
 
-                {/* Editor Name */}
+                {/* Editor/Illustrator Name */}
                 <div className="form-group">
-                    <label htmlFor="editor">Editor Name</label>
+                    <label htmlFor="editor">{roleLabel} Name</label>
                     <SearchableDropdown
                         value={formData.editor}
                         onChange={handleEditorChange}
                         options={editorList}
-                        placeholder="Select or add editor"
+                        placeholder={`Select or add ${roleLabel.toLowerCase()}`}
                         allowCustom={true}
                     />
                 </div>

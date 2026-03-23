@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
-import { Calendar, Upload, Send, X, Users, Hash } from 'lucide-react'
+import { Calendar, Upload, Send, X, Users, Hash, Tag } from 'lucide-react'
 import { PageHeader } from '../components/layout'
 import SearchableDropdown from '../components/SearchableDropdown'
 import MultiSelectDropdown from '../components/MultiSelectDropdown'
@@ -9,7 +9,7 @@ import UpcomingDeadlines from '../components/UpcomingDeadlines'
 import Toast from '../components/Toast'
 
 // CONFIGURATION - UPDATE THIS WITH YOUR APPS SCRIPT WEB APP URL
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwyVSu5z5B_jKx8qjFLkS9pDjMbc2SHf8IY53JY5zG4s934-QWgjNLMRx3-zRYNVJ-F/exec'
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
 
 const DEFAULT_CLIENTS = [
     'Alex',
@@ -32,18 +32,25 @@ const DEFAULT_CLIENTS = [
 ]
 
 const DEFAULT_EDITORS = ['Zayn', 'Dadan', 'Faqih']
+const DEFAULT_ILLUSTRATORS = ['Vanda', 'Rosdiana', 'Dayah']
 
 function ProgressFormPage() {
+    const userRole = localStorage.getItem('userRole') || 'video_editor'
+    const isIllustrator = userRole === 'illustrator'
+    const defaultList = isIllustrator ? DEFAULT_ILLUSTRATORS : DEFAULT_EDITORS
+    const roleLabel = isIllustrator ? 'Illustrator' : 'Editor'
+    const customStorageKey = isIllustrator ? 'customIllustrators' : 'customEditors'
+
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [toast, setToast] = useState(null)
 
     // Get custom editors from localStorage (filter out corrupted non-string entries)
     const [customEditors, setCustomEditors] = useState(() => {
-        const saved = localStorage.getItem('customEditors')
+        const saved = localStorage.getItem(customStorageKey)
         if (!saved) return []
         const parsed = JSON.parse(saved)
         const cleaned = Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : []
-        if (cleaned.length !== parsed.length) localStorage.setItem('customEditors', JSON.stringify(cleaned))
+        if (cleaned.length !== parsed.length) localStorage.setItem(customStorageKey, JSON.stringify(cleaned))
         return cleaned
     })
 
@@ -57,7 +64,7 @@ function ProgressFormPage() {
         return cleaned
     })
 
-    const editorList = [...DEFAULT_EDITORS, ...customEditors]
+    const editorList = [...defaultList, ...customEditors]
     const clientList = [...DEFAULT_CLIENTS, ...customClients]
 
     // Multi-client state: array of selected client names
@@ -68,11 +75,11 @@ function ProgressFormPage() {
     const [formData, setFormData] = useState({
         tanggal: new Date(),
         editor: '',
-        comment: '',
-        screenshot: null
+        comment: ''
     })
 
-    const [screenshotPreview, setScreenshotPreview] = useState(null)
+    // Multi-screenshot state: array of { file, preview, label }
+    const [screenshots, setScreenshots] = useState([])
     const [sceneToast, setSceneToast] = useState(null)
     const [activeClientForTitle, setActiveClientForTitle] = useState(null)
 
@@ -85,7 +92,7 @@ function ProgressFormPage() {
         if (value && !editorList.includes(value)) {
             const newCustomEditors = [...customEditors, value]
             setCustomEditors(newCustomEditors)
-            localStorage.setItem('customEditors', JSON.stringify(newCustomEditors))
+            localStorage.setItem(customStorageKey, JSON.stringify(newCustomEditors))
         }
     }
 
@@ -132,7 +139,7 @@ function ProgressFormPage() {
     const handleDeleteEditor = (name) => {
         const newCustomEditors = customEditors.filter(e => e !== name)
         setCustomEditors(newCustomEditors)
-        localStorage.setItem('customEditors', JSON.stringify(newCustomEditors))
+        localStorage.setItem(customStorageKey, JSON.stringify(newCustomEditors))
         if (formData.editor === name) handleChange('editor', '')
     }
 
@@ -178,11 +185,23 @@ function ProgressFormPage() {
         return null
     }
 
+    // Safe math expression evaluator (supports +, -, *, /)
+    const evaluateExpression = (expr) => {
+        if (!expr || typeof expr !== 'string') return 0
+        const sanitized = expr.replace(/[^0-9+\-*/. ]/g, '').trim()
+        if (!sanitized) return 0
+        try {
+            const result = Function('"use strict"; return (' + sanitized + ')')()
+            return isNaN(result) || !isFinite(result) ? 0 : Math.round(result)
+        } catch {
+            return 0
+        }
+    }
+
     // Calculate total scenes across all clients
     const getTotalScenes = (data = clientData) => {
         return Object.values(data).reduce((sum, d) => {
-            const num = parseInt(d.scenes, 10)
-            return sum + (isNaN(num) ? 0 : num)
+            return sum + evaluateExpression(d.scenes)
         }, 0)
     }
 
@@ -190,7 +209,7 @@ function ProgressFormPage() {
     const encodeClientString = () => {
         return selectedClients
             .map(client => {
-                const scenes = clientData[client]?.scenes || '0'
+                const scenes = evaluateExpression(clientData[client]?.scenes) || 0
                 return `${client} (${scenes})`
             })
             .join(', ')
@@ -204,48 +223,54 @@ function ProgressFormPage() {
             .join(', ')
     }
 
-    const handleScreenshotChange = (file) => {
-        if (file && file.type.startsWith('image/')) {
-            setFormData(prev => ({ ...prev, screenshot: file }))
+    const addScreenshots = (files) => {
+        const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'))
+        imageFiles.forEach(file => {
             const reader = new FileReader()
-            reader.onloadend = () => setScreenshotPreview(reader.result)
+            reader.onloadend = () => {
+                setScreenshots(prev => [...prev, { file, preview: reader.result, label: '' }])
+            }
             reader.readAsDataURL(file)
-        }
+        })
     }
 
     const handlePaste = (e) => {
         const items = e.clipboardData?.items
         if (items) {
+            const files = []
             for (let i = 0; i < items.length; i++) {
                 if (items[i].type.indexOf('image') !== -1) {
-                    const file = items[i].getAsFile()
-                    handleScreenshotChange(file)
-                    break
+                    files.push(items[i].getAsFile())
                 }
             }
+            if (files.length > 0) addScreenshots(files)
         }
     }
 
     const handleFileInput = (e) => {
-        const file = e.target.files?.[0]
-        if (file) handleScreenshotChange(file)
+        if (e.target.files?.length) {
+            addScreenshots(e.target.files)
+            e.target.value = '' // reset so same file can be re-selected
+        }
     }
 
-    const removeScreenshot = () => {
-        setFormData(prev => ({ ...prev, screenshot: null }))
-        setScreenshotPreview(null)
+    const updateScreenshotLabel = (index, label) => {
+        setScreenshots(prev => prev.map((s, i) => i === index ? { ...s, label } : s))
+    }
+
+    const removeScreenshot = (index) => {
+        setScreenshots(prev => prev.filter((_, i) => i !== index))
     }
 
     const resetForm = () => {
         setFormData({
             tanggal: new Date(),
             editor: '',
-            comment: '',
-            screenshot: null
+            comment: ''
         })
         setSelectedClients([])
         setClientData({})
-        setScreenshotPreview(null)
+        setScreenshots([])
     }
 
     const fileToBase64 = (file) => {
@@ -269,10 +294,23 @@ function ProgressFormPage() {
         setIsSubmitting(true)
         setToast(null)
 
+        const userRole = localStorage.getItem('userRole') || 'video_editor'
+        localStorage.setItem('lastUsedEditor', formData.editor) // Save to grab for Attendance name
+
         try {
-            let screenshotData = null
-            if (formData.screenshot) {
-                screenshotData = await fileToBase64(formData.screenshot)
+            // Convert all screenshots to base64 with labels
+            let screenshotsData = []
+            if (screenshots.length > 0) {
+                screenshotsData = await Promise.all(
+                    screenshots.map(async (s) => {
+                        const data = await fileToBase64(s.file)
+                        return {
+                            base64: data.base64,
+                            label: s.label.trim() || 'screenshot',
+                            mimeType: data.mimeType
+                        }
+                    })
+                )
             }
 
             const formatDate = (date) => {
@@ -286,13 +324,15 @@ function ProgressFormPage() {
             const totalScenes = getTotalScenes()
 
             const payload = {
+                action: 'submitProgress',
+                role: userRole,
                 tanggal: formatDate(formData.tanggal),
                 editor: formData.editor || '',
                 judul: encodedJudul,
                 klien: encodedKlien,
                 jumlah_scene: totalScenes.toString(),
                 comment: formData.comment || '',
-                screenshot: screenshotData
+                screenshots: screenshotsData
             }
 
             const response = await fetch(APPS_SCRIPT_URL, {
@@ -358,14 +398,14 @@ function ProgressFormPage() {
                                     />
                                 </div>
 
-                                {/* Editor Name */}
+                                {/* Editor/Illustrator Name */}
                                 <div className="form-group">
-                                    <label htmlFor="editor">Editor Name</label>
+                                    <label htmlFor="editor">{roleLabel} Name</label>
                                     <SearchableDropdown
                                         value={formData.editor}
                                         onChange={handleEditorChange}
                                         options={editorList}
-                                        placeholder="Select or add editor"
+                                        placeholder={`Select or add ${roleLabel.toLowerCase()}`}
                                         allowCustom={true}
                                         customItems={customEditors}
                                         onDelete={handleDeleteEditor}
@@ -416,12 +456,11 @@ function ProgressFormPage() {
                                                         placeholder="Title"
                                                     />
                                                     <input
-                                                        type="number"
+                                                        type="text"
                                                         className="input client-input client-scenes-input"
                                                         value={clientData[client]?.scenes || ''}
                                                         onChange={(e) => handleClientDataChange(client, 'scenes', e.target.value)}
                                                         placeholder="0"
-                                                        min="0"
                                                     />
                                                     <button
                                                         type="button"
@@ -451,41 +490,62 @@ function ProgressFormPage() {
                                     />
                                 </div>
 
-                                {/* Screenshot Upload */}
+                                {/* Screenshots Upload */}
                                 <div className="form-group full-width">
                                     <label htmlFor="screenshot">
                                         <Upload size={16} />
-                                        Screenshot
+                                        Screenshots
                                     </label>
 
-                                    {!screenshotPreview ? (
-                                        <div className="upload-area">
-                                            <input
-                                                id="screenshot"
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={handleFileInput}
-                                                style={{ display: 'none' }}
-                                            />
-                                            <label htmlFor="screenshot" className="upload-label">
-                                                <Upload size={28} />
-                                                <p>Click to upload or paste (Ctrl+V)</p>
-                                                <span>PNG, JPG, GIF</span>
-                                            </label>
-                                        </div>
-                                    ) : (
-                                        <div className="screenshot-preview">
-                                            <img src={screenshotPreview} alt="Screenshot preview" />
-                                            <button
-                                                type="button"
-                                                className="remove-btn"
-                                                onClick={removeScreenshot}
-                                                aria-label="Remove screenshot"
-                                            >
-                                                <X size={18} />
-                                            </button>
+                                    {/* Preview Grid */}
+                                    {screenshots.length > 0 && (
+                                        <div className="screenshots-grid">
+                                            {screenshots.map((s, index) => (
+                                                <div key={index} className="screenshot-card">
+                                                    <div className="screenshot-preview">
+                                                        <img src={s.preview} alt={`Screenshot ${index + 1}`} />
+                                                        <button
+                                                            type="button"
+                                                            className="remove-btn"
+                                                            onClick={() => removeScreenshot(index)}
+                                                            aria-label="Remove screenshot"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    </div>
+                                                    <div className="screenshot-label-row">
+                                                        <Tag size={12} />
+                                                        <input
+                                                            type="text"
+                                                            className="input screenshot-label-input"
+                                                            placeholder="Label this screenshot *"
+                                                            value={s.label}
+                                                            onChange={(e) => updateScreenshotLabel(index, e.target.value)}
+                                                            required
+                                                            style={!s.label.trim() ? { borderBottom: '2px solid var(--error)', borderRadius: 0 } : {}}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
+
+                                    {/* Upload Area (always visible) */}
+                                    <div className="upload-area">
+                                        <input
+                                            id="screenshot"
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={handleFileInput}
+                                            style={{ display: 'none' }}
+                                        />
+                                        <label htmlFor="screenshot" className="upload-label">
+                                            <Upload size={28} />
+                                            <p>{screenshots.length > 0 ? 'Add more screenshots' : 'Click to upload or paste (Ctrl+V)'}</p>
+                                            <span>PNG, JPG, GIF — Multiple files supported</span>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
 
@@ -493,7 +553,8 @@ function ProgressFormPage() {
                             <button
                                 type="submit"
                                 className="submit-btn"
-                                disabled={isSubmitting || !formData.editor || selectedClients.length === 0}
+                                disabled={isSubmitting || !formData.editor || selectedClients.length === 0 || screenshots.some(s => !s.label.trim())}
+                                title={screenshots.some(s => !s.label.trim()) ? 'Berikan label pada Screenshoot' : ''}
                             >
                                 {isSubmitting ? (
                                     <>
