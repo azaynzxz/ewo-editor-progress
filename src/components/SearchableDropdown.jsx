@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, Search, X, Plus, Trash2 } from 'lucide-react'
 
 function SearchableDropdown({ value, onChange, options, placeholder = 'Select...', label, allowCustom = false, customItems = [], onDelete }) {
@@ -6,6 +7,38 @@ function SearchableDropdown({ value, onChange, options, placeholder = 'Select...
     const [searchTerm, setSearchTerm] = useState('')
     const dropdownRef = useRef(null)
     const searchInputRef = useRef(null)
+    const menuRef = useRef(null)
+
+    // Calculate position for popover portal to avoid clipping without causing re-renders
+    useEffect(() => {
+        if (isOpen && dropdownRef.current) {
+            const updatePosition = () => {
+                if (!dropdownRef.current || !menuRef.current) return;
+                const rect = dropdownRef.current.getBoundingClientRect()
+                menuRef.current.style.position = 'fixed'
+                menuRef.current.style.top = `${rect.bottom + 4}px`
+                menuRef.current.style.left = `${rect.left}px`
+                menuRef.current.style.width = `${rect.width}px`
+                menuRef.current.style.zIndex = 99999
+                menuRef.current.style.visibility = 'visible'
+            }
+
+            requestAnimationFrame(updatePosition)
+
+            const handleScroll = (e) => {
+                // Ignore scroll events originating from inside the dropdown menu itself
+                if (menuRef.current && menuRef.current.contains(e.target)) return;
+                updatePosition();
+            }
+
+            window.addEventListener('resize', updatePosition)
+            window.addEventListener('scroll', handleScroll, true)
+            return () => {
+                window.removeEventListener('resize', updatePosition)
+                window.removeEventListener('scroll', handleScroll, true)
+            }
+        }
+    }, [isOpen])
 
     // Filter out any non-string options
     const safeOptions = options.filter(opt => typeof opt === 'string')
@@ -23,7 +56,7 @@ function SearchableDropdown({ value, onChange, options, placeholder = 'Select...
     // Close dropdown when clicking outside
     useEffect(() => {
         function handleClickOutside(event) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target) && !event.target.closest('.dropdown-menu')) {
                 setIsOpen(false)
                 setSearchTerm('')
             }
@@ -33,10 +66,9 @@ function SearchableDropdown({ value, onChange, options, placeholder = 'Select...
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    // Focus search input when dropdown opens
     useEffect(() => {
         if (isOpen && searchInputRef.current) {
-            searchInputRef.current.focus()
+            searchInputRef.current.focus({ preventScroll: true })
         }
     }, [isOpen])
 
@@ -84,8 +116,8 @@ function SearchableDropdown({ value, onChange, options, placeholder = 'Select...
                 </div>
             </div>
 
-            {isOpen && (
-                <div className="dropdown-menu">
+            {isOpen && createPortal(
+                <div className="dropdown-menu" ref={menuRef} style={{ position: 'fixed', visibility: 'hidden' }}>
                     <div className="search-box">
                         <Search size={14} />
                         <input
@@ -141,7 +173,7 @@ function SearchableDropdown({ value, onChange, options, placeholder = 'Select...
                             !isNewValue && <div className="no-results">No results found</div>
                         )}
                     </div>
-                </div>
+                </div>, document.body
             )}
         </div>
     )

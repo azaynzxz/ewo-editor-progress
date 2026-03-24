@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { Calendar, Upload, Send, X, Users, Hash, Tag } from 'lucide-react'
@@ -82,6 +82,25 @@ function ProgressFormPage() {
     const [screenshots, setScreenshots] = useState([])
     const [sceneToast, setSceneToast] = useState(null)
     const [activeClientForTitle, setActiveClientForTitle] = useState(null)
+
+    // Cache upcoming deadlines for autocomplete
+    const [upcomingTitles, setUpcomingTitles] = useState([])
+    useEffect(() => {
+        try {
+            const cached = localStorage.getItem('ewo_upcoming_deadlines')
+            if (cached) {
+                setUpcomingTitles(JSON.parse(cached))
+            }
+        } catch { }
+    }, [])
+
+    const getTitlesForClient = (clientName) => {
+        if (!upcomingTitles.length) return []
+        const titles = upcomingTitles
+            .filter(p => !p.client || p.client.toLowerCase() === clientName.toLowerCase())
+            .map(p => p.title)
+        return [...new Set(titles)]
+    }
 
     const handleChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }))
@@ -344,7 +363,63 @@ function ProgressFormPage() {
             const result = await response.json()
 
             if (result.success) {
-                setToast({ type: 'success', message: 'Progress submitted successfully!' })
+                const todayStr = new Date().toISOString().split('T')[0]
+                localStorage.setItem('lastProgressDate', todayStr)
+
+                // AUTO CLOCK-OUT: If the user is currently clocked in locally, clock them out!
+                const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const attendanceDataStr = localStorage.getItem(`attendance_${dateStr}`)
+                let autoClockOutSuccess = false
+
+                if (attendanceDataStr) {
+                    try {
+                        const attendanceData = JSON.parse(attendanceDataStr)
+                        if (attendanceData.isClockedIn && attendanceData.attendanceId) {
+                            const now = new Date()
+                            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+
+                            let computedDuration = '0.00'
+                            if (attendanceData.clockInTime) {
+                                const inTimeObj = new Date(attendanceData.clockInTime)
+                                if (!isNaN(inTimeObj.getTime())) {
+                                    const diff = (now.getTime() - inTimeObj.getTime()) / (1000 * 60 * 60)
+                                    if (!isNaN(diff) && diff >= 0) computedDuration = diff.toFixed(2)
+                                }
+                            }
+
+                            // Dispatch clock out to AppScript
+                            await fetch(APPS_SCRIPT_URL, {
+                                method: 'POST',
+                                body: JSON.stringify({
+                                    action: 'clockOut',
+                                    attendanceId: attendanceData.attendanceId,
+                                    role: userRole,
+                                    time: timeStr,
+                                    durationHrs: computedDuration
+                                }),
+                                redirect: 'follow'
+                            })
+
+                            // Mark as clocked out locally so they don't have to go back to the dashboard
+                            localStorage.setItem(`attendance_${dateStr}`, JSON.stringify({
+                                isClockedIn: false,
+                                clockInTime: attendanceData.clockInTime,
+                                clockOutTime: now
+                            }))
+
+                            autoClockOutSuccess = true
+                        }
+                    } catch (e) {
+                        console.error('Auto clock-out error:', e)
+                    }
+                }
+
+                if (autoClockOutSuccess) {
+                    setToast({ type: 'success', message: 'Progress submitted & Automatically Clocked Out!' })
+                } else {
+                    setToast({ type: 'success', message: 'Progress submitted successfully!' })
+                }
+
                 setTimeout(resetForm, 1000)
             } else {
                 throw new Error(result.data?.message || 'Submission failed')
@@ -447,20 +522,22 @@ function ProgressFormPage() {
                                             {selectedClients.map((client) => (
                                                 <div key={client} className="client-row">
                                                     <span className="client-name-tag">{client}</span>
-                                                    <input
-                                                        type="text"
-                                                        className="input client-input"
-                                                        value={clientData[client]?.title || ''}
-                                                        onChange={(e) => handleClientDataChange(client, 'title', e.target.value)}
-                                                        onFocus={() => setActiveClientForTitle(client)}
-                                                        placeholder="Title"
-                                                    />
+                                                    <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+                                                        <SearchableDropdown
+                                                            value={clientData[client]?.title || ''}
+                                                            onChange={(val) => handleClientDataChange(client, 'title', val)}
+                                                            options={getTitlesForClient(client)}
+                                                            placeholder="Select Title..."
+                                                            allowCustom={true}
+                                                        />
+                                                    </div>
                                                     <input
                                                         type="text"
                                                         className="input client-input client-scenes-input"
                                                         value={clientData[client]?.scenes || ''}
                                                         onChange={(e) => handleClientDataChange(client, 'scenes', e.target.value)}
                                                         placeholder="0"
+                                                        required
                                                     />
                                                     <button
                                                         type="button"
@@ -553,8 +630,8 @@ function ProgressFormPage() {
                             <button
                                 type="submit"
                                 className="submit-btn"
-                                disabled={isSubmitting || !formData.editor || selectedClients.length === 0 || screenshots.some(s => !s.label.trim())}
-                                title={screenshots.some(s => !s.label.trim()) ? 'Berikan label pada Screenshoot' : ''}
+                                disabled={isSubmitting || !formData.editor || selectedClients.length === 0 || screenshots.some(s => !s.label.trim()) || selectedClients.some(c => !clientData[c]?.scenes?.trim())}
+                                title={screenshots.some(s => !s.label.trim()) ? 'Berikan label pada Screenshoot' : (selectedClients.some(c => !clientData[c]?.scenes?.trim()) ? 'Jumlah scene harus diisi untuk semua klien' : '')}
                             >
                                 {isSubmitting ? (
                                     <>

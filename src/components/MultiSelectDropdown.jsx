@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, Search, X, Plus, Trash2 } from 'lucide-react'
 
 function MultiSelectDropdown({ selectedItems = [], onChange, options, placeholder = 'Select...', allowCustom = false, customItems = [], onDelete }) {
@@ -6,6 +7,37 @@ function MultiSelectDropdown({ selectedItems = [], onChange, options, placeholde
     const [searchTerm, setSearchTerm] = useState('')
     const dropdownRef = useRef(null)
     const searchInputRef = useRef(null)
+    const menuRef = useRef(null)
+
+    // Calculate position for popover portal to avoid clipping without causing re-renders
+    useEffect(() => {
+        if (isOpen && dropdownRef.current) {
+            const updatePosition = () => {
+                if (!dropdownRef.current || !menuRef.current) return;
+                const rect = dropdownRef.current.getBoundingClientRect()
+                menuRef.current.style.position = 'fixed'
+                menuRef.current.style.top = `${rect.bottom + 4}px`
+                menuRef.current.style.left = `${rect.left}px`
+                menuRef.current.style.width = `${rect.width}px`
+                menuRef.current.style.zIndex = 99999
+                menuRef.current.style.visibility = 'visible'
+            }
+
+            requestAnimationFrame(updatePosition)
+
+            const handleScroll = (e) => {
+                if (menuRef.current && menuRef.current.contains(e.target)) return;
+                updatePosition();
+            }
+
+            window.addEventListener('resize', updatePosition)
+            window.addEventListener('scroll', handleScroll, true)
+            return () => {
+                window.removeEventListener('resize', updatePosition)
+                window.removeEventListener('scroll', handleScroll, true)
+            }
+        }
+    }, [isOpen])
 
     // Filter out any non-string options
     const safeOptions = options.filter(opt => typeof opt === 'string')
@@ -23,7 +55,7 @@ function MultiSelectDropdown({ selectedItems = [], onChange, options, placeholde
     // Close dropdown when clicking outside
     useEffect(() => {
         function handleClickOutside(event) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target) && !event.target.closest('.dropdown-menu')) {
                 setIsOpen(false)
                 setSearchTerm('')
             }
@@ -33,10 +65,9 @@ function MultiSelectDropdown({ selectedItems = [], onChange, options, placeholde
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    // Focus search input when dropdown opens
     useEffect(() => {
         if (isOpen && searchInputRef.current) {
-            searchInputRef.current.focus()
+            searchInputRef.current.focus({ preventScroll: true })
         }
     }, [isOpen])
 
@@ -115,8 +146,8 @@ function MultiSelectDropdown({ selectedItems = [], onChange, options, placeholde
                 </div>
             </div>
 
-            {isOpen && (
-                <div className="dropdown-menu">
+            {isOpen && createPortal(
+                <div className="dropdown-menu" ref={menuRef} style={{ position: 'fixed', visibility: 'hidden' }}>
                     <div className="search-box">
                         <Search size={14} />
                         <input
@@ -181,7 +212,7 @@ function MultiSelectDropdown({ selectedItems = [], onChange, options, placeholde
                             !isNewValue && <div className="no-results">No results found</div>
                         )}
                     </div>
-                </div>
+                </div>, document.body
             )}
         </div>
     )

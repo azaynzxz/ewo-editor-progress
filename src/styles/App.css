@@ -6,13 +6,24 @@
 }
 
 body {
-  font-family: var(--font-family);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: var(--gray-100);
+  font-family: var(--font-body);
   color: var(--gray-900);
-  min-height: 100vh;
-  overflow-x: hidden;
+  background-color: var(--gray-50);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.modal-title,
+.card-title,
+.page-title,
+.btn {
+  font-family: var(--font-heading);
 }
 
 /* App Container */
@@ -37,6 +48,20 @@ body {
 @media (max-width: 900px) {
   .progress-page-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .attendance-header-layout .responsive-border {
+    border-left: none !important;
+    padding-left: 0 !important;
+    border-top: 1px solid var(--gray-200);
+    padding-top: 1.25rem;
+    margin-top: 0.25rem;
+  }
+
+  .attendance-header-layout>div {
+    min-width: 100% !important;
   }
 }
 
@@ -606,11 +631,13 @@ select.input {
 .client-entries {
   border: 1px solid var(--gray-200);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
+  /* changed from hidden to let dropdown pop out */
   background: var(--gray-50);
 }
 
 .client-entries-header {
+  border-radius: 8px 8px 0 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -686,6 +713,12 @@ select.input {
   padding: 0.4rem 0.5rem;
   font-size: 0.813rem;
   width: 100%;
+}
+
+.client-row .dropdown-trigger {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.813rem;
+  min-height: auto;
 }
 
 .client-scenes-input {

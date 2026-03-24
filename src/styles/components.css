@@ -379,8 +379,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: var(--space-5);
+    padding: var(--space-4) var(--space-5);
     border-bottom: 1px solid var(--gray-200);
+    border-top-left-radius: var(--radius-xl);
+    border-top-right-radius: var(--radius-xl);
 }
 
 .modal-title {
@@ -394,15 +396,19 @@
     padding: var(--space-5);
     overflow-y: auto;
     flex: 1;
+    min-height: 35vh;
+
 }
 
 .modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: var(--space-3);
-    padding: var(--space-4) var(--space-5);
+    padding: var(--space-3) var(--space-4);
     border-top: 1px solid var(--gray-200);
     background: var(--gray-50);
+    border-bottom-left-radius: var(--radius-xl);
+    border-bottom-right-radius: var(--radius-xl);
 }
 
 /* ==================== TABS ==================== */
