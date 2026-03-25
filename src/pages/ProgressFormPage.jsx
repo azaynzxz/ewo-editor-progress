@@ -194,13 +194,13 @@ function ProgressFormPage() {
     const getSceneMessage = (count) => {
         const num = parseInt(count, 10)
         if (isNaN(num) || num <= 0) return null
-        if (num >= 1 && num <= 10) return '😅 Njir dikit amat'
-        if (num >= 11 && num <= 20) return '👍 Oke mayan lah'
-        if (num >= 21 && num <= 35) return '🎉 Well done cik!'
-        if (num >= 36 && num <= 50) return '🔥 GC banget si!'
-        if (num >= 51 && num <= 80) return '💪 Ga sakit tah punggung?'
-        if (num >= 81 && num <= 100) return '☕ Udh ngopi berapa gelas?'
-        if (num >= 101) return '🚀 BUJUG! Deadliners!'
+        if (num >= 1 && num <= 10) return '🌱 Awal yang baik, mari tingkatkan!'
+        if (num >= 11 && num <= 20) return '👍 Progress yang bagus hari ini.'
+        if (num >= 21 && num <= 35) return '🎉 Kerja bagus! Terus pertahankan.'
+        if (num >= 36 && num <= 50) return '🔥 Sangat produktif! Pekerjaan yang luar biasa.'
+        if (num >= 51 && num <= 80) return '💪 Luar biasa! Jangan lupa beristirahat sejenak.'
+        if (num >= 81 && num <= 100) return '⭐ Pencapaian hebat! Tetap jaga kesehatan Anda.'
+        if (num >= 101) return '🚀 Dedikasi luar biasa! Kinerja yang sangat mengesankan.'
         return null
     }
 
