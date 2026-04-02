@@ -544,29 +544,60 @@ function AttendanceCard() {
             {/* Clock Out Warning Modal */}
             {showClockOutWarning && (
                 <div className="modal-backdrop" onClick={() => setShowClockOutWarning(false)}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-                        <div className="modal-header">
-                            <h3 className="modal-title" style={{ fontSize: 'var(--text-lg)', color: 'var(--orange-500)' }}>Action Required</h3>
-                        </div>
-                        <div className="modal-body">
-                            <p style={{ margin: '0 0 var(--space-3)', fontSize: 'var(--text-base)', color: 'var(--gray-700)' }}>
-                                You haven't submitted your progress form for today. Please submit it before clocking out.
+                    <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px', width: '90%' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '2rem 1.5rem 1.5rem' }}>
+                            {/* Icon */}
+                            <div style={{
+                                width: '56px', height: '56px', borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #FFF3E0, #FFE0B2)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                marginBottom: '1rem', boxShadow: '0 2px 8px rgba(255,152,0,0.15)'
+                            }}>
+                                <ClipboardList size={26} style={{ color: 'var(--orange-500)' }} />
+                            </div>
+
+                            {/* Title */}
+                            <h3 style={{
+                                margin: '0 0 0.5rem', fontSize: '1.15rem', fontWeight: 700,
+                                color: 'var(--gray-900)'
+                            }}>
+                                Progress Form Belum Diisi
+                            </h3>
+
+                            {/* Message */}
+                            <p style={{
+                                margin: '0 0 1.5rem', fontSize: '0.9rem', color: 'var(--gray-500)',
+                                lineHeight: 1.5, maxWidth: '300px'
+                            }}>
+                                Kamu belum submit progress hari ini. Silakan isi dulu sebelum clock out.
                             </p>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-ghost" onClick={() => setShowClockOutWarning(false)}>
-                                Cancel
-                            </button>
-                            <button
-                                className="btn"
-                                onClick={() => {
-                                    setShowClockOutWarning(false);
-                                    navigate('/progress');
-                                }}
-                                style={{ background: 'var(--primary-500)', color: 'white', border: 'none' }}
-                            >
-                                Go to Progress Form
-                            </button>
+
+                            {/* Actions */}
+                            <div style={{ display: 'flex', gap: '0.75rem', width: '100%' }}>
+                                <button
+                                    className="btn btn-ghost"
+                                    onClick={() => setShowClockOutWarning(false)}
+                                    style={{ flex: 1, padding: '0.6rem', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: '0.9rem' }}
+                                >
+                                    Nanti
+                                </button>
+                                <button
+                                    className="btn"
+                                    onClick={() => {
+                                        setShowClockOutWarning(false);
+                                        navigate('/progress');
+                                    }}
+                                    style={{
+                                        flex: 2, padding: '0.6rem', borderRadius: 'var(--radius-md)',
+                                        background: 'var(--primary-500)', color: 'white', border: 'none',
+                                        fontWeight: 600, fontSize: '0.9rem',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+                                    }}
+                                >
+                                    <ClipboardList size={16} />
+                                    Isi Progress Form
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
