@@ -7,10 +7,17 @@ import SearchableDropdown from './SearchableDropdown';
 
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec';
 
+// Helper: get today's date as YYYY-MM-DD in local timezone (consistent key for localStorage)
+const getTodayKey = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 function AttendanceCard() {
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isClockedIn, setIsClockedIn] = useState(false);
     const [clockInTime, setClockInTime] = useState(null);
+    const [clockOutTime, setClockOutTime] = useState(null);
     const [attendanceId, setAttendanceId] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [statusMessage, setStatusMessage] = useState('');
@@ -76,21 +83,70 @@ function AttendanceCard() {
     };
 
 
-    // Load initial state from local storage so UI persists across page reloads
+    // Load initial state from localStorage, then verify against server as fallback
     useEffect(() => {
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getTodayKey();
         const savedAttendance = localStorage.getItem(`attendance_${todayStr}`);
+        let restoredFromLocal = false;
+
         if (savedAttendance) {
-            const data = JSON.parse(savedAttendance);
-            setIsClockedIn(data.isClockedIn);
-            setClockInTime(data.clockInTime);
-            setAttendanceId(data.attendanceId);
+            try {
+                const data = JSON.parse(savedAttendance);
+                if (data.isClockedIn) {
+                    setIsClockedIn(true);
+                    setClockInTime(data.clockInTime);
+                    setAttendanceId(data.attendanceId);
+                    restoredFromLocal = true;
+                } else if (data.clockOutTime) {
+                    // Already clocked out today — show the label
+                    setIsClockedIn(false);
+                    setClockInTime(data.clockInTime);
+                    setClockOutTime(data.clockOutTime);
+                    restoredFromLocal = true;
+                }
+            } catch { /* corrupted data, will fall through to server check */ }
+        }
+
+        // SERVER VERIFICATION FALLBACK: If localStorage has no active clock-in,
+        // ask the backend if this user already clocked in today.
+        // This protects against cleared cache, different browser, etc.
+        if (!restoredFromLocal && userName) {
+            const role = localStorage.getItem('userRole') || 'video_editor';
+            const checkUrl = `${APPS_SCRIPT_URL}?action=checkAttendance&name=${encodeURIComponent(userName)}&role=${encodeURIComponent(role)}&date=${encodeURIComponent(todayStr)}`;
+            fetch(checkUrl)
+                .then(res => res.json())
+                .then(result => {
+                    if (result.success && result.data) {
+                        if (result.data.isClockedIn) {
+                            setIsClockedIn(true);
+                            setClockInTime(result.data.clockInTime);
+                            setAttendanceId(result.data.attendanceId);
+                            // Re-persist to localStorage so subsequent reloads are instant
+                            localStorage.setItem(`attendance_${todayStr}`, JSON.stringify({
+                                isClockedIn: true,
+                                clockInTime: result.data.clockInTime,
+                                attendanceId: result.data.attendanceId
+                            }));
+                        } else if (result.data.clockOutTime) {
+                            // Already clocked out today — restore label from server
+                            setIsClockedIn(false);
+                            setClockInTime(result.data.clockInTime);
+                            setClockOutTime(result.data.clockOutTime);
+                            localStorage.setItem(`attendance_${todayStr}`, JSON.stringify({
+                                isClockedIn: false,
+                                clockInTime: result.data.clockInTime,
+                                clockOutTime: result.data.clockOutTime
+                            }));
+                        }
+                    }
+                })
+                .catch(() => { /* silently fail — user can still clock in manually */ });
         }
 
         // Live clock
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
-    }, []);
+    }, [userName]);
 
     const formatTime = (dateObj) => {
         return dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -219,9 +275,11 @@ function AttendanceCard() {
                 setIsClockedIn(true);
                 setClockInTime(now);
                 setAttendanceId(newAttendanceId);
-                localStorage.setItem(`attendance_${dateStr}`, JSON.stringify({
+                // Use consistent ISO date key (YYYY-MM-DD) so restore logic can find it
+                const todayKey = getTodayKey();
+                localStorage.setItem(`attendance_${todayKey}`, JSON.stringify({
                     isClockedIn: true,
-                    clockInTime: now,
+                    clockInTime: now.toISOString(),
                     attendanceId: newAttendanceId
                 }));
                 // Clear the progress token so they are FORCED to submit a new progress form for this new session
@@ -241,7 +299,7 @@ function AttendanceCard() {
     };
 
     const handleClockOut = async () => {
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = getTodayKey();
         const lastProgressDate = localStorage.getItem('lastProgressDate');
 
         if (lastProgressDate !== todayStr) {
@@ -286,11 +344,13 @@ function AttendanceCard() {
 
             if (result.success) {
                 setIsClockedIn(false);
-                // We keep clockInTime state to show "Today you worked from X to Y" if desired
-                localStorage.setItem(`attendance_${dateStr}`, JSON.stringify({
+                setClockOutTime(now.toISOString());
+                // Use consistent ISO date key
+                const todayKey = getTodayKey();
+                localStorage.setItem(`attendance_${todayKey}`, JSON.stringify({
                     isClockedIn: false,
                     clockInTime: clockInTime,
-                    clockOutTime: now
+                    clockOutTime: now.toISOString()
                 }));
                 setStatusMessage('Clocked out successfully! Great job today.');
                 setTimeout(() => setStatusMessage(''), 5000);
@@ -298,7 +358,8 @@ function AttendanceCard() {
                 setStatusMessage('Error: ' + result.data.message);
                 // Fix for desynced states: if the server says they didn't clock in, reset the local frontend state
                 if (result.data && result.data.message && result.data.message.includes("No Clock In record found")) {
-                    localStorage.removeItem(`attendance_${dateStr}`);
+                    const todayKey = getTodayKey();
+                    localStorage.removeItem(`attendance_${todayKey}`);
                     setIsClockedIn(false);
                     setClockInTime(null);
                     setAttendanceId(null);
@@ -403,9 +464,17 @@ function AttendanceCard() {
                                     {currentTime.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                 </div>
                                 {clockInTime && (
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'var(--success-bg)', padding: '4px 10px', borderRadius: '20px', alignSelf: 'flex-start', marginTop: '0.25rem' }}>
-                                        <CheckCircle2 size={13} />
-                                        In at {formatTime(new Date(clockInTime))}
+                                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'var(--success-bg)', padding: '4px 10px', borderRadius: '20px' }}>
+                                            <CheckCircle2 size={13} />
+                                            In at {formatTime(new Date(clockInTime))}
+                                        </div>
+                                        {clockOutTime && (
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--gray-600)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'var(--gray-100)', padding: '4px 10px', borderRadius: '20px' }}>
+                                                <LogOut size={13} />
+                                                Out at {formatTime(new Date(clockOutTime))}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

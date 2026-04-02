@@ -11,6 +11,12 @@ import Toast from '../components/Toast'
 // CONFIGURATION - UPDATE THIS WITH YOUR APPS SCRIPT WEB APP URL
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
 
+// Helper: get today's date as YYYY-MM-DD in local timezone (consistent key for localStorage)
+const getTodayKey = () => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const DEFAULT_CLIENTS = [
     'Alex',
     'Allan',
@@ -363,12 +369,11 @@ function ProgressFormPage() {
             const result = await response.json()
 
             if (result.success) {
-                const todayStr = new Date().toISOString().split('T')[0]
+                const todayStr = getTodayKey()
                 localStorage.setItem('lastProgressDate', todayStr)
 
                 // AUTO CLOCK-OUT: If the user is currently clocked in locally, clock them out!
-                const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                const attendanceDataStr = localStorage.getItem(`attendance_${dateStr}`)
+                const attendanceDataStr = localStorage.getItem(`attendance_${todayStr}`)
                 let autoClockOutSuccess = false
 
                 if (attendanceDataStr) {
@@ -401,10 +406,10 @@ function ProgressFormPage() {
                             })
 
                             // Mark as clocked out locally so they don't have to go back to the dashboard
-                            localStorage.setItem(`attendance_${dateStr}`, JSON.stringify({
+                            localStorage.setItem(`attendance_${todayStr}`, JSON.stringify({
                                 isClockedIn: false,
                                 clockInTime: attendanceData.clockInTime,
-                                clockOutTime: now
+                                clockOutTime: now.toISOString()
                             }))
 
                             autoClockOutSuccess = true
