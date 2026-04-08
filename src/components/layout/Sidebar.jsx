@@ -5,7 +5,9 @@ import {
     BookOpen,
     FolderOpen,
     UserPlus,
-    ExternalLink
+    ExternalLink,
+    CalendarRange,
+    ClipboardList
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -14,6 +16,8 @@ const NAV_ITEMS = [
         items: [
             { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
             { path: '/progress', icon: FileEdit, label: 'Progress Form' },
+            { path: '/leave', icon: CalendarRange, label: 'Pengajuan Cuti' },
+            { path: '/leave-status', icon: ClipboardList, label: 'Status Cuti' },
         ]
     },
     {
