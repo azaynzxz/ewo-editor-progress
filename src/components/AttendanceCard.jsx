@@ -83,10 +83,31 @@ function AttendanceCard() {
     };
 
 
+    const [sessionDate, setSessionDate] = useState(getTodayKey());
+
     // Load initial state from localStorage, then verify against server as fallback
     useEffect(() => {
         const todayStr = getTodayKey();
-        const savedAttendance = localStorage.getItem(`attendance_${todayStr}`);
+
+        // Find if there is any active session in localStorage (even from previous days)
+        let activeKeyStr = todayStr;
+        let savedAttendance = localStorage.getItem(`attendance_${todayStr}`);
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('attendance_')) {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key));
+                    if (data.isClockedIn) {
+                        activeKeyStr = key.replace('attendance_', '');
+                        savedAttendance = localStorage.getItem(key);
+                        break;
+                    }
+                } catch (e) { }
+            }
+        }
+
+        setSessionDate(activeKeyStr);
         let restoredFromLocal = false;
 
         if (savedAttendance) {
@@ -97,7 +118,7 @@ function AttendanceCard() {
                     setClockInTime(data.clockInTime);
                     setAttendanceId(data.attendanceId);
                     restoredFromLocal = true;
-                } else if (data.clockOutTime) {
+                } else if (data.clockOutTime && activeKeyStr === todayStr) {
                     // Already clocked out today — show the label
                     setIsClockedIn(false);
                     setClockInTime(data.clockInTime);
@@ -121,6 +142,7 @@ function AttendanceCard() {
                             setIsClockedIn(true);
                             setClockInTime(result.data.clockInTime);
                             setAttendanceId(result.data.attendanceId);
+                            setSessionDate(todayStr);
                             // Re-persist to localStorage so subsequent reloads are instant
                             localStorage.setItem(`attendance_${todayStr}`, JSON.stringify({
                                 isClockedIn: true,
@@ -132,6 +154,7 @@ function AttendanceCard() {
                             setIsClockedIn(false);
                             setClockInTime(result.data.clockInTime);
                             setClockOutTime(result.data.clockOutTime);
+                            setSessionDate(todayStr);
                             localStorage.setItem(`attendance_${todayStr}`, JSON.stringify({
                                 isClockedIn: false,
                                 clockInTime: result.data.clockInTime,
@@ -277,6 +300,7 @@ function AttendanceCard() {
                 setAttendanceId(newAttendanceId);
                 // Use consistent ISO date key (YYYY-MM-DD) so restore logic can find it
                 const todayKey = getTodayKey();
+                setSessionDate(todayKey);
                 localStorage.setItem(`attendance_${todayKey}`, JSON.stringify({
                     isClockedIn: true,
                     clockInTime: now.toISOString(),
@@ -345,9 +369,8 @@ function AttendanceCard() {
             if (result.success) {
                 setIsClockedIn(false);
                 setClockOutTime(now.toISOString());
-                // Use consistent ISO date key
-                const todayKey = getTodayKey();
-                localStorage.setItem(`attendance_${todayKey}`, JSON.stringify({
+                // Use the sessionDate key (which could be from a previous day if they forgot to clock out)
+                localStorage.setItem(`attendance_${sessionDate}`, JSON.stringify({
                     isClockedIn: false,
                     clockInTime: clockInTime,
                     clockOutTime: now.toISOString()
@@ -358,8 +381,7 @@ function AttendanceCard() {
                 setStatusMessage('Error: ' + result.data.message);
                 // Fix for desynced states: if the server says they didn't clock in, reset the local frontend state
                 if (result.data && result.data.message && result.data.message.includes("No Clock In record found")) {
-                    const todayKey = getTodayKey();
-                    localStorage.removeItem(`attendance_${todayKey}`);
+                    localStorage.removeItem(`attendance_${sessionDate}`);
                     setIsClockedIn(false);
                     setClockInTime(null);
                     setAttendanceId(null);
@@ -465,9 +487,18 @@ function AttendanceCard() {
                                 </div>
                                 {clockInTime && (
                                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'var(--success-bg)', padding: '4px 10px', borderRadius: '20px' }}>
+                                        <div style={{ fontSize: '0.75rem', color: sessionDate !== getTodayKey() ? 'var(--orange-500)' : 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: sessionDate !== getTodayKey() ? 'rgba(255, 152, 0, 0.1)' : 'var(--success-bg)', padding: '4px 10px', borderRadius: '20px' }}>
                                             <CheckCircle2 size={13} />
-                                            In at {formatTime(new Date(clockInTime))}
+                                            {(() => {
+                                                const inTimeObj = new Date(clockInTime);
+                                                const timeStr = formatTime(inTimeObj);
+
+                                                if (sessionDate !== getTodayKey()) {
+                                                    const dateStr = inTimeObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                                    return `Since ${dateStr}, ${timeStr}`;
+                                                }
+                                                return `In at ${timeStr}`;
+                                            })()}
                                         </div>
                                         {clockOutTime && (
                                             <div style={{ fontSize: '0.75rem', color: 'var(--gray-600)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'var(--gray-100)', padding: '4px 10px', borderRadius: '20px' }}>

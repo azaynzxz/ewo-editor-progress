@@ -373,7 +373,23 @@ function ProgressFormPage() {
                 localStorage.setItem('lastProgressDate', todayStr)
 
                 // AUTO CLOCK-OUT: If the user is currently clocked in locally, clock them out!
-                const attendanceDataStr = localStorage.getItem(`attendance_${todayStr}`)
+                let activeAttendanceKey = `attendance_${todayStr}`
+                let attendanceDataStr = localStorage.getItem(activeAttendanceKey)
+
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i)
+                    if (key && key.startsWith('attendance_')) {
+                        try {
+                            const data = JSON.parse(localStorage.getItem(key))
+                            if (data.isClockedIn) {
+                                activeAttendanceKey = key
+                                attendanceDataStr = localStorage.getItem(key)
+                                break
+                            }
+                        } catch (e) { }
+                    }
+                }
+
                 let autoClockOutSuccess = false
 
                 if (attendanceDataStr) {
@@ -406,7 +422,7 @@ function ProgressFormPage() {
                             })
 
                             // Mark as clocked out locally so they don't have to go back to the dashboard
-                            localStorage.setItem(`attendance_${todayStr}`, JSON.stringify({
+                            localStorage.setItem(activeAttendanceKey, JSON.stringify({
                                 isClockedIn: false,
                                 clockInTime: attendanceData.clockInTime,
                                 clockOutTime: now.toISOString()
