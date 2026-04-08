@@ -297,6 +297,7 @@ function AttendanceCard() {
             if (result.success) {
                 setIsClockedIn(true);
                 setClockInTime(now);
+                setClockOutTime(null);
                 setAttendanceId(newAttendanceId);
                 // Use consistent ISO date key (YYYY-MM-DD) so restore logic can find it
                 const todayKey = getTodayKey();
@@ -503,7 +504,16 @@ function AttendanceCard() {
                                         {clockOutTime && (
                                             <div style={{ fontSize: '0.75rem', color: 'var(--gray-600)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'var(--gray-100)', padding: '4px 10px', borderRadius: '20px' }}>
                                                 <LogOut size={13} />
-                                                Out at {formatTime(new Date(clockOutTime))}
+                                                {(() => {
+                                                    const outTimeObj = new Date(clockOutTime);
+                                                    const timeStr = formatTime(outTimeObj);
+
+                                                    if (sessionDate !== getTodayKey()) {
+                                                        const dateStr = outTimeObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                                        return `Out on ${dateStr}, ${timeStr}`;
+                                                    }
+                                                    return `Out at ${timeStr}`;
+                                                })()}
                                             </div>
                                         )}
                                     </div>
