@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import DatePicker from 'react-datepicker'
+import HolidayDatePicker from './HolidayDatePicker'
+import useHolidays from '../hooks/useHolidays'
 import 'react-datepicker/dist/react-datepicker.css'
 import { Calendar, Upload, Send, X, CheckCircle, AlertCircle } from 'lucide-react'
 import SearchableDropdown from './SearchableDropdown'
@@ -31,6 +32,7 @@ function ProgressForm({ onSubmit, isSubmitting }) {
     const isIllustrator = userRole === 'illustrator'
     const defaultList = isIllustrator ? DEFAULT_ILLUSTRATORS : DEFAULT_EDITORS
     const roleLabel = isIllustrator ? 'Illustrator' : 'Editor'
+    const holidays = useHolidays()
 
     // Get custom editors from localStorage
     const [customEditors, setCustomEditors] = useState(() => {
@@ -173,12 +175,12 @@ function ProgressForm({ onSubmit, isSubmitting }) {
                         <Calendar size={16} />
                         Date
                     </label>
-                    <DatePicker
-                        id="tanggal"
+                    <HolidayDatePicker
+                        holidays={holidays}
                         selected={formData.tanggal}
                         onChange={(date) => handleChange('tanggal', date)}
-                        dateFormat="yyyy-MM-dd"
                         className="input"
+                        placeholderText="Pilih tanggal"
                         required
                     />
                 </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import DatePicker from 'react-datepicker'
+import HolidayDatePicker from '../components/HolidayDatePicker'
 import 'react-datepicker/dist/react-datepicker.css'
-import { Calendar, CalendarRange, Send, FileText, Info, AlertCircle } from 'lucide-react'
+import { Calendar, CalendarRange, Send, FileText, Info, AlertCircle, User, Clock, Hash } from 'lucide-react'
 import { PageHeader } from '../components/layout'
 import Toast from '../components/Toast'
 import SearchableDropdown from '../components/SearchableDropdown'
@@ -25,6 +25,8 @@ const ALASAN_OPTIONS = [
 function LeaveFormPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [toast, setToast] = useState(null)
+    const [holidays, setHolidays] = useState({})
+
     const userName = localStorage.getItem('lastUsedEditor') || localStorage.getItem('userName') || ''
     const userRole = localStorage.getItem('userRole') || 'video_editor'
 
@@ -35,23 +37,106 @@ function LeaveFormPage() {
         notes: ''
     })
 
+    const handleDateChange = (field, value) => {
+        setFormData(prev => ({ ...prev, [field]: value }))
+    }
+
     const handleChange = (field, value) => {
         setFormData(prev => ({ ...prev, [field]: value }))
     }
 
-    // Auto-calculate duration (Days)
-    const durationDays = useMemo(() => {
-        if (!formData.startDate || !formData.endDate) return 0
+    // Fetch National Holidays
+    useEffect(() => {
+        const fetchHolidays = async () => {
+            const year = new Date().getFullYear()
+            try {
+                // Fetch this year and next year to safely cover December-January overlaps
+                const [res1, res2] = await Promise.all([
+                    fetch(`https://libur.deno.dev/api?year=${year}`),
+                    fetch(`https://libur.deno.dev/api?year=${year + 1}`)
+                ])
+                const d1 = await res1.json()
+                const d2 = await res2.json()
+
+                const holMap = {}
+                    ;[...d1, ...d2].forEach(h => {
+                        if (h.date) holMap[h.date] = h.name
+                    })
+                setHolidays(holMap)
+            } catch (e) {
+                console.error("Failed to fetch holidays", e)
+            }
+        }
+        fetchHolidays()
+    }, [])
+
+    // Timezone safe YYYY-MM-DD
+    const toLocalYYYYMMDD = (d) => {
+        const offset = new Date(d.getTime() - (d.getTimezoneOffset() * 60000))
+        return offset.toISOString().split('T')[0]
+    }
+
+    // Auto-calculate logic (Ignore Sundays & National Holidays)
+    const { durationDays, returnDateStr, ignoredDaysNames } = useMemo(() => {
+        if (!formData.startDate || !formData.endDate) return { durationDays: 0, returnDateStr: '', ignoredDaysNames: [] }
+
         const start = new Date(formData.startDate)
         start.setHours(0, 0, 0, 0)
         const end = new Date(formData.endDate)
         end.setHours(0, 0, 0, 0)
 
-        const diffTime = end.getTime() - start.getTime()
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+        if (end < start) {
+            return { durationDays: 0, returnDateStr: '-', ignoredDaysNames: [] }
+        }
 
-        return diffDays >= 0 ? diffDays + 1 : 0
-    }, [formData.startDate, formData.endDate])
+        let current = new Date(start)
+        let totalCount = 0
+        let ignoredLog = []
+
+        while (current <= end) {
+            const dayOfWeek = current.getDay() // 0 = Sunday
+            const dateStr = toLocalYYYYMMDD(current)
+
+            if (dayOfWeek === 0) {
+                // Ignore purely because it is Sunday (Weekend)
+                if (!ignoredLog.includes('Minggu (Hari Libur)')) ignoredLog.push('Minggu (Hari Libur)')
+            } else if (holidays[dateStr]) {
+                // Ignore because it's a National Holiday
+                const holName = holidays[dateStr]
+                if (!ignoredLog.includes(holName)) ignoredLog.push(holName)
+            } else {
+                totalCount++
+            }
+
+            current.setDate(current.getDate() + 1)
+        }
+
+        // Determine Return Date
+        let returnD = new Date(end)
+        returnD.setDate(returnD.getDate() + 1) // strictly day after end date
+
+        while (true) {
+            const rDateStr = toLocalYYYYMMDD(returnD)
+            if (returnD.getDay() === 0 || holidays[rDateStr]) {
+                // If return date is Sunday or Holiday, push exactly 1 more day recursively
+                returnD.setDate(returnD.getDate() + 1)
+            } else {
+                break
+            }
+        }
+
+        // Format strings properly for Bahasa Indonesia
+        const daysId = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
+        const monthsId = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des']
+
+        const finalReturnStr = `${daysId[returnD.getDay()]}, ${returnD.getDate()} ${monthsId[returnD.getMonth()]} ${returnD.getFullYear()}`
+
+        return {
+            durationDays: totalCount,
+            returnDateStr: finalReturnStr,
+            ignoredDaysNames: ignoredLog
+        }
+    }, [formData.startDate, formData.endDate, holidays])
 
     const resetForm = () => {
         setFormData({
@@ -137,8 +222,8 @@ function LeaveFormPage() {
                 description="Submit your leave request"
             />
 
-            <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--space-6)' }}>
-                <div className="progress-form-container" style={{ maxWidth: '800px', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <div className="progress-form-container" style={{ maxWidth: '900px', width: '100%' }}>
                     <div className="card">
                         {userName ? (
                             <div style={{ padding: '16px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -159,48 +244,65 @@ function LeaveFormPage() {
                         <form className="form" onSubmit={handleSubmit}>
                             <div className="form-grid">
 
-                                {/* Start Date Box */}
-                                <div className="form-group">
-                                    <label htmlFor="startDate">
-                                        <Calendar size={16} />
-                                        Tanggal Mulai
-                                    </label>
-                                    <DatePicker
-                                        id="startDate"
-                                        selected={formData.startDate}
-                                        onChange={(date) => handleChange('startDate', date)}
-                                        dateFormat="yyyy-MM-dd"
-                                        className="input"
-                                        required
-                                    />
-                                </div>
+                                {/* Unified Horizontal Date & Metrics Row */}
+                                <div className="form-group full-width" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-end', marginBottom: '16px' }}>
 
-                                {/* End Date Box */}
-                                <div className="form-group">
-                                    <label htmlFor="endDate">
-                                        <CalendarRange size={16} />
-                                        Tanggal Berakhir
-                                    </label>
-                                    <DatePicker
-                                        id="endDate"
-                                        selected={formData.endDate}
-                                        onChange={(date) => handleChange('endDate', date)}
-                                        dateFormat="yyyy-MM-dd"
-                                        minDate={formData.startDate}
-                                        className="input"
-                                        required
-                                    />
-                                </div>
+                                    {/* Start Date Box */}
+                                    <div style={{ flex: '1 1 180px' }}>
+                                        <label htmlFor="startDate" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '0.875rem', fontWeight: '500', color: '#475569' }}>
+                                            <Calendar size={16} color="var(--primary, #4f46e5)" />
+                                            Tanggal Mulai
+                                        </label>
+                                        <HolidayDatePicker
+                                            holidays={holidays}
+                                            selected={formData.startDate ? new Date(formData.startDate) : null}
+                                            onChange={(date) => handleDateChange('startDate', date)}
+                                            placeholderText="Pilih Tanggal Mulai"
+                                            className="input"
+                                        />
+                                    </div>
 
-                                {/* Auto-calculated duration UI display */}
-                                <div className="form-group full-width">
-                                    <div style={{ padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <span style={{ fontWeight: '500', color: '#475569' }}>Total Durasi:</span>
-                                        <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary)' }}>
-                                            {durationDays} Hari
-                                        </span>
+                                    {/* End Date Box */}
+                                    <div style={{ flex: '1 1 180px' }}>
+                                        <label htmlFor="endDate" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '0.875rem', fontWeight: '500', color: '#475569' }}>
+                                            <CalendarRange size={16} color="var(--primary, #4f46e5)" />
+                                            Tanggal Berakhir
+                                        </label>
+                                        <HolidayDatePicker
+                                            holidays={holidays}
+                                            selected={formData.endDate ? new Date(formData.endDate) : null}
+                                            onChange={(date) => handleDateChange('endDate', date)}
+                                            placeholderText="Pilih Tanggal Berakhir"
+                                            className="input"
+                                        />
+                                    </div>
+
+                                    {/* Metrics UI Box */}
+                                    <div style={{ flex: '2 1 360px', display: 'flex', alignItems: 'center', gap: '24px', padding: '0 20px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                                        <div style={{ padding: '8px 0' }}>
+                                            <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>Potong Cuti</div>
+                                            <div style={{ fontSize: '1rem', fontWeight: '800', color: 'var(--primary, #4f46e5)', lineHeight: '1' }}>{durationDays} Hari</div>
+                                        </div>
+                                        <div style={{ flex: 1, padding: '8px 0 8px 24px', borderLeft: '1px solid #cbd5e1', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                            <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>Kembali Bekerja</div>
+                                            <div style={{ fontSize: '0.9rem', fontWeight: '700', color: '#059669', display: 'flex', alignItems: 'center', gap: '4px', lineHeight: '1' }}>
+                                                <Calendar size={14} color="#059669" />
+                                                <span style={{ whiteSpace: 'nowrap' }}>{returnDateStr}</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
+
+                                {ignoredDaysNames.length > 0 && (
+                                    <div className="form-group full-width" style={{ marginTop: '-8px', marginBottom: '16px' }}>
+                                        <div style={{ fontSize: '0.8rem', color: '#b45309', display: 'flex', gap: '6px' }}>
+                                            <Info size={14} style={{ marginTop: '2px', flexShrink: 0 }} />
+                                            <span style={{ fontStyle: 'italic' }}>
+                                                <strong>Tidak dihitung cuti: </strong>{ignoredDaysNames.join(', ')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Alasan Dropdown */}
                                 <div className="form-group full-width">
