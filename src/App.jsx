@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion'
 import { Layout, ProtectedRoute } from './components/layout'
 import { PageWrapper } from './components/layout/PageWrapper'
 import { Dashboard, Wiki, Resources, Onboarding, ProgressFormPage, RoleSelection, LeaveFormPage, LeaveStatusPage, AdminPage } from './pages'
+import NotFoundPage from './pages/NotFoundPage'
 
 import './styles/variables.css'
 import './styles/components.css'
@@ -78,7 +79,7 @@ function AnimatedRoutes() {
                 </Route>
 
                 {/* Fallback */}
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<NotFoundPage />} />
             </Routes>
         </AnimatePresence>
     );
