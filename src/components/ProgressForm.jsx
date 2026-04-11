@@ -24,8 +24,8 @@ const CLIENT_LIST = [
     'Zheng'
 ]
 
-export const DEFAULT_EDITORS = ['Zayn', 'Dadan', 'Faqih']
-export const DEFAULT_ILLUSTRATORS = ['Vanda', 'Rosdiana', 'Dayah']
+export const DEFAULT_EDITORS = ['Zayn', 'Ari', 'Hendi']
+export const DEFAULT_ILLUSTRATORS = ['Rosdiana', 'Dayah', 'Manda', 'Luky', 'Mike', 'Dian', 'Beka', 'Derrick', 'Vanda', 'Bagas']
 
 function ProgressForm({ onSubmit, isSubmitting }) {
     const userRole = localStorage.getItem('userRole') || 'video_editor'

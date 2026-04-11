@@ -2,13 +2,14 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { AnimatePresence } from 'framer-motion'
 import { Layout, ProtectedRoute } from './components/layout'
 import { PageWrapper } from './components/layout/PageWrapper'
-import { Dashboard, Wiki, Resources, Onboarding, ProgressFormPage, RoleSelection, LeaveFormPage, LeaveStatusPage } from './pages'
+import { Dashboard, Wiki, Resources, Onboarding, ProgressFormPage, RoleSelection, LeaveFormPage, LeaveStatusPage, AdminPage } from './pages'
 
 import './styles/variables.css'
 import './styles/components.css'
 import './styles/layout.css'
 import './styles/wiki.css'
 import './styles/dashboard.css'
+import './styles/admin.css'
 import './styles/App.css'
 
 function AnimatedRoutes() {
@@ -23,6 +24,13 @@ function AnimatedRoutes() {
                         <RoleSelection />
                     </PageWrapper>
                 } />
+                <Route path="/admin" element={
+                    <PageWrapper>
+                        <Layout />
+                    </PageWrapper>
+                }>
+                    <Route index element={<AdminPage />} />
+                </Route>
 
                 {/* Protected Routes (All roles) */}
                 <Route element={<ProtectedRoute />}>
