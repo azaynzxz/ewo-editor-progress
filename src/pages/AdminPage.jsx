@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Shield, RefreshCw, BarChart3, Users, FileText, CalendarRange, CalendarDays } from 'lucide-react'
+import { Shield, RefreshCw, BarChart3, Users, FileText, CalendarRange, CalendarDays, LogOut } from 'lucide-react'
 import OverviewStats from '../components/admin/OverviewStats'
 import AttendancePanel from '../components/admin/AttendancePanel'
 import ProgressLog from '../components/admin/ProgressLog'
 import LeaveManager from '../components/admin/LeaveManager'
 import SchedulePanel from '../components/admin/SchedulePanel'
+import AdminAuthGate from '../components/admin/AdminAuthGate'
 
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
 
@@ -21,10 +22,11 @@ function todayStr() {
 }
 
 function AdminPage() {
+    const [isAuthed, setIsAuthed] = useState(() => sessionStorage.getItem('adminAuth') === 'true')
     const [activeTab, setActiveTab] = useState('overview')
     const [refreshing, setRefreshing] = useState(false)
 
-    // Data states
+    // Data states — all hooks MUST be above any early return
     const [overviewData, setOverviewData] = useState(null)
     const [overviewLoading, setOverviewLoading] = useState(true)
 
@@ -43,6 +45,8 @@ function AdminPage() {
 
     const [schedule, setSchedule] = useState([])
     const [scheduleLoading, setScheduleLoading] = useState(false)
+
+    const [initialLoaded, setInitialLoaded] = useState(false)
 
     // Fetch helpers
     const fetchOverview = useCallback(async () => {
@@ -112,9 +116,6 @@ function AdminPage() {
         setScheduleLoading(false)
     }, [])
 
-    // Fetch all data ONCE on mount — subsequent tab switches use cached data
-    const [initialLoaded, setInitialLoaded] = useState(false)
-
     const fetchAll = useCallback(async () => {
         setRefreshing(true)
         await Promise.all([
@@ -128,12 +129,23 @@ function AdminPage() {
         setTimeout(() => setRefreshing(false), 300)
     }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-    useEffect(() => { fetchAll() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    // Fetch data when authenticated
+    useEffect(() => { if (isAuthed) fetchAll() }, [isAuthed]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Re-fetch only when filters change (server-side filtering)
+    // Re-fetch only when filters change
     useEffect(() => { if (initialLoaded) fetchAttendance(attendanceDate) }, [attendanceDate]) // eslint-disable-line
     useEffect(() => { if (initialLoaded) fetchProgress(progressFilters) }, [progressFilters]) // eslint-disable-line
     useEffect(() => { if (initialLoaded) fetchLeaves(leaveStatusFilter) }, [leaveStatusFilter]) // eslint-disable-line
+
+    // Auth gate — show PIN screen if not authenticated
+    if (!isAuthed) {
+        return <AdminAuthGate onSuccess={() => setIsAuthed(true)} />
+    }
+
+    const handleLogout = () => {
+        sessionStorage.removeItem('adminAuth')
+        setIsAuthed(false)
+    }
 
     // Refresh = re-fetch everything
     const handleRefresh = async () => {
@@ -179,6 +191,14 @@ function AdminPage() {
                         >
                             <RefreshCw size={16} />
                             {refreshing ? 'Refreshing…' : 'Refresh'}
+                        </button>
+                        <button
+                            className="admin-refresh-btn"
+                            onClick={handleLogout}
+                            style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}
+                        >
+                            <LogOut size={16} />
+                            Logout
                         </button>
                     </div>
                 </div>
