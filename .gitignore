@@ -9,6 +9,10 @@ dist-ssr
 # Apps Script (private)
 appscript/
 
+# Local databases and knowledge docs
+databases/
+knowledge/
+
 # SOP and Brief documents (external files in root)
 /*.pdf
 /*.docx
