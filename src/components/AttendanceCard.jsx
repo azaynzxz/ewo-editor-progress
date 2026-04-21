@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardBody } from './ui';
-import { Clock, LogIn, LogOut, CheckCircle2, X, ClipboardList, Users, StickyNote } from 'lucide-react';
+import { Clock, LogIn, LogOut, CheckCircle2, X, ClipboardList, Users, StickyNote, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import MultiSelectDropdown from './MultiSelectDropdown';
 import SearchableDropdown from './SearchableDropdown';
@@ -23,9 +23,10 @@ function AttendanceCard() {
     const [statusMessage, setStatusMessage] = useState('');
     const [showTodoModal, setShowTodoModal] = useState(false);
 
-    // New states for form
-    const [selectedClients, setSelectedClients] = useState([]);
-    const [clientData, setClientData] = useState({});
+    // Entry-based model: array of { id, client, title, notes }
+    const [entries, setEntries] = useState([]);
+    // Derived unique client names for the multi-select display
+    const selectedClients = [...new Set(entries.map(e => e.client))];
     const [additionalNotes, setAdditionalNotes] = useState('');
     const [showClockOutWarning, setShowClockOutWarning] = useState(false);
 
@@ -189,7 +190,6 @@ function AttendanceCard() {
     };
 
     const handleClientsChange = (newSelectedClients) => {
-        setSelectedClients(newSelectedClients);
         // Add new clients to custom list if they don't exist
         newSelectedClients.forEach(client => {
             if (!clientList.includes(client)) {
@@ -199,53 +199,47 @@ function AttendanceCard() {
             }
         });
 
-        setClientData(prev => {
-            const updated = { ...prev };
+        // Sync entries: keep existing, remove deselected, add new
+        setEntries(prev => {
+            const kept = prev.filter(e => newSelectedClients.includes(e.client));
+            const existingClients = new Set(kept.map(e => e.client));
             newSelectedClients.forEach(client => {
-                if (!updated[client]) {
-                    updated[client] = { title: '', notes: '' };
+                if (!existingClients.has(client)) {
+                    kept.push({ id: Date.now() + Math.random(), client, title: '', notes: '' });
                 }
             });
-            Object.keys(updated).forEach(key => {
-                if (!newSelectedClients.includes(key)) {
-                    delete updated[key];
-                }
-            });
+            return kept;
+        });
+    };
+
+    const handleEntryChange = (entryId, field, value) => {
+        setEntries(prev => prev.map(e => e.id === entryId ? { ...e, [field]: value } : e));
+    };
+
+    const duplicateEntry = (entryId) => {
+        setEntries(prev => {
+            const idx = prev.findIndex(e => e.id === entryId);
+            if (idx === -1) return prev;
+            const source = prev[idx];
+            const updated = [...prev];
+            updated.splice(idx + 1, 0, { id: Date.now() + Math.random(), client: source.client, title: '', notes: '' });
             return updated;
         });
     };
 
-    const handleClientDataChange = (clientName, field, value) => {
-        setClientData(prev => ({
-            ...prev,
-            [clientName]: {
-                ...prev[clientName],
-                [field]: value
-            }
-        }));
-    };
-
-    const removeClient = (clientName) => {
-        setSelectedClients(prev => prev.filter(c => c !== clientName));
-        setClientData(prev => {
-            const updated = { ...prev };
-            delete updated[clientName];
-            return updated;
-        });
+    const removeEntry = (entryId) => {
+        setEntries(prev => prev.filter(e => e.id !== entryId));
     };
 
     const handleDeleteClient = (name) => {
         const newCustomClients = customClients.filter(c => c !== name);
         setCustomClients(newCustomClients);
         localStorage.setItem('customClients', JSON.stringify(newCustomClients));
-        if (selectedClients.includes(name)) {
-            handleClientsChange(selectedClients.filter(c => c !== name));
-        }
+        setEntries(prev => prev.filter(e => e.client !== name));
     };
 
     const openTodoModal = () => {
-        setSelectedClients([]);
-        setClientData({});
+        setEntries([]);
         setAdditionalNotes('');
         setShowTodoModal(true);
     };
@@ -266,10 +260,10 @@ function AttendanceCard() {
         }
 
         let generatedTodo = "I Will do:\n";
-        selectedClients.forEach((client, idx) => {
-            const title = clientData[client]?.title || '';
-            const notes = clientData[client]?.notes || '';
-            generatedTodo += `${idx + 1}. ${client}, ${title}, ${notes}\n`;
+        entries.forEach((entry, idx) => {
+            const title = entry.title || '';
+            const notes = entry.notes || '';
+            generatedTodo += `${idx + 1}. ${entry.client}, ${title}, ${notes}\n`;
         });
         if (additionalNotes.trim()) {
             generatedTodo += `\nadditional notes: ${additionalNotes}`;
@@ -677,17 +671,29 @@ function AttendanceCard() {
                                 />
                             </div>
 
-                            {selectedClients.length > 0 && (
+                            {entries.length > 0 && (
                                 <div style={{ background: 'var(--gray-50)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-4)' }}>
-                                    {selectedClients.map(client => (
-                                        <div key={client} style={{ marginBottom: 'var(--space-3)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--gray-200)' }}>
-                                            <div style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--gray-700)', marginBottom: 'var(--space-2)' }}>{client}</div>
+                                    {entries.map(entry => (
+                                        <div key={entry.id} style={{ marginBottom: 'var(--space-3)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--gray-200)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-2)' }}>
+                                                <span style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--gray-700)' }}>{entry.client}</span>
+                                                <div style={{ display: 'flex', gap: 4 }}>
+                                                    <button type="button" onClick={() => duplicateEntry(entry.id)} title="Duplicate" style={{
+                                                        background: 'none', border: '1px solid var(--gray-300)', borderRadius: '4px',
+                                                        padding: '3px', cursor: 'pointer', color: 'var(--blue-500)', display: 'flex'
+                                                    }}><Copy size={12} /></button>
+                                                    <button type="button" onClick={() => removeEntry(entry.id)} style={{
+                                                        background: 'none', border: 'none', padding: '3px', cursor: 'pointer',
+                                                        color: 'var(--gray-400)', display: 'flex'
+                                                    }}><X size={12} /></button>
+                                                </div>
+                                            </div>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-2)' }}>
                                                 <div style={{ minWidth: 0, position: 'relative' }}>
                                                     <SearchableDropdown
-                                                        value={clientData[client]?.title || ''}
-                                                        onChange={(val) => handleClientDataChange(client, 'title', val)}
-                                                        options={getTitlesForClient(client)}
+                                                        value={entry.title}
+                                                        onChange={(val) => handleEntryChange(entry.id, 'title', val)}
+                                                        options={getTitlesForClient(entry.client)}
                                                         placeholder="Select Title..."
                                                         allowCustom={true}
                                                     />
@@ -695,8 +701,8 @@ function AttendanceCard() {
                                                 <input
                                                     type="text"
                                                     placeholder="Notes"
-                                                    value={clientData[client]?.notes || ''}
-                                                    onChange={(e) => handleClientDataChange(client, 'notes', e.target.value)}
+                                                    value={entry.notes}
+                                                    onChange={(e) => handleEntryChange(entry.id, 'notes', e.target.value)}
                                                     style={{ padding: 'var(--space-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-300)', width: '100%', boxSizing: 'border-box' }}
                                                 />
                                             </div>
@@ -730,12 +736,12 @@ function AttendanceCard() {
                             <button
                                 className="btn"
                                 onClick={handleClockIn}
-                                disabled={(selectedClients.length === 0 && !additionalNotes.trim()) || isSubmitting}
+                                disabled={(entries.length === 0 && !additionalNotes.trim()) || isSubmitting}
                                 style={{
                                     background: isLate() ? 'var(--orange-500)' : 'var(--primary-500)',
                                     color: 'white',
                                     border: 'none',
-                                    opacity: ((selectedClients.length === 0 && !additionalNotes.trim()) || isSubmitting) ? 0.6 : 1
+                                    opacity: ((entries.length === 0 && !additionalNotes.trim()) || isSubmitting) ? 0.6 : 1
                                 }}
                             >
                                 {isSubmitting ? (

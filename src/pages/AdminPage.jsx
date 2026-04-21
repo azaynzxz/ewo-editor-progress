@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Shield, RefreshCw, BarChart3, Users, FileText, CalendarRange, CalendarDays, LogOut } from 'lucide-react'
+import { Shield, RefreshCw, BarChart3, Users, FileText, CalendarRange, FolderKanban, LogOut } from 'lucide-react'
 import OverviewStats from '../components/admin/OverviewStats'
 import AttendancePanel from '../components/admin/AttendancePanel'
 import ProgressLog from '../components/admin/ProgressLog'
 import LeaveManager from '../components/admin/LeaveManager'
-import SchedulePanel from '../components/admin/SchedulePanel'
+import ProjectManager from '../components/admin/ProjectManager'
 import AdminAuthGate from '../components/admin/AdminAuthGate'
 
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
@@ -13,7 +13,7 @@ const TABS = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'attendance', label: 'Attendance', icon: Users },
     { id: 'progress', label: 'Progress', icon: FileText },
-    { id: 'schedule', label: 'Schedule', icon: CalendarDays },
+    { id: 'projects', label: 'Projects', icon: FolderKanban },
     { id: 'leaves', label: 'Leaves', icon: CalendarRange },
 ]
 
@@ -43,8 +43,11 @@ function AdminPage() {
     const [leaveStatusFilter, setLeaveStatusFilter] = useState('')
     const [leaveActionLoading, setLeaveActionLoading] = useState(false)
 
-    const [schedule, setSchedule] = useState([])
-    const [scheduleLoading, setScheduleLoading] = useState(false)
+    const [projects, setProjects] = useState([])
+    const [projectsLoading, setProjectsLoading] = useState(false)
+    const [projectMonth, setProjectMonth] = useState('')
+    const [availableSheets, setAvailableSheets] = useState([])
+    const [syncState, setSyncState] = useState({ status: 'idle' })
 
     const [initialLoaded, setInitialLoaded] = useState(false)
 
@@ -104,16 +107,22 @@ function AdminPage() {
         setLeavesLoading(false)
     }, [])
 
-    const fetchSchedule = useCallback(async () => {
-        setScheduleLoading(true)
+    const fetchProjects = useCallback(async (month) => {
+        setProjectsLoading(true)
         try {
-            const res = await fetch(`${APPS_SCRIPT_URL}?action=getAdminSchedule`)
+            const params = new URLSearchParams({ action: 'getAdminProjects' })
+            if (month) params.set('month', month)
+            const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`)
             const json = await res.json()
-            if (json.success) setSchedule(json.data.schedule || [])
+            if (json.success) {
+                setProjects(json.data.projects || [])
+                if (json.data.sheetName) setProjectMonth(json.data.sheetName)
+                if (json.data.availableSheets) setAvailableSheets(json.data.availableSheets)
+            }
         } catch (err) {
-            console.error('Failed to fetch schedule:', err)
+            console.error('Failed to fetch projects:', err)
         }
-        setScheduleLoading(false)
+        setProjectsLoading(false)
     }, [])
 
     const fetchAll = useCallback(async () => {
@@ -123,7 +132,7 @@ function AdminPage() {
             fetchAttendance(attendanceDate),
             fetchProgress(progressFilters),
             fetchLeaves(leaveStatusFilter),
-            fetchSchedule(),
+            fetchProjects(projectMonth),
         ])
         setInitialLoaded(true)
         setTimeout(() => setRefreshing(false), 300)
@@ -150,6 +159,85 @@ function AdminPage() {
     // Refresh = re-fetch everything
     const handleRefresh = async () => {
         await fetchAll()
+    }
+
+    // ===== PROJECT CRUD (optimistic) =====
+    const showSync = (status, message, retryFn) => {
+        setSyncState({ status, message, retry: retryFn })
+        if (status === 'saved') setTimeout(() => setSyncState({ status: 'idle' }), 3000)
+    }
+
+    const handleAddProject = async (data) => {
+        // Optimistic: add temp row
+        const tempRow = { ...data, rowIndex: 'temp-' + Date.now(), no: '…', progress: '', projectStatus: '', paymentStatus: '' }
+        setProjects(prev => [...prev, tempRow])
+        showSync('saving')
+        try {
+            const res = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'createProject', month: projectMonth, ...data })
+            })
+            const json = await res.json()
+            if (json.success) {
+                showSync('saved')
+                fetchProjects(projectMonth) // re-fetch to get real row index
+            } else {
+                setProjects(prev => prev.filter(p => p.rowIndex !== tempRow.rowIndex))
+                showSync('error', json.data?.message || 'Create failed', () => handleAddProject(data))
+            }
+        } catch (err) {
+            setProjects(prev => prev.filter(p => p.rowIndex !== tempRow.rowIndex))
+            showSync('error', 'Network error', () => handleAddProject(data))
+        }
+    }
+
+    const handleUpdateProject = async (rowIndex, fields) => {
+        // Optimistic: update local state
+        const prev = projects.map(p => p.rowIndex === rowIndex ? { ...p, ...fields } : p)
+        const oldProjects = [...projects]
+        setProjects(prev)
+        showSync('saving')
+        try {
+            const res = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'updateProject', month: projectMonth, rowIndex, fields })
+            })
+            const json = await res.json()
+            if (json.success) {
+                showSync('saved')
+            } else {
+                setProjects(oldProjects)
+                showSync('error', json.data?.message || 'Update failed', () => handleUpdateProject(rowIndex, fields))
+            }
+        } catch (err) {
+            setProjects(oldProjects)
+            showSync('error', 'Network error', () => handleUpdateProject(rowIndex, fields))
+        }
+    }
+
+    const handleDeleteProject = async (rowIndex) => {
+        const oldProjects = [...projects]
+        setProjects(prev => prev.filter(p => p.rowIndex !== rowIndex))
+        showSync('saving')
+        try {
+            const res = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'deleteProject', month: projectMonth, rowIndex })
+            })
+            const json = await res.json()
+            if (json.success) {
+                showSync('saved')
+            } else {
+                setProjects(oldProjects)
+                showSync('error', json.data?.message || 'Delete failed', () => handleDeleteProject(rowIndex))
+            }
+        } catch (err) {
+            setProjects(oldProjects)
+            showSync('error', 'Network error', () => handleDeleteProject(rowIndex))
+        }
     }
 
     // Leave status action
@@ -261,10 +349,17 @@ function AdminPage() {
                     actionLoading={leaveActionLoading}
                 />
             )}
-            {activeTab === 'schedule' && (
-                <SchedulePanel
-                    schedule={schedule}
-                    loading={scheduleLoading}
+            {activeTab === 'projects' && (
+                <ProjectManager
+                    projects={projects}
+                    loading={projectsLoading}
+                    availableSheets={availableSheets}
+                    currentSheet={projectMonth}
+                    onMonthChange={m => { setProjectMonth(m); fetchProjects(m) }}
+                    onAdd={handleAddProject}
+                    onUpdate={handleUpdateProject}
+                    onDelete={handleDeleteProject}
+                    syncState={syncState}
                 />
             )}
         </div>

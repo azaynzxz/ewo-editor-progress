@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { AnimatePresence } from 'framer-motion'
 import { Layout, ProtectedRoute } from './components/layout'
 import { PageWrapper } from './components/layout/PageWrapper'
-import { Dashboard, Wiki, Resources, Onboarding, ProgressFormPage, RoleSelection, LeaveFormPage, LeaveStatusPage, AdminPage } from './pages'
+import { Dashboard, Wiki, Resources, Onboarding, ProgressFormPage, RoleSelection, LeaveFormPage, LeaveStatusPage, AdminPage, YourSchedule } from './pages'
 import NotFoundPage from './pages/NotFoundPage'
 
 import './styles/variables.css'
@@ -54,6 +54,11 @@ function AnimatedRoutes() {
                         <Route path="/leave-status" element={
                             <PageWrapper>
                                 <LeaveStatusPage />
+                            </PageWrapper>
+                        } />
+                        <Route path="/schedule" element={
+                            <PageWrapper>
+                                <YourSchedule />
                             </PageWrapper>
                         } />
 

@@ -666,10 +666,10 @@ select.input {
   font-weight: 600;
 }
 
-/* Single-row per client: Name | Title | Scenes | X */
+/* Single-row per client: Name | Title | Scenes | Dup | X */
 .client-row {
   display: grid;
-  grid-template-columns: 70px 1fr 65px 24px;
+  grid-template-columns: 70px 1fr 65px auto 24px;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
@@ -725,6 +725,28 @@ select.input {
   text-align: center;
 }
 
+.client-row-dup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: white;
+  border: 1px solid var(--gray-300);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.688rem;
+  font-weight: 600;
+  color: var(--blue-500);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.client-row-dup:hover {
+  background: var(--blue-50);
+  border-color: var(--blue-300);
+  color: var(--blue-600);
+}
+
 .client-row-remove {
   background: none;
   border: none;
@@ -776,7 +798,7 @@ select.input {
 
 .upcoming-header {
   display: grid;
-  grid-template-columns: 1fr 70px 86px 24px;
+  grid-template-columns: 1fr 70px 110px 40px 86px 24px;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   background: white;
@@ -786,11 +808,16 @@ select.input {
   color: var(--gray-500);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  align-items: center;
+}
+
+.upcoming-header-compact {
+  grid-template-columns: 1fr 70px 86px 24px;
 }
 
 .upcoming-row {
   display: grid;
-  grid-template-columns: 1fr 70px 86px 24px;
+  grid-template-columns: 1fr 70px 110px 40px 86px 24px;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--gray-100);
@@ -798,6 +825,10 @@ select.input {
   cursor: pointer;
   transition: all 0.15s ease;
   align-items: center;
+}
+
+.upcoming-row-compact {
+  grid-template-columns: 1fr 70px 86px 24px;
 }
 
 .upcoming-row:last-child {

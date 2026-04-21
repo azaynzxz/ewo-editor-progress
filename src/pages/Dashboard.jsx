@@ -127,37 +127,37 @@ function Dashboard() {
                 ))}
             </div>
 
-            {/* Quick Access + Upcoming Deadlines */}
+            {/* Quick Access Top Row */}
             <div className="section-title">
                 <Zap size={20} className="text-primary-500" />
                 Quick Access
             </div>
 
-            <div className="dashboard-quick-section">
-                <div className="grid grid-2 dashboard-quick-cards">
-                    {filteredQuickAccess.map((item) => (
-                        <Link
-                            key={item.path}
-                            to={item.path}
-                            style={{ textDecoration: 'none' }}
-                        >
-                            <Card hoverable className="quick-access-card">
-                                <CardBody>
-                                    <div className="quick-access-header">
-                                        <div className={`quick-access-icon ${item.bgClass}`}>
-                                            <item.icon size={20} />
-                                        </div>
-                                        <ArrowRight size={20} style={{ color: 'var(--gray-300)' }} />
+            <div className="dashboard-quick-row">
+                {filteredQuickAccess.map((item) => (
+                    <Link
+                        key={item.path}
+                        to={item.path}
+                        style={{ textDecoration: 'none' }}
+                    >
+                        <Card hoverable className="quick-access-card">
+                            <CardBody>
+                                <div className="quick-access-header">
+                                    <div className={`quick-access-icon ${item.bgClass}`}>
+                                        <item.icon size={20} />
                                     </div>
-                                    <h3 className="quick-access-title">{item.title}</h3>
-                                    <p className="quick-access-desc">{item.description}</p>
-                                </CardBody>
-                            </Card>
-                        </Link>
-                    ))}
-                </div>
-                <UpcomingDeadlines />
+                                    <ArrowRight size={20} style={{ color: 'var(--gray-300)' }} />
+                                </div>
+                                <h3 className="quick-access-title">{item.title}</h3>
+                                <p className="quick-access-desc">{item.description}</p>
+                            </CardBody>
+                        </Card>
+                    </Link>
+                ))}
             </div>
+
+            {/* Upcoming Deadlines Full-Width */}
+            <UpcomingDeadlines />
 
             {/* Existing Modal logic */}
             <Modal

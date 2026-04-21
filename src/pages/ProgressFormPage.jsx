@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
-import { Calendar, Upload, Send, X, Users, Hash, Tag } from 'lucide-react'
+import { Calendar, Upload, Send, X, Users, Hash, Tag, Copy } from 'lucide-react'
 import { PageHeader } from '../components/layout'
 import SearchableDropdown from '../components/SearchableDropdown'
 import MultiSelectDropdown from '../components/MultiSelectDropdown'
@@ -73,10 +73,12 @@ function ProgressFormPage() {
     const editorList = [...defaultList, ...customEditors]
     const clientList = [...DEFAULT_CLIENTS, ...customClients]
 
-    // Multi-client state: array of selected client names
-    const [selectedClients, setSelectedClients] = useState([])
-    // Per-client data: { clientName: { scenes: '', title: '' } }
-    const [clientData, setClientData] = useState({})
+    // Entry-based model: array of { id, client, title, scenes }
+    let entryIdCounter = 0
+    const makeEntryId = () => ++entryIdCounter
+    const [entries, setEntries] = useState([])
+    // Derived unique client names for the multi-select display
+    const selectedClients = [...new Set(entries.map(e => e.client))]
 
     const [formData, setFormData] = useState({
         tanggal: new Date(),
@@ -87,7 +89,6 @@ function ProgressFormPage() {
     // Multi-screenshot state: array of { file, preview, label }
     const [screenshots, setScreenshots] = useState([])
     const [sceneToast, setSceneToast] = useState(null)
-    const [activeClientForTitle, setActiveClientForTitle] = useState(null)
 
     // Cache upcoming deadlines for autocomplete
     const [upcomingTitles, setUpcomingTitles] = useState([])
@@ -122,8 +123,6 @@ function ProgressFormPage() {
     }
 
     const handleClientsChange = (newSelectedClients) => {
-        setSelectedClients(newSelectedClients)
-
         // Add new clients to custom list if they don't exist
         newSelectedClients.forEach(client => {
             if (!clientList.includes(client)) {
@@ -133,21 +132,19 @@ function ProgressFormPage() {
             }
         })
 
-        // Initialize clientData for newly added clients
-        setClientData(prev => {
-            const updated = { ...prev }
+        // Sync entries: add new clients, remove deselected ones
+        setEntries(prev => {
+            const existing = [...prev]
+            // Remove entries for clients no longer selected
+            const kept = existing.filter(e => newSelectedClients.includes(e.client))
+            // Add new entries for newly selected clients
+            const existingClients = new Set(kept.map(e => e.client))
             newSelectedClients.forEach(client => {
-                if (!updated[client]) {
-                    updated[client] = { scenes: '', title: '' }
+                if (!existingClients.has(client)) {
+                    kept.push({ id: Date.now() + Math.random(), client, title: '', scenes: '' })
                 }
             })
-            // Clean up removed clients
-            Object.keys(updated).forEach(key => {
-                if (!newSelectedClients.includes(key)) {
-                    delete updated[key]
-                }
-            })
-            return updated
+            return kept
         })
     }
 
@@ -155,10 +152,8 @@ function ProgressFormPage() {
         const newCustomClients = customClients.filter(c => c !== name)
         setCustomClients(newCustomClients)
         localStorage.setItem('customClients', JSON.stringify(newCustomClients))
-        // Also remove from selected if it was selected
-        if (selectedClients.includes(name)) {
-            handleClientsChange(selectedClients.filter(c => c !== name))
-        }
+        // Also remove entries for this client
+        setEntries(prev => prev.filter(e => e.client !== name))
     }
 
     const handleDeleteEditor = (name) => {
@@ -168,19 +163,14 @@ function ProgressFormPage() {
         if (formData.editor === name) handleChange('editor', '')
     }
 
-    const handleClientDataChange = (clientName, field, value) => {
-        setClientData(prev => ({
-            ...prev,
-            [clientName]: {
-                ...prev[clientName],
-                [field]: value
-            }
-        }))
+    const handleEntryChange = (entryId, field, value) => {
+        setEntries(prev => prev.map(e => e.id === entryId ? { ...e, [field]: value } : e))
 
-        // Show scene toast for fun messages
+        // Show scene toast
         if (field === 'scenes') {
-            const totalScenes = getTotalScenes({ ...clientData, [clientName]: { ...clientData[clientName], [field]: value } })
-            const message = getSceneMessage(totalScenes)
+            const updatedEntries = entries.map(e => e.id === entryId ? { ...e, scenes: value } : e)
+            const total = updatedEntries.reduce((sum, e) => sum + evaluateExpression(e.scenes), 0)
+            const message = getSceneMessage(total)
             if (message) {
                 setSceneToast(message)
                 setTimeout(() => setSceneToast(null), 2500)
@@ -188,13 +178,20 @@ function ProgressFormPage() {
         }
     }
 
-    const removeClient = (clientName) => {
-        setSelectedClients(prev => prev.filter(c => c !== clientName))
-        setClientData(prev => {
-            const updated = { ...prev }
-            delete updated[clientName]
+    const duplicateEntry = (entryId) => {
+        setEntries(prev => {
+            const idx = prev.findIndex(e => e.id === entryId)
+            if (idx === -1) return prev
+            const source = prev[idx]
+            const newEntry = { id: Date.now() + Math.random(), client: source.client, title: '', scenes: '' }
+            const updated = [...prev]
+            updated.splice(idx + 1, 0, newEntry)
             return updated
         })
+    }
+
+    const removeEntry = (entryId) => {
+        setEntries(prev => prev.filter(e => e.id !== entryId))
     }
 
     const getSceneMessage = (count) => {
@@ -223,27 +220,25 @@ function ProgressFormPage() {
         }
     }
 
-    // Calculate total scenes across all clients
-    const getTotalScenes = (data = clientData) => {
-        return Object.values(data).reduce((sum, d) => {
-            return sum + evaluateExpression(d.scenes)
-        }, 0)
+    // Calculate total scenes across all entries
+    const getTotalScenes = () => {
+        return entries.reduce((sum, e) => sum + evaluateExpression(e.scenes), 0)
     }
 
-    // Encode client string: "Alex (25), Ryan (25)"
+    // Encode client string: "Ryan (25), Ryan (30)" → combines same clients
     const encodeClientString = () => {
-        return selectedClients
-            .map(client => {
-                const scenes = evaluateExpression(clientData[client]?.scenes) || 0
-                return `${client} (${scenes})`
+        return entries
+            .map(e => {
+                const scenes = evaluateExpression(e.scenes) || 0
+                return `${e.client} (${scenes})`
             })
             .join(', ')
     }
 
     // Encode title string: "Title 1, Title 2"
     const encodeTitleString = () => {
-        return selectedClients
-            .map(client => clientData[client]?.title || '')
+        return entries
+            .map(e => e.title || '')
             .filter(title => title.trim() !== '')
             .join(', ')
     }
@@ -293,8 +288,7 @@ function ProgressFormPage() {
             editor: '',
             comment: ''
         })
-        setSelectedClients([])
-        setClientData({})
+        setEntries([])
         setScreenshots([])
     }
 
@@ -525,8 +519,8 @@ function ProgressFormPage() {
                                     />
                                 </div>
 
-                                {/* Per-Client Inputs */}
-                                {selectedClients.length > 0 && (
+                                {/* Per-Entry Inputs */}
+                                {entries.length > 0 && (
                                     <div className="form-group full-width">
                                         <div className="client-entries">
                                             <div className="client-entries-header">
@@ -540,14 +534,14 @@ function ProgressFormPage() {
                                                     </span>
                                                 )}
                                             </div>
-                                            {selectedClients.map((client) => (
-                                                <div key={client} className="client-row">
-                                                    <span className="client-name-tag">{client}</span>
+                                            {entries.map((entry) => (
+                                                <div key={entry.id} className="client-row">
+                                                    <span className="client-name-tag">{entry.client}</span>
                                                     <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
                                                         <SearchableDropdown
-                                                            value={clientData[client]?.title || ''}
-                                                            onChange={(val) => handleClientDataChange(client, 'title', val)}
-                                                            options={getTitlesForClient(client)}
+                                                            value={entry.title}
+                                                            onChange={(val) => handleEntryChange(entry.id, 'title', val)}
+                                                            options={getTitlesForClient(entry.client)}
                                                             placeholder="Select Title..."
                                                             allowCustom={true}
                                                         />
@@ -555,16 +549,24 @@ function ProgressFormPage() {
                                                     <input
                                                         type="text"
                                                         className="input client-input client-scenes-input"
-                                                        value={clientData[client]?.scenes || ''}
-                                                        onChange={(e) => handleClientDataChange(client, 'scenes', e.target.value)}
+                                                        value={entry.scenes}
+                                                        onChange={(e) => handleEntryChange(entry.id, 'scenes', e.target.value)}
                                                         placeholder="0"
                                                         required
                                                     />
                                                     <button
                                                         type="button"
+                                                        className="client-row-dup"
+                                                        onClick={() => duplicateEntry(entry.id)}
+                                                        title="Duplicate this row"
+                                                    >
+                                                        <Copy size={13} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
                                                         className="client-row-remove"
-                                                        onClick={() => removeClient(client)}
-                                                        aria-label={`Remove ${client}`}
+                                                        onClick={() => removeEntry(entry.id)}
+                                                        aria-label="Remove entry"
                                                     >
                                                         <X size={14} />
                                                     </button>
@@ -651,8 +653,8 @@ function ProgressFormPage() {
                             <button
                                 type="submit"
                                 className="submit-btn"
-                                disabled={isSubmitting || !formData.editor || selectedClients.length === 0 || screenshots.some(s => !s.label.trim()) || selectedClients.some(c => !clientData[c]?.scenes?.trim())}
-                                title={screenshots.some(s => !s.label.trim()) ? 'Berikan label pada Screenshoot' : (selectedClients.some(c => !clientData[c]?.scenes?.trim()) ? 'Jumlah scene harus diisi untuk semua klien' : '')}
+                                disabled={isSubmitting || !formData.editor || entries.length === 0 || screenshots.some(s => !s.label.trim()) || entries.some(e => !e.scenes?.trim())}
+                                title={screenshots.some(s => !s.label.trim()) ? 'Berikan label pada Screenshoot' : (entries.some(e => !e.scenes?.trim()) ? 'Jumlah scene harus diisi untuk semua klien' : '')}
                             >
                                 {isSubmitting ? (
                                     <>
@@ -670,7 +672,7 @@ function ProgressFormPage() {
                     </div>
                 </div>
 
-                <UpcomingDeadlines />
+                <UpcomingDeadlines compact />
             </div>
         </>
     )

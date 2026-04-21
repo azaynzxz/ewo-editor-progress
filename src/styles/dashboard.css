@@ -105,21 +105,22 @@
     font-weight: 500;
 }
 
-/* Quick Access + Deadlines Layout */
-.dashboard-quick-section {
+/* Quick Access Row */
+.dashboard-quick-row {
     display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: var(--space-5);
-    align-items: stretch;
-}
-
-.dashboard-quick-cards {
-    min-width: 0;
-    grid-template-rows: 1fr 1fr;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
 }
 
 @media (max-width: 900px) {
-    .dashboard-quick-section {
+    .dashboard-quick-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-quick-row {
         grid-template-columns: 1fr;
     }
 }
