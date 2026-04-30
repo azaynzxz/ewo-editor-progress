@@ -8,7 +8,8 @@ import {
     ExternalLink,
     CalendarRange,
     CalendarDays,
-    ClipboardList
+    ClipboardList,
+    GraduationCap
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -20,6 +21,12 @@ const NAV_ITEMS = [
             { path: '/schedule', icon: CalendarDays, label: 'Your Schedule' },
             { path: '/leave', icon: CalendarRange, label: 'Pengajuan Cuti' },
             { path: '/leave-status', icon: ClipboardList, label: 'Status Cuti' },
+        ]
+    },
+    {
+        section: 'Learning',
+        items: [
+            { path: '/learn', icon: GraduationCap, label: 'Learn' },
         ]
     },
     {

@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { AnimatePresence } from 'framer-motion'
 import { Layout, ProtectedRoute } from './components/layout'
 import { PageWrapper } from './components/layout/PageWrapper'
-import { Dashboard, Wiki, Resources, Onboarding, ProgressFormPage, RoleSelection, LeaveFormPage, LeaveStatusPage, AdminPage, YourSchedule } from './pages'
+import { Dashboard, Wiki, Resources, Onboarding, ProgressFormPage, RoleSelection, LeaveFormPage, LeaveStatusPage, AdminPage, YourSchedule, Learn } from './pages'
 import NotFoundPage from './pages/NotFoundPage'
 
 import './styles/variables.css'
@@ -11,6 +11,7 @@ import './styles/layout.css'
 import './styles/wiki.css'
 import './styles/dashboard.css'
 import './styles/admin.css'
+import './styles/learn.css'
 import './styles/App.css'
 
 function AnimatedRoutes() {
@@ -81,6 +82,23 @@ function AnimatedRoutes() {
                                 </PageWrapper>
                             } />
                         </Route>
+
+                        {/* Learn — available to all roles, content filtered per role */}
+                        <Route path="/learn" element={
+                            <PageWrapper>
+                                <Learn />
+                            </PageWrapper>
+                        } />
+                        <Route path="/learn/:courseSlug" element={
+                            <PageWrapper>
+                                <Learn />
+                            </PageWrapper>
+                        } />
+                        <Route path="/learn/:courseSlug/:lessonSlug" element={
+                            <PageWrapper>
+                                <Learn />
+                            </PageWrapper>
+                        } />
                     </Route>
                 </Route>
 

@@ -1,0 +1,220 @@
+{
+  "courses": {
+    "lorem-ipsum-course": {
+      "id": "course-1",
+      "slug": "lorem-ipsum-course",
+      "title": "Lorem Ipsum Animation Course",
+      "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      "thumbnail_url": "https://placehold.co/1280x720/1f2937/9ca3af?text=Course+Thumbnail",
+      "is_published": true,
+      "category": "Video Editor",
+      "roles": ["video_editor"],
+      "lessons": [
+        {
+          "id": "lesson-1",
+          "course_id": "course-1",
+          "slug": "lorem-ipsum-dolor-sit",
+          "title": "Lorem Ipsum Dolor Sit",
+          "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 1,
+          "duration_seconds": 0,
+          "is_free": true,
+          "status": "unlocked"
+        },
+        {
+          "id": "lesson-2",
+          "course_id": "course-1",
+          "slug": "consectetur-adipiscing",
+          "title": "Consectetur Adipiscing",
+          "description": "Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 2,
+          "duration_seconds": 0,
+          "is_free": true,
+          "status": "unlocked"
+        },
+        {
+          "id": "lesson-3",
+          "course_id": "course-1",
+          "slug": "sed-do-eiusmod-tempor",
+          "title": "Sed Do Eiusmod Tempor",
+          "description": "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium. Totam rem aperiam eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 3,
+          "duration_seconds": 300,
+          "is_free": true,
+          "status": "completed"
+        },
+        {
+          "id": "lesson-4",
+          "course_id": "course-1",
+          "slug": "ut-labore-et-dolore",
+          "title": "Ut Labore et Dolore",
+          "description": "At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint. Occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 4,
+          "duration_seconds": 0,
+          "is_free": false,
+          "status": "locked"
+        },
+        {
+          "id": "lesson-5",
+          "course_id": "course-1",
+          "slug": "magna-aliqua-ut-enim",
+          "title": "Magna Aliqua Ut Enim",
+          "description": "Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus. Omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 5,
+          "duration_seconds": 0,
+          "is_free": false,
+          "status": "locked"
+        },
+        {
+          "id": "lesson-6",
+          "course_id": "course-1",
+          "slug": "quis-nostrud-exercitation",
+          "title": "Quis Nostrud Exercitation",
+          "description": "Itaque earum rerum hic tenetur a sapiente delectus ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat. Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 6,
+          "duration_seconds": 0,
+          "is_free": false,
+          "status": "locked"
+        },
+        {
+          "id": "lesson-7",
+          "course_id": "course-1",
+          "slug": "ullamco-laboris-nisi",
+          "title": "Ullamco Laboris Nisi",
+          "description": "Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur, vel illum qui dolorem eum fugiat quo voluptas nulla pariatur. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 7,
+          "duration_seconds": 0,
+          "is_free": false,
+          "status": "locked"
+        },
+        {
+          "id": "lesson-8",
+          "course_id": "course-1",
+          "slug": "duis-aute-irure-dolor",
+          "title": "Duis Aute Irure Dolor",
+          "description": "Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 8,
+          "duration_seconds": 0,
+          "is_free": false,
+          "status": "locked"
+        }
+      ]
+    },
+    "lorem-ipsum-illustrator-course": {
+      "id": "course-2",
+      "slug": "lorem-ipsum-illustrator-course",
+      "title": "Lorem Ipsum Illustrator Course",
+      "description": "Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+      "thumbnail_url": "https://placehold.co/1280x720/1f2937/9ca3af?text=Illustrator+Course",
+      "is_published": true,
+      "category": "Illustrator",
+      "roles": ["illustrator"],
+      "lessons": [
+        {
+          "id": "lesson-i1",
+          "course_id": "course-2",
+          "slug": "fundamenta-illustrandi",
+          "title": "Fundamenta Illustrandi",
+          "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin sagittis eros nec lectus venenatis, a lacinia justo tempor. Vivamus euismod arcu quis risus condimentum sagittis.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 1,
+          "duration_seconds": 0,
+          "is_free": true,
+          "status": "unlocked"
+        },
+        {
+          "id": "lesson-i2",
+          "course_id": "course-2",
+          "slug": "colores-et-formae",
+          "title": "Colores et Formae",
+          "description": "Suspendisse potenti. Duis at ligula vel lacus pharetra dictum. Curabitur gravida neque nec libero viverra, vel blandit eros efficitur.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 2,
+          "duration_seconds": 0,
+          "is_free": true,
+          "status": "unlocked"
+        },
+        {
+          "id": "lesson-i3",
+          "course_id": "course-2",
+          "slug": "compositio-artis",
+          "title": "Compositio Artis",
+          "description": "Fusce vehicula tortor nec eros congue, sed dignissim augue malesuada. Integer at nisi et neque bibendum blandit sed vel nunc.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 3,
+          "duration_seconds": 0,
+          "is_free": false,
+          "status": "locked"
+        },
+        {
+          "id": "lesson-i4",
+          "course_id": "course-2",
+          "slug": "character-design-basis",
+          "title": "Character Design Basis",
+          "description": "Nulla facilisi. Aliquam erat volutpat. Morbi eget sapien sed ex feugiat scelerisque. Ut auctor massa in turpis pretium venenatis.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 4,
+          "duration_seconds": 0,
+          "is_free": false,
+          "status": "locked"
+        }
+      ]
+    },
+    "lorem-ipsum-shared-course": {
+      "id": "course-3",
+      "slug": "lorem-ipsum-shared-course",
+      "title": "Lorem Ipsum Shared Course",
+      "description": "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Course for both teams.",
+      "thumbnail_url": "https://placehold.co/1280x720/1f2937/9ca3af?text=Shared+Course",
+      "is_published": true,
+      "category": "Video Editor and Illustrator",
+      "roles": ["video_editor", "illustrator"],
+      "lessons": [
+        {
+          "id": "lesson-s1",
+          "course_id": "course-3",
+          "slug": "intro-creative-workflow",
+          "title": "Intro Creative Workflow",
+          "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus imperdiet nulla et dui pretium, quis suscipit nisl mollis. Sed vehicula metus sed augue lacinia.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 1,
+          "duration_seconds": 0,
+          "is_free": true,
+          "status": "unlocked"
+        },
+        {
+          "id": "lesson-s2",
+          "course_id": "course-3",
+          "slug": "asset-management-basics",
+          "title": "Asset Management Basics",
+          "description": "Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae. Donec velit neque, auctor sit amet aliquam vel, ullamcorper sit amet ligula.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 2,
+          "duration_seconds": 0,
+          "is_free": true,
+          "status": "unlocked"
+        },
+        {
+          "id": "lesson-s3",
+          "course_id": "course-3",
+          "slug": "delivery-standards",
+          "title": "Delivery Standards",
+          "description": "Cras ultricies ligula sed magna dictum porta. Proin eget tortor risus. Nulla quis lorem ut libero malesuada feugiat.",
+          "youtube_video_id": "PLACEHOLDER_ID",
+          "order": 3,
+          "duration_seconds": 0,
+          "is_free": false,
+          "status": "locked"
+        }
+      ]
+    }
+  }
+}

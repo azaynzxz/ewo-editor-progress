@@ -12,6 +12,9 @@
     border: 1px solid var(--gray-200);
     padding: 0;
     overflow: hidden;
+    min-width: 0;          /* prevent flex/grid blowout */
+    max-width: 100%;       /* never exceed parent */
+    word-break: break-word;
     transition: all 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -92,6 +95,20 @@
     padding: var(--space-4) var(--space-5);
     border-top: 1px solid var(--gray-100);
     background: var(--gray-50);
+}
+
+@media (max-width: 768px) {
+    .card-body {
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .card-header {
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .card-footer {
+        padding: var(--space-3) var(--space-4);
+    }
 }
 
 /* ==================== BUTTONS ==================== */
@@ -441,6 +458,26 @@
 .tab.active {
     color: var(--gray-900);
     border-bottom-color: var(--gray-900);
+}
+
+/* Tabs: horizontal scroll on mobile */
+@media (max-width: 768px) {
+    .tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: 0 var(--space-2);
+    }
+
+    .tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .tab {
+        padding: var(--space-2) var(--space-3);
+        font-size: var(--text-sm);
+        white-space: nowrap;
+    }
 }
 
 /* ==================== ANIMATIONS ==================== */

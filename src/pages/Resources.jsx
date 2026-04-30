@@ -218,14 +218,8 @@ function Resources() {
             />
 
             {/* Filters */}
-            <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 'var(--space-4)',
-                marginBottom: 'var(--space-5)',
-                alignItems: 'center'
-            }}>
-                <div style={{ flex: '1', maxWidth: '300px' }}>
+            <div className="resources-filters">
+                <div className="resources-search">
                     <SearchInput
                         value={searchTerm}
                         onChange={setSearchTerm}

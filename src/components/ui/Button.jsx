@@ -31,7 +31,7 @@ const Button = forwardRef(({
             {loading ? (
                 <div className="spinner" />
             ) : icon}
-            {children}
+            {children && <span className="btn-label">{children}</span>}
             {!loading && iconRight}
         </button>
     )

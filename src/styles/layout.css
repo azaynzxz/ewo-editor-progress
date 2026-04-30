@@ -132,6 +132,8 @@
 
 .main-content {
     flex: 1;
+    min-width: 0;            /* flex items default to min-width:auto — this lets it shrink */
+    overflow-x: hidden;      /* clip anything that still overflows */
     margin-left: var(--sidebar-width);
     min-height: 100vh;
     transition: margin-left var(--transition-slow);
@@ -141,6 +143,7 @@
     padding: var(--space-6);
     max-width: 1200px;
     margin: 0 auto;
+    overflow-x: hidden;   /* prevent children from causing horizontal scroll */
 }
 
 /* ==================== PAGE HEADER ==================== */
@@ -228,9 +231,51 @@
         grid-template-columns: 1fr;
     }
 
+    .grid-auto {
+        grid-template-columns: 1fr;
+    }
+
     .page-header-row {
-        flex-direction: column;
+        flex-direction: row;
         align-items: flex-start;
+    }
+
+    /* Icon-only buttons in page headers on mobile */
+    .page-header-row .btn .btn-label {
+        display: none;
+    }
+}
+
+/* ==================== RESOURCES FILTER BAR ==================== */
+
+.resources-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+    align-items: center;
+}
+
+.resources-search {
+    flex: 1;
+    max-width: 300px;
+}
+
+@media (max-width: 768px) {
+    .resources-filters {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-3);
+    }
+
+    .resources-search {
+        max-width: none;
+    }
+
+    .resources-filters .tabs {
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 }
 
