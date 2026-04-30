@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { FileText, ChevronRight, ArrowLeft, Clock, User } from 'lucide-react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { FileText, ChevronRight, ArrowLeft, Clock, User, Link as LinkIcon, Check } from 'lucide-react'
 import { PageHeader } from '../components/layout'
-import { Card, CardBody, SearchInput, Button, Badge } from '../components/ui'
+import { Card, CardBody, SearchInput, Button, Badge, IconButton } from '../components/ui'
 
 // Wiki articles data based on SOP content
 export const WIKI_ARTICLES = [
@@ -576,8 +577,20 @@ const parseMarkdown = (content) => {
 }
 
 function Wiki() {
+    const { slug } = useParams()
+    const navigate = useNavigate()
     const [searchTerm, setSearchTerm] = useState('')
-    const [selectedArticle, setSelectedArticle] = useState(null)
+    const [copied, setCopied] = useState(false)
+    
+    const selectedArticle = WIKI_ARTICLES.find(a => a.id === slug) || null
+
+    const handleCopyLink = () => {
+        if (!selectedArticle) return
+        const url = `${window.location.origin}/wiki/${selectedArticle.id}`
+        navigator.clipboard.writeText(url)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+    }
 
     const filteredArticles = WIKI_ARTICLES.filter(article =>
         article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -591,7 +604,7 @@ function Wiki() {
                 <Button
                     variant="ghost"
                     icon={<ArrowLeft size={18} />}
-                    onClick={() => setSelectedArticle(null)}
+                    onClick={() => navigate('/wiki')}
                     style={{ marginBottom: 'var(--space-4)' }}
                 >
                     Back to Wiki
@@ -600,8 +613,11 @@ function Wiki() {
                 <Card>
                     <CardBody>
                         <div className="wiki-article-header">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
                                 <Badge color="blue">{selectedArticle.category}</Badge>
+                                <IconButton onClick={handleCopyLink}>
+                                    {copied ? <Check size={16} style={{ color: 'var(--success)' }} /> : <LinkIcon size={16} />}
+                                </IconButton>
                             </div>
                             <h1 className="wiki-article-title">{selectedArticle.title}</h1>
                             <div className="wiki-article-meta">
@@ -644,7 +660,7 @@ function Wiki() {
                     <Card
                         key={article.id}
                         hoverable
-                        onClick={() => setSelectedArticle(article)}
+                        onClick={() => navigate(`/wiki/${article.id}`)}
                     >
                         <CardBody>
                             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>

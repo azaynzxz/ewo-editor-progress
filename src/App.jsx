@@ -15,10 +15,11 @@ import './styles/App.css'
 
 function AnimatedRoutes() {
     const location = useLocation();
+    const baseKey = location.pathname.split('/')[1] || 'home';
 
     return (
         <AnimatePresence mode="wait">
-            <Routes location={location} key={location.pathname}>
+            <Routes location={location} key={baseKey}>
                 {/* Public Routes */}
                 <Route path="/role-selection" element={
                     <PageWrapper>
@@ -64,12 +65,12 @@ function AnimatedRoutes() {
 
                         {/* More Restricted Routes (Video Editor only) */}
                         <Route element={<ProtectedRoute allowedRoles={['video_editor']} />}>
-                            <Route path="/wiki" element={
+                            <Route path="/wiki/:slug?" element={
                                 <PageWrapper>
                                     <Wiki />
                                 </PageWrapper>
                             } />
-                            <Route path="/resources" element={
+                            <Route path="/resources/:slug?" element={
                                 <PageWrapper>
                                     <Resources />
                                 </PageWrapper>

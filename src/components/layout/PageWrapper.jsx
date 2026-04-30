@@ -24,10 +24,11 @@ const pageTransition = {
 
 export function PageWrapper({ children }) {
     const location = useLocation()
+    const baseKey = location.pathname.split('/')[1] || 'home'
 
     return (
         <motion.div
-            key={location.pathname}
+            key={baseKey}
             initial="initial"
             animate="in"
             exit="out"

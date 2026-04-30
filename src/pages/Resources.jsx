@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
     FolderOpen,
     Link as LinkIcon,
@@ -8,10 +9,11 @@ import {
     Music,
     FileType,
     Film,
-    Plus
+    Plus,
+    Check
 } from 'lucide-react'
 import { PageHeader } from '../components/layout'
-import { Card, CardBody, SearchInput, Button, Badge, EmptyState } from '../components/ui'
+import { Card, CardBody, SearchInput, Button, Badge, EmptyState, Modal, IconButton } from '../components/ui'
 
 const CATEGORIES = [
     { id: 'all', label: 'All', icon: FolderOpen },
@@ -22,7 +24,7 @@ const CATEGORIES = [
 
 export const RESOURCES = [
     {
-        id: 1,
+        id: 'animation-root-folder',
         name: 'Animation Root Folder',
         category: 'assets',
         type: 'Google Drive',
@@ -33,7 +35,7 @@ export const RESOURCES = [
         tags: ['animation', 'assets', 'drive']
     },
     {
-        id: 2,
+        id: 'expression-panel',
         name: 'Expression Panel',
         category: 'assets',
         type: 'AE Script',
@@ -44,7 +46,7 @@ export const RESOURCES = [
         tags: ['after effects', 'script', 'expressions', 'plugin', 'animation']
     },
     {
-        id: 3,
+        id: 'frequently-used-plugin',
         name: 'Frequently used Plugin',
         category: 'assets',
         type: 'Google Drive',
@@ -55,7 +57,7 @@ export const RESOURCES = [
         tags: ['plugin', 'ae', 'assets']
     },
     {
-        id: 4,
+        id: 'sound-effect',
         name: 'Sound Effect',
         category: 'assets',
         type: 'Google Drive',
@@ -66,29 +68,7 @@ export const RESOURCES = [
         tags: ['audio', 'sfx', 'assets']
     },
     {
-        id: 5,
-        name: 'Client Drive - Alex',
-        category: 'links',
-        type: 'Google Drive',
-        description: 'Project files and assets for Alex',
-        url: 'https://drive.google.com',
-        icon: FolderOpen,
-        color: 'blue',
-        tags: ['client', 'drive']
-    },
-    {
-        id: 6,
-        name: 'Client Drive - Simon',
-        category: 'links',
-        type: 'Google Drive',
-        description: 'Project files and assets for Simon',
-        url: 'https://drive.google.com',
-        icon: FolderOpen,
-        color: 'blue',
-        tags: ['client', 'drive']
-    },
-    {
-        id: 7,
+        id: 'google-fonts',
         name: 'Google Fonts',
         category: 'bookmarks',
         type: 'Website',
@@ -97,12 +77,69 @@ export const RESOURCES = [
         icon: FileType,
         color: 'blue',
         tags: ['fonts', 'typography', 'free']
+    },
+    {
+        id: 'amanda',
+        name: 'Mascot Amanda',
+        category: 'assets',
+        type: 'Google Drive',
+        description: 'Mascot and Asset Libraries with Tutorial for Amanda',
+        url: '#',
+        icon: FileType,
+        color: 'pink',
+        tags: ['mascot', 'amanda', 'assets', 'tutorial'],
+        hasModal: true,
+        links: [
+            { title: 'MASCOT AMANDA', url: 'https://drive.google.com/file/d/1vmbp4lbhpIZ-TWpYJjzYSj0I7ko8XUFc/view?usp=drive_link' },
+            { title: 'TUTORIAL', url: 'https://drive.google.com/file/d/1kufgxRL3iFDqzCOWDhTlHTbjQoHAyIp3/view?usp=drive_link' }
+        ]
+    },
+    {
+        id: 'jorge',
+        name: 'Mascot Jorge',
+        category: 'assets',
+        type: 'Google Drive',
+        description: 'Asset Libraries and Tutorial for Jorge',
+        url: '#',
+        icon: FileType,
+        color: 'orange',
+        tags: ['mascot', 'jorge', 'assets', 'tutorial'],
+        hasModal: true,
+        links: [
+            { title: 'Tutorial Mascot Jorge', url: 'https://drive.google.com/open?id=1XHiBBFSnOtTYaQZbmoYZ6xVtaOrzgqeS&usp=drive_fs' },
+            { title: 'Asset Libraries Jorge', url: 'https://drive.google.com/open?id=18ZeX8nDztsJPl_RxbymVEyyy2sp_T1zE&usp=drive_fs' }
+        ]
+    },
+    {
+        id: 'ioana',
+        name: 'Libraries Ioana',
+        category: 'assets',
+        type: 'Google Drive',
+        description: 'Asset Libraries for Ioana',
+        url: 'https://drive.google.com/file/d/1YJOtRnqAXjhuOuUe-U8-w2SuiRwNJ9RD/view?usp=drive_link',
+        icon: FileType,
+        color: 'purple',
+        tags: ['assets', 'libraries', 'ioana']
     }
 ]
 
 function Resources() {
+    const { slug } = useParams()
+    const navigate = useNavigate()
     const [searchTerm, setSearchTerm] = useState('')
     const [activeCategory, setActiveCategory] = useState('all')
+    const [copied, setCopied] = useState(null)
+
+    const selectedResource = RESOURCES.find(r => r.id === slug) || null
+
+    const handleCopyLink = (e, id) => {
+        e.preventDefault()
+        e.stopPropagation()
+        const url = `${window.location.origin}/resources/${id}`
+        navigator.clipboard.writeText(url)
+        setCopied(id)
+        setTimeout(() => setCopied(null), 2000)
+    }
 
     const filteredResources = RESOURCES.filter(resource => {
         const matchesSearch =
@@ -114,6 +151,59 @@ function Resources() {
 
         return matchesSearch && matchesCategory
     })
+
+    const renderModalContent = () => {
+        if (!selectedResource) return null;
+
+        if (selectedResource.hasModal && selectedResource.links) {
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                    <p style={{ color: 'var(--gray-600)', margin: 0, marginBottom: 'var(--space-2)' }}>
+                        {selectedResource.description}
+                    </p>
+                    {selectedResource.links.map((link, idx) => (
+                        <a
+                            key={idx}
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ textDecoration: 'none' }}
+                        >
+                            <Button 
+                                variant="outline" 
+                                style={{ width: '100%', justifyContent: 'space-between', padding: 'var(--space-3)' }}
+                            >
+                                <span style={{ fontWeight: 500 }}>{link.title}</span>
+                                <ExternalLink size={18} />
+                            </Button>
+                        </a>
+                    ))}
+                </div>
+            )
+        }
+
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', alignItems: 'center', padding: 'var(--space-4) 0' }}>
+                <div className={`card-header-icon ${selectedResource.color}`} style={{ width: 64, height: 64, borderRadius: '50%' }}>
+                    <selectedResource.icon size={32} />
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                    <h3 style={{ margin: '0 0 var(--space-2) 0' }}>{selectedResource.name}</h3>
+                    <p style={{ color: 'var(--gray-600)', margin: 0 }}>{selectedResource.description}</p>
+                </div>
+                <a
+                    href={selectedResource.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ textDecoration: 'none', width: '100%' }}
+                >
+                    <Button variant="primary" style={{ width: '100%', justifyContent: 'center' }}>
+                        Open Resource <ExternalLink size={16} style={{ marginLeft: 'var(--space-2)' }} />
+                    </Button>
+                </a>
+            </div>
+        )
+    }
 
     return (
         <>
@@ -161,14 +251,8 @@ function Resources() {
             {/* Resources Grid */}
             {filteredResources.length > 0 ? (
                 <div className="grid grid-auto">
-                    {filteredResources.map((resource) => (
-                        <a
-                            key={resource.id}
-                            href={resource.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ textDecoration: 'none' }}
-                        >
+                    {filteredResources.map((resource) => {
+                        const cardContent = (
                             <Card hoverable>
                                 <CardBody>
                                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)' }}>
@@ -195,12 +279,40 @@ function Resources() {
                                                 {resource.description}
                                             </p>
                                         </div>
-                                        <ExternalLink size={16} style={{ color: 'var(--gray-400)' }} />
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                                            <IconButton 
+                                                onClick={(e) => handleCopyLink(e, resource.id)}
+                                                aria-label="Copy link"
+                                            >
+                                                {copied === resource.id ? <Check size={16} style={{ color: 'var(--success)' }} /> : <LinkIcon size={16} style={{ color: 'var(--gray-400)' }} />}
+                                            </IconButton>
+                                            <ExternalLink size={16} style={{ color: 'var(--gray-400)' }} />
+                                        </div>
                                     </div>
                                 </CardBody>
                             </Card>
-                        </a>
-                    ))}
+                        )
+
+                        if (resource.hasModal) {
+                            return (
+                                <div key={resource.id} style={{ cursor: 'pointer', textDecoration: 'none' }} onClick={() => navigate(`/resources/${resource.id}`)}>
+                                    {cardContent}
+                                </div>
+                            )
+                        }
+
+                        return (
+                            <a
+                                key={resource.id}
+                                href={resource.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ textDecoration: 'none' }}
+                            >
+                                {cardContent}
+                            </a>
+                        )
+                    })}
                 </div>
             ) : (
                 <EmptyState
@@ -209,6 +321,15 @@ function Resources() {
                     message="Try adjusting your search or filters"
                 />
             )}
+
+            {/* Resource Modal */}
+            <Modal
+                isOpen={!!selectedResource}
+                onClose={() => navigate('/resources')}
+                title={selectedResource?.name}
+            >
+                {renderModalContent()}
+            </Modal>
         </>
     )
 }
