@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
@@ -12,7 +13,9 @@ import {
     ChevronRight,
     ZoomIn,
     ZoomOut,
-    X
+    X,
+    PlayCircle,
+    ArrowRight
 } from 'lucide-react'
 import { PageHeader } from '../components/layout'
 import { Card, CardHeader, CardBody, Button, Badge } from '../components/ui'
@@ -197,6 +200,9 @@ function Onboarding() {
         return saved ? JSON.parse(saved) : []
     })
     const [pdfViewerOpen, setPdfViewerOpen] = useState(false)
+    const navigate = useNavigate()
+    const userRole = localStorage.getItem('userRole') || 'video_editor'
+    const isVideoEditor = userRole === 'video_editor'
 
     useEffect(() => {
         localStorage.setItem('onboardingProgress', JSON.stringify(completedItems))
@@ -263,6 +269,82 @@ function Onboarding() {
                         />
                     </div>
                 </CardBody>
+            </Card>
+
+            {/* Learn Page CTA */}
+            <Card style={{ marginBottom: 'var(--space-6)', overflow: 'hidden' }}>
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 'var(--space-4)',
+                    padding: 'var(--space-5)',
+                    background: 'linear-gradient(135deg, var(--gray-900) 0%, #1e3a5f 100%)',
+                    position: 'relative',
+                }}>
+                    {/* Decorative circle */}
+                    <div style={{
+                        position: 'absolute', right: -24, top: -24,
+                        width: 120, height: 120, borderRadius: '50%',
+                        background: 'rgba(255,255,255,0.04)',
+                    }} />
+                    <div style={{
+                        width: 48, height: 48, borderRadius: 'var(--radius-xl)',
+                        background: 'rgba(255,255,255,0.12)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
+                    }}>
+                        <PlayCircle size={24} color="white" />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{
+                            fontSize: 'var(--text-xs)',
+                            fontWeight: 600,
+                            color: 'rgba(255,255,255,0.5)',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.06em',
+                            margin: '0 0 var(--space-1)',
+                        }}>
+                            Tutorial
+                        </p>
+                        <h3 style={{
+                            fontSize: 'var(--text-base)',
+                            fontWeight: 700,
+                            color: 'white',
+                            margin: '0 0 var(--space-1)',
+                        }}>
+                            {isVideoEditor ? 'Expression Panel Tutorial' : 'Video Tutorials'}
+                        </h3>
+                        <p style={{
+                            fontSize: 'var(--text-sm)',
+                            color: 'rgba(255,255,255,0.55)',
+                            margin: 0,
+                        }}>
+                            {isVideoEditor
+                                ? '12 video panduan dari instalasi hingga lipsync'
+                                : 'Pelajari alur kerja tim melalui video tutorial'}
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => navigate('/learn')}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+                            padding: 'var(--space-2) var(--space-4)',
+                            background: 'white',
+                            color: 'var(--gray-900)',
+                            border: 'none',
+                            borderRadius: 'var(--radius-lg)',
+                            fontSize: 'var(--text-sm)',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                            transition: 'opacity 0.15s ease',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                    >
+                        Mulai Belajar <ArrowRight size={14} />
+                    </button>
+                </div>
             </Card>
 
             {/* SOP Document */}

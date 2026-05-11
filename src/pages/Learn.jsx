@@ -61,7 +61,7 @@ function useCourseData() {
         return availableCourses[0] || null
     }, [courseSlug, availableCourses])
 
-    const lessons = course?.lessons || []
+    const lessons = useMemo(() => course?.lessons || [], [course])
 
     const initialIndex = useMemo(() => {
         if (!lessonSlug) return 0
@@ -246,6 +246,7 @@ function LearnMobile({ course, lessons, selectedIndex, activeLesson, completedCo
                                 <div
                                     key={lesson.id}
                                     onClick={() => !isLocked && selectLesson(index)}
+                                    title={isLocked ? 'Selesaikan tutorial sebelumnya terlebih dahulu' : ''}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -273,10 +274,16 @@ function LearnMobile({ course, lessons, selectedIndex, activeLesson, completedCo
                                         fontSize: 'var(--text-sm)',
                                         fontWeight: 500,
                                         color: isActive ? 'white' : 'var(--gray-700)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
                                     }}>
                                         {lesson.title}
+                                        {lesson.status === 'locked' && <Lock size={11} style={{ flexShrink: 0, opacity: 0.5 }} />}
                                     </span>
-                                    {!isActive && <StatusBadge status={lesson.status} />}
+                                    {!isActive && lesson.status === 'completed' && (
+                                        <CheckCircle2 size={14} color="var(--success)" style={{ flexShrink: 0 }} />
+                                    )}
                                 </div>
                             )
                         })}
@@ -334,12 +341,19 @@ function LearnDesktop({ course, lessons, selectedIndex, activeLesson, completedC
                                 ].filter(Boolean).join(' ')}
                                 onClick={() => selectLesson(index)}
                                 disabled={lesson.status === 'locked'}
-                                title={lesson.status === 'locked' ? 'Locked' : lesson.title}
+                                title={lesson.status === 'locked' ? 'Selesaikan tutorial sebelumnya terlebih dahulu' : lesson.title}
                             >
                                 <span className="learn-lesson-num">{lesson.order}</span>
                                 <div className="learn-lesson-info">
-                                    <p className="learn-lesson-title">{lesson.title}</p>
-                                    <StatusBadge status={lesson.status} />
+                                    <p className="learn-lesson-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        {lesson.title}
+                                        {lesson.status === 'locked' && <Lock size={11} style={{ flexShrink: 0, opacity: 0.5 }} />}
+                                    </p>
+                                    {lesson.status === 'completed' && (
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--success)', fontWeight: 500 }}>
+                                            <CheckCircle2 size={10} /> Completed
+                                        </span>
+                                    )}
                                 </div>
                             </button>
                         ))}
@@ -413,7 +427,24 @@ function LearnDesktop({ course, lessons, selectedIndex, activeLesson, completedC
 export default function Learn() {
     const isMobile = useIsMobile()
     const data = useCourseData()
+    const userRole = localStorage.getItem('userRole') || 'video_editor'
+    const isVideoEditor = userRole === 'video_editor'
 
+    // Video editor role: show the real learning UI
+    if (isVideoEditor) {
+        if (!data.course || !data.activeLesson) {
+            return (
+                <div className="empty-state">
+                    <div className="empty-state-icon"><BookOpen size={32} /></div>
+                    <h3 className="empty-state-title">No courses available</h3>
+                    <p className="empty-state-message">No courses are available for your role yet.</p>
+                </div>
+            )
+        }
+        return isMobile ? <LearnMobile {...data} /> : <LearnDesktop {...data} />
+    }
+
+    // Other roles: Coming Soon overlay
     const content = (!data.course || !data.activeLesson)
         ? (
             <div className="empty-state">

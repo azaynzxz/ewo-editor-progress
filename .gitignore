@@ -20,6 +20,9 @@ knowledge/
 !README.md
 !/public/*.pdf
 
+# Local video tutorial assets
+VE Tutorial/
+
 # Editor
 .vscode/*
 !.vscode/extensions.json

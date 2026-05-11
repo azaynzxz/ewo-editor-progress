@@ -200,7 +200,7 @@ function Dashboard() {
                             color: 'var(--primary-700)',
                             fontWeight: 500
                         }}>
-                            This is your first time here! Let us show you around.
+                            Halo! Ini pertama kalinya kamu masuk. Yuk kenalan dulu.
                         </p>
                     </div>
 
@@ -209,7 +209,7 @@ function Dashboard() {
                         color: 'var(--gray-700)',
                         margin: '0 0 var(--space-3)'
                     }}>
-                        EWO Hub matches the premium quality of your work. Everything in one place:
+                        Semua yang kamu butuhkan sudah ada di sini:
                     </p>
 
                     <ul style={{
@@ -221,11 +221,12 @@ function Dashboard() {
                         flexDirection: 'column',
                         gap: 'var(--space-2)'
                     }}>
-                        <li><strong>Progress Form</strong> — Streamlined daily reporting</li>
+                        <li><strong>Progress Form</strong> — Laporan harian cepat & mudah</li>
                         {userRole !== 'illustrator' && (
                             <>
-                                <li><strong>Wiki</strong> — Your editing knowledge base</li>
-                                <li><strong>Resources</strong> — Assets at your fingertips</li>
+                                <li><strong>Wiki</strong> — Panduan dan referensi editing</li>
+                                <li><strong>Resources</strong> — Aset siap pakai</li>
+                                <li><strong>Learn</strong> — Tutorial video Expression Panel</li>
                             </>
                         )}
                     </ul>
