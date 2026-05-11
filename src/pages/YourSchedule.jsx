@@ -29,7 +29,10 @@ function matchesUser(field, userName) {
 }
 
 function YourSchedule() {
-    const userName = localStorage.getItem('lastUsedEditor') || ''
+    const [userName, setUserName] = useState(
+        () => localStorage.getItem('lastUsedEditor') || localStorage.getItem('userName') || ''
+    )
+    const [nameInput, setNameInput] = useState('')
     const [projects, setProjects] = useState(() => {
         try {
             const cached = localStorage.getItem(CACHE_KEY)
@@ -117,15 +120,47 @@ function YourSchedule() {
         return 'Editor'
     }, [myProjects, userName])
 
+    const handleSetName = () => {
+        const trimmed = nameInput.trim()
+        if (!trimmed) return
+        localStorage.setItem('lastUsedEditor', trimmed)
+        setUserName(trimmed)
+        setNameInput('')
+    }
+
     if (!userName) {
         return (
             <div className="ys-page">
-                <div className="card" style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
-                    <User size={48} style={{ color: 'var(--gray-300)', marginBottom: 'var(--space-3)' }} />
-                    <h3 style={{ margin: '0 0 var(--space-2)', fontWeight: 700 }}>No Name Set</h3>
-                    <p style={{ color: 'var(--gray-500)', margin: 0, fontSize: 'var(--text-sm)' }}>
-                        Please set your name in the <strong>Dashboard</strong> attendance card first.
+                <div className="card" style={{ maxWidth: 400, margin: '0 auto', padding: 'var(--space-6)', textAlign: 'center' }}>
+                    <User size={40} style={{ color: 'var(--primary-300)', marginBottom: 'var(--space-3)' }} />
+                    <h3 style={{ margin: '0 0 var(--space-2)', fontWeight: 700 }}>Siapa namamu?</h3>
+                    <p style={{ color: 'var(--gray-500)', margin: '0 0 var(--space-4)', fontSize: 'var(--text-sm)' }}>
+                        Masukkan namamu (sesuai yang ada di database) untuk melihat jadwalmu.
                     </p>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                        <input
+                            type="text"
+                            className="input"
+                            placeholder="Contoh: Zurvi"
+                            value={nameInput}
+                            onChange={e => setNameInput(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSetName()}
+                            autoFocus
+                            style={{ flex: 1 }}
+                        />
+                        <button
+                            onClick={handleSetName}
+                            disabled={!nameInput.trim()}
+                            style={{
+                                padding: '0 var(--space-4)', background: 'var(--primary-500)', color: 'white',
+                                border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 600,
+                                fontSize: 'var(--text-sm)', cursor: 'pointer', whiteSpace: 'nowrap',
+                                opacity: nameInput.trim() ? 1 : 0.5,
+                            }}
+                        >
+                            Lihat Jadwal
+                        </button>
+                    </div>
                 </div>
             </div>
         )
