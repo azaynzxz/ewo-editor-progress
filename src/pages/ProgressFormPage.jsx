@@ -653,8 +653,8 @@ function ProgressFormPage() {
                             <button
                                 type="submit"
                                 className="submit-btn"
-                                disabled={isSubmitting || !formData.editor || entries.length === 0 || screenshots.some(s => !s.label.trim()) || entries.some(e => !e.scenes?.trim())}
-                                title={screenshots.some(s => !s.label.trim()) ? 'Berikan label pada Screenshoot' : (entries.some(e => !e.scenes?.trim()) ? 'Jumlah scene harus diisi untuk semua klien' : '')}
+                                disabled={isSubmitting || !formData.editor || entries.length === 0 || screenshots.length === 0 || screenshots.some(s => !s.label.trim()) || entries.some(e => !e.scenes?.trim())}
+                                title={screenshots.length === 0 ? 'Upload minimal satu screenshot' : (screenshots.some(s => !s.label.trim()) ? 'Berikan label pada Screenshoot' : (entries.some(e => !e.scenes?.trim()) ? 'Jumlah scene harus diisi untuk semua klien' : ''))}
                             >
                                 {isSubmitting ? (
                                     <>
