@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Palette, Video } from 'lucide-react';
+import { Palette, Video, Layers } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 function RoleSelection() {
@@ -160,6 +160,50 @@ function RoleSelection() {
                         </span>
                         <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>
                             Animation & Composite
+                        </span>
+                    </motion.button>
+
+                    <motion.button
+                        variants={itemVariants}
+                        whileHover={{
+                            y: -4,
+                            borderColor: 'var(--primary-500)',
+                            boxShadow: 'var(--shadow-md)',
+                            scale: 1.02
+                        }}
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => handleSelectRole('ads_design')}
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 'var(--space-3)',
+                            padding: 'var(--space-6)',
+                            background: 'var(--white)',
+                            border: '2px solid var(--primary-200)',
+                            borderRadius: 'var(--radius-lg)',
+                            cursor: 'pointer',
+                            transition: 'background 0.2s',
+                            boxShadow: 'var(--shadow-sm)'
+                        }}
+                    >
+                        <div style={{
+                            width: '64px',
+                            height: '64px',
+                            borderRadius: '50%',
+                            background: 'var(--primary-50)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'var(--primary-600)'
+                        }}>
+                            <Layers size={32} />
+                        </div>
+                        <span style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--gray-900)' }}>
+                            Ads & Design
+                        </span>
+                        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>
+                            Marketing & Graphics
                         </span>
                     </motion.button>
                 </div>

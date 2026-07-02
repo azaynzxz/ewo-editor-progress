@@ -63,6 +63,53 @@ function EditableCell({ value, onSave, style }) {
     )
 }
 
+// ========== EDITABLE MULTI-SELECT CELL ==========
+function EditableMultiSelectCell({ value, onSave, options, placeholder }) {
+    const [editing, setEditing] = useState(false)
+    const containerRef = useRef(null)
+
+    const selectedItems = useMemo(() => {
+        return value ? value.split(',').map(s => s.trim()).filter(Boolean) : []
+    }, [value])
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (editing && containerRef.current && !containerRef.current.contains(event.target) && !event.target.closest('.dropdown-menu')) {
+                setEditing(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [editing])
+
+    if (!editing) {
+        return (
+            <div
+                onClick={() => setEditing(true)}
+                style={{ cursor: 'pointer', padding: '6px 8px', minHeight: '30px', display: 'flex', alignItems: 'center', borderRadius: 'var(--radius-sm)' }}
+                className="admin-editable-cell-trigger"
+                title="Click to edit"
+            >
+                {value || <span style={{ color: 'var(--gray-400)', fontStyle: 'italic' }}>—</span>}
+            </div>
+        )
+    }
+
+    return (
+        <div ref={containerRef} style={{ minWidth: 160 }} onClick={e => e.stopPropagation()}>
+            <MultiSelectDropdown
+                selectedItems={selectedItems}
+                onChange={newItems => {
+                    onSave(newItems.join(', '))
+                }}
+                options={options}
+                placeholder={placeholder}
+                allowCustom={true}
+            />
+        </div>
+    )
+}
+
 // ========== SYNC STATUS BAR ==========
 function SyncStatusBar({ syncState }) {
     if (syncState.status === 'idle') return null
@@ -373,15 +420,19 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
                                                 onSave={val => handleInlineUpdate(p.rowIndex, 'projectName', val)}
                                             />
                                         </td>
-                                        <td style={{ fontSize: 'var(--text-xs)' }}>
-                                            <EditableCell
+                                        <td style={{ fontSize: 'var(--text-xs)', minWidth: 160 }}>
+                                            <EditableMultiSelectCell
                                                 value={p.illustrator}
+                                                options={DEFAULT_ILLUSTRATORS}
+                                                placeholder="Illustrators..."
                                                 onSave={val => handleInlineUpdate(p.rowIndex, 'illustrator', val)}
                                             />
                                         </td>
-                                        <td style={{ fontSize: 'var(--text-xs)' }}>
-                                            <EditableCell
+                                        <td style={{ fontSize: 'var(--text-xs)', minWidth: 160 }}>
+                                            <EditableMultiSelectCell
                                                 value={p.editor}
+                                                options={DEFAULT_EDITORS}
+                                                placeholder="Editors..."
                                                 onSave={val => handleInlineUpdate(p.rowIndex, 'editor', val)}
                                             />
                                         </td>
@@ -510,6 +561,14 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
                     border-radius: var(--radius-sm); font-size: var(--text-xs);
                     background: white; box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
                     outline: none; box-sizing: border-box;
+                }
+                .admin-editable-cell-trigger {
+                    border: 1px dashed transparent;
+                    transition: all 0.15s ease;
+                }
+                .admin-editable-cell-trigger:hover {
+                    background: var(--gray-50);
+                    border-color: var(--gray-300);
                 }
                 .admin-inline-select {
                     background: transparent; border: 1px solid transparent;

@@ -6,6 +6,8 @@ import ProgressLog from '../components/admin/ProgressLog'
 import LeaveManager from '../components/admin/LeaveManager'
 import ProjectManager from '../components/admin/ProjectManager'
 import AdminAuthGate from '../components/admin/AdminAuthGate'
+import DailyReportModal from '../components/DailyReportModal'
+import { fetchAllSheetsProjects } from '../utils/projectFetcher'
 
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
 
@@ -50,6 +52,9 @@ function AdminPage() {
     const [syncState, setSyncState] = useState({ status: 'idle' })
 
     const [initialLoaded, setInitialLoaded] = useState(false)
+    const [showReportModal, setShowReportModal] = useState(false)
+    const [reportProjects, setReportProjects] = useState([])
+    const [loadingReportProjects, setLoadingReportProjects] = useState(false)
 
     // Fetch helpers
     const fetchOverview = useCallback(async () => {
@@ -133,6 +138,7 @@ function AdminPage() {
             fetchProgress(progressFilters),
             fetchLeaves(leaveStatusFilter),
             fetchProjects(projectMonth),
+            fetchAllSheetsProjects(),
         ])
         setInitialLoaded(true)
         setTimeout(() => setRefreshing(false), 300)
@@ -154,6 +160,47 @@ function AdminPage() {
     const handleLogout = () => {
         sessionStorage.removeItem('adminAuth')
         setIsAuthed(false)
+    }
+
+    const getPreviousMonthSheet = (currentSheet, available) => {
+        if (!currentSheet || !available || available.length === 0) return null
+        const months = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ]
+        const match = currentSheet.match(/^([A-Za-z]+)\s+(\d{4})/)
+        if (!match) return null
+        const monthName = match[1]
+        const year = parseInt(match[2], 10)
+        
+        const mIdx = months.indexOf(monthName)
+        if (mIdx === -1) return null
+        
+        const prevMIdx = mIdx === 0 ? 11 : mIdx - 1
+        const prevYear = mIdx === 0 ? year - 1 : year
+        const prevLabel = `${months[prevMIdx]} ${prevYear}`
+        
+        if (available.includes(prevLabel)) {
+            return prevLabel
+        }
+        return null
+    }
+
+    const handleOpenReportModal = async () => {
+        setLoadingReportProjects(true)
+        let cachedProjects = []
+        try {
+            const cached = localStorage.getItem('ewo_all_projects_cache')
+            if (cached) cachedProjects = JSON.parse(cached)
+        } catch {}
+
+        if (cachedProjects.length === 0) {
+            const result = await fetchAllSheetsProjects()
+            cachedProjects = result.projects || []
+        }
+        setReportProjects(cachedProjects)
+        setLoadingReportProjects(false)
+        setShowReportModal(true)
     }
 
     // Refresh = re-fetch everything
@@ -282,6 +329,14 @@ function AdminPage() {
                         </button>
                         <button
                             className="admin-refresh-btn"
+                            onClick={handleOpenReportModal}
+                            disabled={loadingReportProjects}
+                            style={{ background: '#2563eb', color: 'white', borderColor: '#2563eb' }}
+                        >
+                            {loadingReportProjects ? 'Loading…' : 'Daily Report'}
+                        </button>
+                        <button
+                            className="admin-refresh-btn"
                             onClick={handleLogout}
                             style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}
                         >
@@ -362,6 +417,14 @@ function AdminPage() {
                     syncState={syncState}
                 />
             )}
+            
+            {/* Daily Report Modal */}
+            <DailyReportModal 
+                isOpen={showReportModal} 
+                onClose={() => setShowReportModal(false)} 
+                initialProjects={reportProjects} 
+                isAdminMode={true}
+            />
         </div>
     )
 }

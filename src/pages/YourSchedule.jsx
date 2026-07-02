@@ -28,6 +28,51 @@ function matchesUser(field, userName) {
     return normalizedField.split(',').some(part => part.trim() === normalizedUser)
 }
 
+function getMonthYearFromDateString(dateStr) {
+    if (!dateStr) return null
+    let date = dateStr
+    if (dateStr instanceof Date) {
+        const y = dateStr.getFullYear()
+        const m = String(dateStr.getMonth() + 1).padStart(2, '0')
+        const d = String(dateStr.getDate()).padStart(2, '0')
+        date = `${y}-${m}-${d}`
+    }
+    const match = String(date).match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (match) {
+        const year = match[1]
+        const monthNum = parseInt(match[2], 10)
+        const months = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ]
+        const monthName = months[monthNum - 1]
+        if (monthName) {
+            return {
+                monthName,
+                year,
+                label: `${monthName} ${year}`,
+                sortKey: `${year}-${String(monthNum).padStart(2, '0')}`
+            }
+        }
+    }
+    const dObj = new Date(dateStr)
+    if (!isNaN(dObj.getTime())) {
+        const monthName = dObj.toLocaleString('en-US', { month: 'long' })
+        const year = dObj.getFullYear()
+        const monthNum = dObj.getMonth() + 1
+        return {
+            monthName,
+            year,
+            label: `${monthName} ${year}`,
+            sortKey: `${year}-${String(monthNum).padStart(2, '0')}`
+        }
+    }
+    return null
+}
+
+import DailyReportModal from '../components/DailyReportModal'
+import { fetchAllSheetsProjects } from '../utils/projectFetcher'
+
 function YourSchedule() {
     const [userName, setUserName] = useState(
         () => localStorage.getItem('lastUsedEditor') || localStorage.getItem('userName') || ''
@@ -35,31 +80,30 @@ function YourSchedule() {
     const [nameInput, setNameInput] = useState('')
     const [projects, setProjects] = useState(() => {
         try {
-            const cached = localStorage.getItem(CACHE_KEY)
+            const cached = localStorage.getItem('ewo_all_projects_cache')
             return cached ? JSON.parse(cached) : []
         } catch { return [] }
     })
     const [isLoading, setIsLoading] = useState(false)
     const [view, setView] = useState('table')
-    const [filterMode, setFilterMode] = useState('running') // 'running' or 'all'
+    const [selectedMonth, setSelectedMonth] = useState('all')
+    const [hasInitializedMonth, setHasInitializedMonth] = useState(false)
     const [viewMode, setViewMode] = useState(ViewMode.Day)
     const [ganttFullscreen, setGanttFullscreen] = useState(false)
+    const [showReportModal, setShowReportModal] = useState(false)
     const [lastFetched, setLastFetched] = useState(() => {
-        try { return localStorage.getItem(CACHE_KEY + '_ts') || '' } catch { return '' }
+        try { return localStorage.getItem('ewo_my_schedule_ts') || '' } catch { return '' }
     })
 
     const fetchProjects = useCallback(async () => {
         setIsLoading(true)
         try {
-            const res = await fetch(`${APPS_SCRIPT_URL}?action=getAdminProjects`)
-            const result = await res.json()
-            if (result.success && result.data?.projects) {
-                const all = result.data.projects
-                localStorage.setItem(CACHE_KEY, JSON.stringify(all))
+            const result = await fetchAllSheetsProjects()
+            if (result.success || result.projects?.length > 0) {
                 const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-                localStorage.setItem(CACHE_KEY + '_ts', now)
+                localStorage.setItem('ewo_my_schedule_ts', now)
                 setLastFetched(now)
-                setProjects(all)
+                setProjects(result.projects)
             }
         } catch (err) {
             console.error('Failed to fetch schedule:', err)
@@ -76,13 +120,48 @@ function YourSchedule() {
         )
     }, [projects, userName])
 
-    const filteredProjects = useMemo(() => {
-        if (filterMode === 'all') return myProjects
-        return myProjects.filter(p => {
-            const status = (p.projectStatus || '').toLowerCase()
-            return status !== 'done' && status !== 'under review'
+    // Compute unique months from myProjects sorted chronologically
+    const availableMonths = useMemo(() => {
+        const monthsMap = new Map()
+        myProjects.forEach(p => {
+            ;['dlIllustrator', 'dlEditor'].forEach(key => {
+                const val = p[key]
+                const parsed = getMonthYearFromDateString(val)
+                if (parsed) {
+                    monthsMap.set(parsed.label, { label: parsed.label, sortKey: parsed.sortKey })
+                }
+            })
         })
-    }, [myProjects, filterMode])
+        return Array.from(monthsMap.values()).sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+    }, [myProjects])
+
+    // Auto-select current month if available on initial data load
+    useEffect(() => {
+        if (availableMonths.length > 0 && !hasInitializedMonth) {
+            const today = new Date()
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+            const currentLabel = `${months[today.getMonth()]} ${today.getFullYear()}`
+            const hasCurrent = availableMonths.some(m => m.label === currentLabel)
+            if (hasCurrent) {
+                setSelectedMonth(currentLabel)
+            }
+            setHasInitializedMonth(true)
+        }
+    }, [availableMonths, hasInitializedMonth])
+
+    const filteredProjects = useMemo(() => {
+        let list = myProjects
+        if (selectedMonth !== 'all') {
+            list = list.filter(p => {
+                return ['dlIllustrator', 'dlEditor'].some(key => {
+                    const val = p[key]
+                    const parsed = getMonthYearFromDateString(val)
+                    return parsed && parsed.label === selectedMonth
+                })
+            })
+        }
+        return list
+    }, [myProjects, selectedMonth])
 
     const ganttTasks = useMemo(() => {
         return filteredProjects
@@ -205,6 +284,9 @@ function YourSchedule() {
                         <RefreshCw size={14} className={isLoading ? 'spin' : ''} />
                         {isLoading ? 'Fetching…' : 'Refresh'}
                     </button>
+                    <button onClick={() => setShowReportModal(true)} className="ys-refresh-btn" style={{ background: '#2563eb' }}>
+                        Daily Report
+                    </button>
                 </div>
             </div>
 
@@ -236,15 +318,22 @@ function YourSchedule() {
                 </div>
             )}
 
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: '-8px' }}>
-                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--gray-600)' }}>Filter:</span>
-                <div className="ys-view-toggle">
-                    <button onClick={() => setFilterMode('running')} className={`ys-view-btn ${filterMode === 'running' ? 'active' : ''}`}>
-                        Running
-                    </button>
-                    <button onClick={() => setFilterMode('all')} className={`ys-view-btn ${filterMode === 'all' ? 'active' : ''}`}>
-                        All
-                    </button>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: '-8px' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--gray-600)' }}>Month:</span>
+                    <select
+                        className="ys-select"
+                        value={selectedMonth}
+                        onChange={e => setSelectedMonth(e.target.value)}
+                        style={{ minWidth: 140 }}
+                    >
+                        <option value="all">All Months</option>
+                        {availableMonths.map(m => (
+                            <option key={m.label} value={m.label}>
+                                {m.label}
+                            </option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
@@ -258,7 +347,7 @@ function YourSchedule() {
                 ) : myProjects.length === 0 ? (
                     <div className="ys-empty">
                         <Inbox size={40} style={{ color: 'var(--gray-300)' }} />
-                        <p>No projects assigned to you this month</p>
+                        <p>No projects assigned to you</p>
                     </div>
                 ) : view === 'gantt' ? (
                     <div style={{ overflow: 'auto', padding: 'var(--space-3)' }}>
@@ -386,6 +475,13 @@ function YourSchedule() {
                     </div>
                 </div>
             )}
+
+            {/* Daily Report Modal */}
+            <DailyReportModal 
+                isOpen={showReportModal} 
+                onClose={() => setShowReportModal(false)} 
+                initialProjects={myProjects} 
+            />
 
             <style>{`
                 .ys-page { display: flex; flex-direction: column; gap: var(--space-4); }
