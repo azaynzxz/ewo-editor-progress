@@ -70,7 +70,6 @@ function getMonthYearFromDateString(dateStr) {
     return null
 }
 
-import DailyReportModal from '../components/DailyReportModal'
 import { fetchAllSheetsProjects } from '../utils/projectFetcher'
 
 function YourSchedule() {
@@ -84,13 +83,18 @@ function YourSchedule() {
             return cached ? JSON.parse(cached) : []
         } catch { return [] }
     })
+    const [availableSheets, setAvailableSheets] = useState(() => {
+        try {
+            const cached = localStorage.getItem('ewo_available_sheets')
+            return cached ? JSON.parse(cached) : []
+        } catch { return [] }
+    })
     const [isLoading, setIsLoading] = useState(false)
     const [view, setView] = useState('table')
     const [selectedMonth, setSelectedMonth] = useState('all')
     const [hasInitializedMonth, setHasInitializedMonth] = useState(false)
     const [viewMode, setViewMode] = useState(ViewMode.Day)
     const [ganttFullscreen, setGanttFullscreen] = useState(false)
-    const [showReportModal, setShowReportModal] = useState(false)
     const [lastFetched, setLastFetched] = useState(() => {
         try { return localStorage.getItem('ewo_my_schedule_ts') || '' } catch { return '' }
     })
@@ -104,6 +108,9 @@ function YourSchedule() {
                 localStorage.setItem('ewo_my_schedule_ts', now)
                 setLastFetched(now)
                 setProjects(result.projects)
+                if (result.availableSheets) {
+                    setAvailableSheets(result.availableSheets)
+                }
             }
         } catch (err) {
             console.error('Failed to fetch schedule:', err)
@@ -120,20 +127,40 @@ function YourSchedule() {
         )
     }, [projects, userName])
 
-    // Compute unique months from myProjects sorted chronologically
+    // Compute unique months from availableSheets or fall back to projects if empty
     const availableMonths = useMemo(() => {
+        const getSortVal = (mStr) => {
+            const monthsOrder = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+            const match = mStr.toLowerCase().match(/^([a-z]+)\s+(\d{4})/)
+            if (!match) return 0
+            const idx = monthsOrder.indexOf(match[1])
+            const year = parseInt(match[2], 10)
+            return year * 12 + idx
+        }
+
+        if (availableSheets.length > 0) {
+            return availableSheets.map(sheet => ({
+                label: sheet,
+                sortKey: getSortVal(sheet)
+            })).sort((a, b) => a.sortKey - b.sortKey)
+        }
+
+        // Fallback to computing from projects if cache is not yet populated
         const monthsMap = new Map()
         myProjects.forEach(p => {
             ;['dlIllustrator', 'dlEditor'].forEach(key => {
                 const val = p[key]
                 const parsed = getMonthYearFromDateString(val)
                 if (parsed) {
-                    monthsMap.set(parsed.label, { label: parsed.label, sortKey: parsed.sortKey })
+                    monthsMap.set(parsed.label, parsed.label)
                 }
             })
         })
-        return Array.from(monthsMap.values()).sort((a, b) => a.sortKey.localeCompare(b.sortKey))
-    }, [myProjects])
+        return Array.from(monthsMap.values()).map(label => ({
+            label,
+            sortKey: getSortVal(label)
+        })).sort((a, b) => a.sortKey - b.sortKey)
+    }, [availableSheets, myProjects])
 
     // Auto-select current month if available on initial data load
     useEffect(() => {
@@ -283,9 +310,6 @@ function YourSchedule() {
                     <button onClick={fetchProjects} disabled={isLoading} className="ys-refresh-btn">
                         <RefreshCw size={14} className={isLoading ? 'spin' : ''} />
                         {isLoading ? 'Fetching…' : 'Refresh'}
-                    </button>
-                    <button onClick={() => setShowReportModal(true)} className="ys-refresh-btn" style={{ background: '#2563eb' }}>
-                        Daily Report
                     </button>
                 </div>
             </div>
@@ -476,12 +500,7 @@ function YourSchedule() {
                 </div>
             )}
 
-            {/* Daily Report Modal */}
-            <DailyReportModal 
-                isOpen={showReportModal} 
-                onClose={() => setShowReportModal(false)} 
-                initialProjects={myProjects} 
-            />
+
 
             <style>{`
                 .ys-page { display: flex; flex-direction: column; gap: var(--space-4); }
