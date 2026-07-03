@@ -787,7 +787,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                         <table className="drm-table">
                                             <thead>
                                                 <tr>
-                                                    <th style={{ width: 35, textAlign: 'center' }}>
+                                                    <th style={{ width: 35, textAlign: 'center', overflow: 'visible' }}>
                                                         <input
                                                             type="checkbox"
                                                             checked={displayedRows.length > 0 && displayedRows.every(r => r.selected)}
@@ -1316,15 +1316,16 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     background: var(--gray-50);
                     color: var(--gray-600);
                     font-weight: 700;
-                    padding: 10px 12px;
+                    padding: 6px 8px;
                     border-bottom: 1px solid var(--gray-200);
                     white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
+                    font-size: 12px;
                 }
                 
                 .drm-table td {
-                    padding: 8px 12px;
+                    padding: 4px 6px;
                     border-bottom: 1px solid var(--gray-100);
                     vertical-align: middle;
                     overflow: visible;
@@ -1339,11 +1340,11 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     align-items: center;
                     justify-content: space-between;
                     width: 100%;
-                    padding: 6px 10px;
-                    border-radius: var(--radius-md);
-                    border: 1px solid var(--gray-200);
-                    background: var(--gray-50);
-                    font-size: 12px;
+                    padding: 4px 6px;
+                    border-radius: var(--radius-sm);
+                    border: 1px solid transparent;
+                    background: transparent;
+                    font-size: 11px;
                     font-weight: 600;
                     color: var(--gray-700);
                     cursor: pointer;
@@ -1391,17 +1392,17 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 }
 
                 .drm-add-notes-btn {
-                    padding: 4px 8px;
-                    border: 1px dashed var(--gray-300);
+                    padding: 3px 6px;
+                    border: 1px dashed var(--gray-200);
                     background: transparent;
                     color: var(--gray-400);
-                    border-radius: var(--radius-md);
+                    border-radius: var(--radius-sm);
                     font-size: 11px;
-                    font-weight: 600;
+                    font-weight: 500;
                     cursor: pointer;
                     width: 100%;
                     text-align: center;
-                    transition: all 0.15s;
+                    transition: all 0.1s;
                 }
                 .drm-add-notes-btn:hover {
                     border-color: var(--primary-400);
@@ -1626,29 +1627,29 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 }
                 
                 .drm-inline-input {
-                    flex: 1; border: 1px solid var(--gray-200);
-                    padding: 6px 10px; border-radius: var(--radius-md);
-                    font-size: 13px; font-family: inherit;
-                    transition: all 0.15s;
-                    background: var(--gray-50);
+                    width: 100%; box-sizing: border-box;
+                    border: 1px solid transparent;
+                    padding: 4px 6px; border-radius: var(--radius-sm);
+                    font-size: 12px; font-family: inherit;
+                    transition: all 0.1s; background: transparent;
                 }
-                .drm-inline-input:hover { border-color: var(--gray-300); }
-                .drm-inline-input:focus { border-color: var(--primary-500); background: white; outline: none; }
+                .drm-inline-input:hover { border-color: var(--gray-200); background: var(--gray-50); }
+                .drm-inline-input:focus { border-color: var(--primary-500); background: white; outline: none; box-shadow: 0 0 0 1px var(--primary-100); }
                 
                 .drm-row-ed-chip {
-                    display: inline-block; padding: 2px 8px; border-radius: var(--radius-md);
+                    display: inline-block; padding: 1px 4px; border-radius: var(--radius-sm);
                     background: var(--gray-100); color: var(--gray-700);
-                    font-size: 11px; font-weight: 600; cursor: pointer;
+                    font-size: 10px; font-weight: 600; cursor: pointer; line-height: 1.2;
                 }
                 .drm-row-ed-chip:hover { background: #fee2e2; color: #b91c1c; }
                 
                 .drm-add-row-ed-btn {
-                    padding: 2px 8px; border: 1px dashed var(--gray-300);
+                    padding: 1px 4px; border: 1px dashed var(--gray-300);
                     background: transparent; color: var(--gray-500);
-                    border-radius: var(--radius-md); font-size: 11px; font-weight: 600;
-                    cursor: pointer;
+                    border-radius: var(--radius-sm); font-size: 10px; font-weight: 600;
+                    cursor: pointer; line-height: 1.2;
                 }
-                .drm-add-row-ed-btn:hover { border-color: var(--primary-500); color: var(--primary-500); }
+                .drm-add-row-ed-btn:hover { border-color: var(--primary-500); color: var(--primary-500); background: var(--primary-50); }
                 
                 .drm-row-del-btn {
                     border: none; background: transparent; color: var(--gray-400);
