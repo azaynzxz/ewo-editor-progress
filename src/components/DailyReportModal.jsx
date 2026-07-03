@@ -1186,7 +1186,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     transition: max-width 0.2s ease-in-out;
                 }
                 .drm-card.view-table {
-                    max-width: 1600px;
+                    max-width: 90vw;
                 }
                 .drm-card.view-list {
                     max-width: 1500px;
@@ -1218,7 +1218,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     transition: grid-template-columns 0.2s ease-in-out;
                 }
                 .drm-card.view-table .drm-split-layout {
-                    grid-template-columns: 1fr 600px;
+                    grid-template-columns: 1fr 800px;
                 }
                 .drm-card.view-list .drm-split-layout {
                     grid-template-columns: 460px 1fr;
