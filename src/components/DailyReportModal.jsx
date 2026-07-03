@@ -675,7 +675,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 {/* Header */}
                 <div className="drm-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Generate Daily Progress JPG</h2>
+                        <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Daily Report</h2>
                         <button
                             onClick={handleRefreshModalData}
                             disabled={isRefreshingData}
