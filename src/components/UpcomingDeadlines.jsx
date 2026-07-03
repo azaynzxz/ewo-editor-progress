@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { List, RefreshCw, Copy, Check, ExternalLink, Users, Maximize2, Minimize2, BarChart3 } from 'lucide-react'
 import { Gantt, ViewMode } from 'gantt-task-react'
 import 'gantt-task-react/dist/index.css'
+import { fetchAllSheetsProjects } from '../utils/projectFetcher'
 
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
 const CACHE_KEY = 'ewo_upcoming_deadlines'
@@ -28,11 +29,16 @@ function UpcomingDeadlines({ compact = false }) {
     const fetchProjects = async () => {
         setIsLoading(true)
         try {
-            const res = await fetch(`${APPS_SCRIPT_URL}?action=getAdminProjects`)
-            const result = await res.json()
-            if (result.success && result.data?.projects) {
+            const result = await fetchAllSheetsProjects()
+            if (result.success || result.projects?.length > 0) {
+                // Filter to only projects from the current month's sheet
+                const today = new Date()
+                const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+                const currentSheetName = `${months[today.getMonth()]} ${today.getFullYear()}`
+
                 const EXCLUDED_STATUS = ['done', 'on hold', 'under review']
-                const mapped = result.data.projects
+                const mapped = result.projects
+                    .filter(p => p.sourceSheet === currentSheetName)
                     .filter(p => p.dlEditor && !EXCLUDED_STATUS.includes((p.projectStatus || '').toLowerCase()))
                     .map(p => ({
                         title: p.projectName,
@@ -49,6 +55,7 @@ function UpcomingDeadlines({ compact = false }) {
                 const sorted = sortByDeadline(mapped)
                 setProjects(sorted)
                 localStorage.setItem(CACHE_KEY, JSON.stringify(sorted))
+                window.dispatchEvent(new Event('ewo_deadlines_refreshed'))
             }
         } catch (error) {
             console.error('Failed to fetch upcoming projects:', error)

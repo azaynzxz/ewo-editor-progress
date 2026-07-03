@@ -43,9 +43,10 @@ const DEFAULT_ILLUSTRATORS = ['Vanda', 'Rosdiana', 'Dayah']
 function ProgressFormPage() {
     const userRole = localStorage.getItem('userRole') || 'video_editor'
     const isIllustrator = userRole === 'illustrator'
+    const isAdsDesign = userRole === 'ads_design'
     const defaultList = isIllustrator ? DEFAULT_ILLUSTRATORS : DEFAULT_EDITORS
-    const roleLabel = isIllustrator ? 'Illustrator' : 'Editor'
-    const customStorageKey = isIllustrator ? 'customIllustrators' : 'customEditors'
+    const roleLabel = isIllustrator ? 'Illustrator' : (isAdsDesign ? 'Designer' : 'Editor')
+    const customStorageKey = isIllustrator ? 'customIllustrators' : (isAdsDesign ? 'customDesigners' : 'customEditors')
 
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [toast, setToast] = useState(null)
@@ -82,7 +83,7 @@ function ProgressFormPage() {
 
     const [formData, setFormData] = useState({
         tanggal: new Date(),
-        editor: '',
+        editor: localStorage.getItem('lastUsedEditor') || '',
         comment: ''
     })
 
@@ -90,22 +91,32 @@ function ProgressFormPage() {
     const [screenshots, setScreenshots] = useState([])
     const [sceneToast, setSceneToast] = useState(null)
 
-    // Cache upcoming deadlines for autocomplete
-    const [upcomingTitles, setUpcomingTitles] = useState([])
+    // Cache all projects for autocomplete
+    const [allProjects, setAllProjects] = useState([])
     useEffect(() => {
-        try {
-            const cached = localStorage.getItem('ewo_upcoming_deadlines')
-            if (cached) {
-                setUpcomingTitles(JSON.parse(cached))
-            }
-        } catch { }
+        const loadCached = () => {
+            try {
+                const cached = localStorage.getItem('ewo_all_projects_cache')
+                if (cached) {
+                    setAllProjects(JSON.parse(cached))
+                }
+            } catch { }
+        }
+        loadCached()
+        window.addEventListener('ewo_deadlines_refreshed', loadCached)
+        return () => window.removeEventListener('ewo_deadlines_refreshed', loadCached)
     }, [])
 
     const getTitlesForClient = (clientName) => {
-        if (!upcomingTitles.length) return []
-        const titles = upcomingTitles
-            .filter(p => !p.client || p.client.toLowerCase() === clientName.toLowerCase())
-            .map(p => p.title)
+        if (!allProjects.length) return []
+        const titles = allProjects
+            .filter(p => {
+                if (!p.clients) return true
+                // Support comma-separated clients (case-insensitive, whitespace trimmed)
+                const clientList = p.clients.split(',').map(c => c.trim().toLowerCase())
+                return clientList.includes(clientName.toLowerCase())
+            })
+            .map(p => p.projectName)
         return [...new Set(titles)]
     }
 

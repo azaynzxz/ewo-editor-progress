@@ -64,22 +64,32 @@ function AttendanceCard() {
     const [userName, setUserName] = useState(localStorage.getItem('lastUsedEditor') || '');
     const [isEditingName, setIsEditingName] = useState(!localStorage.getItem('lastUsedEditor'));
 
-    // Cache upcoming deadlines for autocomplete
-    const [upcomingTitles, setUpcomingTitles] = useState([]);
+    // Cache all projects for autocomplete
+    const [allProjects, setAllProjects] = useState([]);
     useEffect(() => {
-        try {
-            const cached = localStorage.getItem('ewo_upcoming_deadlines');
-            if (cached) {
-                setUpcomingTitles(JSON.parse(cached));
-            }
-        } catch { }
+        const loadCached = () => {
+            try {
+                const cached = localStorage.getItem('ewo_all_projects_cache');
+                if (cached) {
+                    setAllProjects(JSON.parse(cached));
+                }
+            } catch { }
+        };
+        loadCached();
+        window.addEventListener('ewo_deadlines_refreshed', loadCached);
+        return () => window.removeEventListener('ewo_deadlines_refreshed', loadCached);
     }, [showTodoModal]);
 
     const getTitlesForClient = (clientName) => {
-        if (!upcomingTitles.length) return [];
-        const titles = upcomingTitles
-            .filter(p => !p.client || p.client.toLowerCase() === clientName.toLowerCase())
-            .map(p => p.title);
+        if (!allProjects.length) return [];
+        const titles = allProjects
+            .filter(p => {
+                if (!p.clients) return true;
+                // Support comma-separated clients (case-insensitive, whitespace trimmed)
+                const clientList = p.clients.split(',').map(c => c.trim().toLowerCase());
+                return clientList.includes(clientName.toLowerCase());
+            })
+            .map(p => p.projectName);
         return [...new Set(titles)];
     };
 
