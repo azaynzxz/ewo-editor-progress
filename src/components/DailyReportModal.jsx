@@ -194,6 +194,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     plan: defaultPlan,
                     client: p.clients || '',
                     title: p.projectName || '',
+                    progress: p.progress || '0%',
                     notes: p.projectNotes || '',
                     editor: people ? people.split(',').map(e => e.trim()).filter(Boolean) : [],
                     selected: isCurrentMonth,
@@ -284,6 +285,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     plan: defaultPlan,
                     client: p.clients || '',
                     title: p.projectName || '',
+                    progress: p.progress || '0%',
                     notes: p.projectNotes || '',
                     editor: people ? people.split(',').map(e => e.trim()).filter(Boolean) : [],
                     selected: isCurrentMonth,
@@ -372,6 +374,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         plan: ['CICIL'],
         client: '',
         title: '',
+        progress: '0%',
         notes: '',
         editor: [],
         selected: true
@@ -510,8 +513,9 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
 
         ctx.fillText('PLAN', 70, tableY + tableHeaderHeight / 2)
-        ctx.fillText('CLIENT', 250, tableY + tableHeaderHeight / 2)
-        ctx.fillText('TITLE', 400, tableY + tableHeaderHeight / 2)
+        ctx.fillText('CLIENT', 230, tableY + tableHeaderHeight / 2)
+        ctx.fillText('TITLE', 370, tableY + tableHeaderHeight / 2)
+        ctx.fillText('PERCENTAGE', 640, tableY + tableHeaderHeight / 2)
         ctx.fillText('NOTES', 740, tableY + tableHeaderHeight / 2)
         ctx.fillText(getRoleHeaderLabel(), 960, tableY + tableHeaderHeight / 2)
 
@@ -576,12 +580,17 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
             // Client
             ctx.fillStyle = '#475569'
             ctx.font = '500 16px "Inter", "Segoe UI", Roboto, sans-serif'
-            ctx.fillText(truncateText(row.client || '—', 140), 250, currentY + rowHeight / 2)
+            ctx.fillText(truncateText(row.client || '—', 120), 230, currentY + rowHeight / 2)
 
             // Title
             ctx.fillStyle = '#0f172a'
             ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
-            ctx.fillText(truncateText(row.title || '—', 310), 400, currentY + rowHeight / 2)
+            ctx.fillText(truncateText(row.title || '—', 250), 370, currentY + rowHeight / 2)
+
+            // Percentage
+            ctx.fillStyle = '#0284c7'
+            ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
+            ctx.fillText(truncateText(row.progress || '0%', 80), 640, currentY + rowHeight / 2)
 
             // Notes
             ctx.fillStyle = '#4b5563'
@@ -797,10 +806,11 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                             }}
                                                         />
                                                     </th>
-                                                    <th style={{ width: '16%' }}>Plan Tags</th>
-                                                    <th style={{ width: '15%' }}>Client</th>
-                                                    <th style={{ width: '33%' }}>Title</th>
-                                                    <th style={{ width: '16%' }}>Notes</th>
+                                                    <th style={{ width: '14%' }}>Plan Tags</th>
+                                                    <th style={{ width: '12%' }}>Client</th>
+                                                    <th style={{ width: '25%' }}>Title</th>
+                                                    <th style={{ width: '12%' }}>Percentage</th>
+                                                    <th style={{ width: '17%' }}>Notes</th>
                                                     <th style={{ width: '16%' }}>{getRoleSingleLabel()}(s)</th>
                                                 </tr>
                                             </thead>
@@ -865,6 +875,15 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                                 value={row.title}
                                                                 style={{ fontWeight: 600 }}
                                                                 onChange={e => handleUpdateRow(row.id, { title: e.target.value })}
+                                                            />
+                                                        </td>
+                                                        <td>
+                                                            <input
+                                                                type="text"
+                                                                className="drm-inline-input"
+                                                                placeholder="0%..."
+                                                                value={row.progress || ''}
+                                                                onChange={e => handleUpdateRow(row.id, { progress: e.target.value })}
                                                             />
                                                         </td>
                                                         <td>
@@ -1054,6 +1073,16 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                                             style={{ fontWeight: 600 }}
                                                                             value={row.title}
                                                                             onChange={e => handleUpdateRow(row.id, { title: e.target.value })}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="drm-field-group" style={{ marginTop: 6 }}>
+                                                                        <span className="drm-field-label">Percentage</span>
+                                                                        <input
+                                                                            type="text"
+                                                                            className="drm-inline-input"
+                                                                            placeholder="0%..."
+                                                                            value={row.progress || ''}
+                                                                            onChange={e => handleUpdateRow(row.id, { progress: e.target.value })}
                                                                         />
                                                                     </div>
                                                                     <div className="drm-field-group" style={{ marginTop: 6 }}>
