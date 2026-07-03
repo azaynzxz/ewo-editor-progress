@@ -45,7 +45,7 @@ function ProgressFormPage() {
     const isIllustrator = userRole === 'illustrator'
     const isAdsDesign = userRole === 'ads_design'
     const defaultList = isIllustrator ? DEFAULT_ILLUSTRATORS : DEFAULT_EDITORS
-    const roleLabel = isIllustrator ? 'Illustrator' : (isAdsDesign ? 'Designer' : 'Editor')
+    const roleLabel = isIllustrator ? 'Illustrator' : (isAdsDesign ? 'Excecutor' : 'Editor')
     const customStorageKey = isIllustrator ? 'customIllustrators' : (isAdsDesign ? 'customDesigners' : 'customEditors')
 
     const [isSubmitting, setIsSubmitting] = useState(false)

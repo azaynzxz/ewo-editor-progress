@@ -93,6 +93,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
     const [activeRowEditorDropdown, setActiveRowEditorDropdown] = useState(null)
     const [expandedRowId, setExpandedRowId] = useState(null)
     const [viewMode, setViewMode] = useState('table')
+    const [activePlanDropdown, setActivePlanDropdown] = useState(null)
+    const [showNotesInputForRow, setShowNotesInputForRow] = useState({})
     const dropdownRef = useRef(null)
     const canvasRef = useRef(null)
     const [logoImage, setLogoImage] = useState(null)
@@ -156,6 +158,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 projectsList = projectsList.filter(p => {
                     if (userRole === 'illustrator') {
                         return matchesUser(p.illustrator, loggedInUser)
+                    } else if (userRole === 'ads_design') {
+                        return matchesUser(p.editor, loggedInUser) || matchesUser(p.illustrator, loggedInUser)
                     } else {
                         return matchesUser(p.editor, loggedInUser)
                     }
@@ -171,6 +175,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 let people = ''
                 if (userRole === 'illustrator') {
                     people = p.illustrator || ''
+                } else if (userRole === 'ads_design') {
+                    people = p.editor || p.illustrator || ''
                 } else {
                     people = p.editor || ''
                 }
@@ -239,6 +245,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 projectsList = projectsList.filter(p => {
                     if (userRole === 'illustrator') {
                         return matchesUser(p.illustrator, loggedInUser)
+                    } else if (userRole === 'ads_design') {
+                        return matchesUser(p.editor, loggedInUser) || matchesUser(p.illustrator, loggedInUser)
                     } else {
                         return matchesUser(p.editor, loggedInUser)
                     }
@@ -256,6 +264,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 let people = ''
                 if (userRole === 'illustrator') {
                     people = p.illustrator || ''
+                } else if (userRole === 'ads_design') {
+                    people = p.editor || p.illustrator || ''
                 } else {
                     people = p.editor || ''
                 }
@@ -343,11 +353,14 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         })
     }, [reportRows, projectMonthFilter])
 
-    // Close row editor dropdown on click outside
+    // Close dropdowns on click outside
     useEffect(() => {
         function handleClickOutside(event) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+            if (!event.target.closest('.drm-ed-dropdown-container') && !event.target.closest('.drm-add-row-ed-btn')) {
                 setActiveRowEditorDropdown(null)
+            }
+            if (!event.target.closest('.drm-plan-dropdown-container')) {
+                setActivePlanDropdown(null)
             }
         }
         document.addEventListener('mousedown', handleClickOutside)
@@ -774,7 +787,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                         <table className="drm-table">
                                             <thead>
                                                 <tr>
-                                                    <th style={{ width: 40, textAlign: 'center' }}>
+                                                    <th style={{ width: 35, textAlign: 'center' }}>
                                                         <input
                                                             type="checkbox"
                                                             checked={displayedRows.length > 0 && displayedRows.every(r => r.selected)}
@@ -784,12 +797,12 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                             }}
                                                         />
                                                     </th>
-                                                    <th style={{ width: 150 }}>Plan Tags</th>
-                                                    <th style={{ width: 110 }}>Client</th>
-                                                    <th>Title</th>
-                                                    <th style={{ width: 140 }}>Notes</th>
-                                                    <th style={{ width: 140 }}>{getRoleSingleLabel()}(s)</th>
-                                                    <th style={{ width: 40, textAlign: 'center' }}>Hapus</th>
+                                                    <th style={{ width: 120 }}>Plan Tags</th>
+                                                    <th style={{ width: 130 }}>Client</th>
+                                                    <th style={{ width: 250 }}>Title</th>
+                                                    <th style={{ width: 120 }}>Notes</th>
+                                                    <th style={{ width: 150 }}>{getRoleSingleLabel()}(s)</th>
+                                                    <th style={{ width: 45, textAlign: 'center' }}>Hapus</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -802,27 +815,34 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                                 onChange={e => handleUpdateRow(row.id, { selected: e.target.checked })}
                                                             />
                                                         </td>
-                                                        <td>
-                                                            <div style={{ display: 'flex', gap: 4 }}>
-                                                                {['SUBMIT', 'CICIL', 'REV'].map((tag) => {
-                                                                    const isActive = row.plan.includes(tag)
-                                                                    const colors = PLAN_COLORS[tag]
-                                                                    return (
-                                                                        <button
-                                                                            key={tag}
-                                                                            onClick={() => handleTogglePlan(row.id, tag)}
-                                                                            className={`drm-plan-tag-btn ${isActive ? 'active' : ''}`}
-                                                                            style={{
-                                                                                borderColor: colors.border,
-                                                                                color: isActive ? colors.text : 'var(--gray-400)',
-                                                                                background: isActive ? colors.bg : 'transparent'
-                                                                            }}
-                                                                        >
-                                                                            {tag}
-                                                                        </button>
-                                                                    )
-                                                                })}
-                                                            </div>
+                                                        <td className="drm-plan-dropdown-container" style={{ position: 'relative' }}>
+                                                            <button
+                                                                onClick={() => setActivePlanDropdown(activePlanDropdown === row.id ? null : row.id)}
+                                                                className="drm-plan-dropdown-trigger"
+                                                            >
+                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                                                                    {row.plan.length === 0 ? 'Pilih Plan...' : row.plan.join(', ')}
+                                                                </span>
+                                                                <span style={{ fontSize: '8px', marginLeft: 4, color: 'var(--gray-400)' }}>▼</span>
+                                                            </button>
+                                                            
+                                                            {activePlanDropdown === row.id && (
+                                                                <div className="drm-plan-dropdown-menu">
+                                                                    {['SUBMIT', 'CICIL', 'REV'].map(tag => {
+                                                                        const isSelected = row.plan.includes(tag)
+                                                                        return (
+                                                                            <label key={tag} className="drm-plan-dropdown-item">
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={isSelected}
+                                                                                    onChange={() => handleTogglePlan(row.id, tag)}
+                                                                                />
+                                                                                <span style={{ color: PLAN_COLORS[tag].text }}>{tag}</span>
+                                                                            </label>
+                                                                        )
+                                                                    })}
+                                                                </div>
+                                                            )}
                                                         </td>
                                                         <td>
                                                             <input
@@ -844,15 +864,31 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                             />
                                                         </td>
                                                         <td>
-                                                            <input
-                                                                type="text"
-                                                                className="drm-inline-input"
-                                                                placeholder="Catatan..."
-                                                                value={row.notes || ''}
-                                                                onChange={e => handleUpdateRow(row.id, { notes: e.target.value })}
-                                                            />
+                                                            {showNotesInputForRow[row.id] || row.notes ? (
+                                                                <input
+                                                                    type="text"
+                                                                    className="drm-inline-input"
+                                                                    placeholder="Catatan..."
+                                                                    value={row.notes || ''}
+                                                                    onChange={e => handleUpdateRow(row.id, { notes: e.target.value })}
+                                                                    autoFocus
+                                                                    onBlur={e => {
+                                                                        if (!e.target.value.trim()) {
+                                                                            setShowNotesInputForRow(prev => ({ ...prev, [row.id]: false }))
+                                                                            handleUpdateRow(row.id, { notes: '' })
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <button
+                                                                    onClick={() => setShowNotesInputForRow(prev => ({ ...prev, [row.id]: true }))}
+                                                                    className="drm-add-notes-btn"
+                                                                >
+                                                                    + Catatan
+                                                                </button>
+                                                            )}
                                                         </td>
-                                                        <td style={{ position: 'relative' }}>
+                                                        <td className="drm-ed-dropdown-container" style={{ position: 'relative' }}>
                                                             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                                                                 {row.editor.map(ed => (
                                                                     <span 
@@ -1273,6 +1309,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     border-collapse: collapse;
                     text-align: left;
                     font-size: 13px;
+                    table-layout: fixed;
                 }
                 
                 .drm-table th {
@@ -1282,16 +1319,93 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     padding: 10px 12px;
                     border-bottom: 1px solid var(--gray-200);
                     white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }
                 
                 .drm-table td {
                     padding: 8px 12px;
                     border-bottom: 1px solid var(--gray-100);
                     vertical-align: middle;
+                    overflow: visible;
                 }
                 
                 .drm-table tr:hover {
                     background: var(--gray-50);
+                }
+
+                .drm-plan-dropdown-trigger {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    width: 100%;
+                    padding: 6px 10px;
+                    border-radius: var(--radius-md);
+                    border: 1px solid var(--gray-200);
+                    background: var(--gray-50);
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: var(--gray-700);
+                    cursor: pointer;
+                    text-align: left;
+                    transition: all 0.15s;
+                }
+                .drm-plan-dropdown-trigger:hover {
+                    border-color: var(--gray-300);
+                    background: white;
+                }
+
+                .drm-plan-dropdown-menu {
+                    position: absolute;
+                    top: calc(100% + 4px);
+                    left: 12px;
+                    z-index: 200;
+                    background: white;
+                    border: 1px solid var(--gray-200);
+                    border-radius: var(--radius-md);
+                    box-shadow: var(--shadow-lg);
+                    padding: 6px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    width: 120px;
+                }
+
+                .drm-plan-dropdown-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 4px 6px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 11px;
+                    font-weight: 700;
+                    transition: background 0.15s;
+                }
+                .drm-plan-dropdown-item:hover {
+                    background: var(--gray-50);
+                }
+                .drm-plan-dropdown-item input {
+                    margin: 0;
+                    cursor: pointer;
+                }
+
+                .drm-add-notes-btn {
+                    padding: 4px 8px;
+                    border: 1px dashed var(--gray-300);
+                    background: transparent;
+                    color: var(--gray-400);
+                    border-radius: var(--radius-md);
+                    font-size: 11px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    width: 100%;
+                    text-align: center;
+                    transition: all 0.15s;
+                }
+                .drm-add-notes-btn:hover {
+                    border-color: var(--primary-400);
+                    color: var(--primary-500);
                 }
                 
                 .drm-preview-pane {
