@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Plus, Trash2, Download, X, PlusCircle, Check, RefreshCw } from 'lucide-react'
 import { fetchAllSheetsProjects } from '../utils/projectFetcher'
 
@@ -92,6 +92,17 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
     const [newEditorInput, setNewEditorInput] = useState('')
     const [activeRowEditorDropdown, setActiveRowEditorDropdown] = useState(null)
     const dropdownRef = useRef(null)
+    const canvasRef = useRef(null)
+    const [logoImage, setLogoImage] = useState(null)
+
+    // Preload logo for synchronous canvas rendering
+    useEffect(() => {
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        img.src = '/logo.jpg'
+        img.onload = () => setLogoImage(img)
+        img.onerror = () => console.error('Failed to load logo')
+    }, [])
 
     const userRole = localStorage.getItem('userRole') || 'video_editor'
 
@@ -341,8 +352,6 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    if (!isOpen) return null
-
     const createNewRow = () => ({
         id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         plan: ['CICIL'],
@@ -404,65 +413,46 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         handleUpdateRow(rowId, { editor: updatedEditors })
     }
 
-    // Dynamic high-res Canvas generation
-    const handleDownloadJpg = async () => {
-        const activeRows = reportRows.filter(r => r.selected)
-        if (activeRows.length === 0) {
-            alert('Silakan pilih minimal satu project untuk di-export.')
-            return
-        }
+    const drawCanvas = useCallback(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return
 
-        // Setup dimensions
+        const activeRows = reportRows.filter(r => r.selected)
         const width = 1200
         const headerHeight = 200
         const rowHeight = 70
         const footerHeight = 80
         const tableHeaderHeight = 55
-        const height = headerHeight + tableHeaderHeight + (activeRows.length * rowHeight) + footerHeight
+        const height = activeRows.length === 0
+            ? 350
+            : headerHeight + tableHeaderHeight + (activeRows.length * rowHeight) + footerHeight
 
-        // Create canvas
-        const canvas = document.createElement('canvas')
-        const scale = 3 // 3x resolution for high sharpness
+        // Generate canvas at 2x resolution for preview sharpness & high quality download
+        const scale = 2
         canvas.width = width * scale
         canvas.height = height * scale
+
         const ctx = canvas.getContext('2d')
         ctx.scale(scale, scale)
-
-        // Enable high-quality text anti-aliasing
         ctx.textBaseline = 'middle'
 
         // 1. Draw Clean White Background
         ctx.fillStyle = '#ffffff'
         ctx.fillRect(0, 0, width, height)
 
-        // Get role based color palettes
         const rCol = getRoleColors()
 
         // 2. Draw Premium Top Accent Stripe (Role-based)
         ctx.fillStyle = rCol.accent
         ctx.fillRect(0, 0, width, 12)
 
-        // 3. Load & Draw Logo (left-aligned)
-        let logoImg = null
-        try {
-            logoImg = await new Promise((resolve) => {
-                const img = new Image()
-                img.crossOrigin = 'anonymous'
-                img.src = '/logo.jpg'
-                img.onload = () => resolve(img)
-                img.onerror = () => resolve(null)
-            })
-        } catch (e) {
-            console.error('Logo loading failed:', e)
+        // 3. Draw Logo
+        if (logoImage) {
+            ctx.drawImage(logoImage, 50, 40, 120, 120)
         }
 
-        if (logoImg) {
-            // Draw logo at x=50, y=40, scaled to width=120, height=120
-            ctx.drawImage(logoImg, 50, 40, 120, 120)
-        }
-
-        // 4. Header Titles (aligned next to logo, x=190)
-        const headerTextX = logoImg ? 190 : 50
+        // 4. Header Titles
+        const headerTextX = logoImage ? 190 : 50
         
         ctx.fillStyle = '#1e293b'
         ctx.font = 'bold 24px "Inter", "Segoe UI", Roboto, sans-serif'
@@ -480,12 +470,27 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         ctx.font = '500 18px "Inter", "Segoe UI", Roboto, sans-serif'
         ctx.fillText(formattedDate, headerTextX, 150)
 
-        // 5. Draw Table Headers (starts at y=200)
+        if (activeRows.length === 0) {
+            // Draw empty state
+            ctx.fillStyle = '#f8fafc'
+            ctx.fillRect(50, headerHeight, width - 100, 100)
+            ctx.strokeStyle = '#cbd5e1'
+            ctx.lineWidth = 1
+            ctx.strokeRect(50, headerHeight, width - 100, 100)
+            
+            ctx.fillStyle = '#94a3b8'
+            ctx.font = 'italic 16px "Inter", sans-serif'
+            ctx.textAlign = 'center'
+            ctx.fillText('Pilih minimal satu project di panel kiri untuk melihat preview progress report.', width / 2, headerHeight + 50)
+            ctx.textAlign = 'left' // reset
+            return
+        }
+
+        // 5. Draw Table Headers
         const tableY = headerHeight
-        ctx.fillStyle = rCol.headerBg // Role-based header background
+        ctx.fillStyle = rCol.headerBg
         ctx.fillRect(50, tableY, width - 100, tableHeaderHeight)
 
-        // Header Labels
         ctx.fillStyle = '#ffffff'
         ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
         
@@ -495,7 +500,6 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         ctx.fillText('NOTES', 740, tableY + tableHeaderHeight / 2)
         ctx.fillText(getRoleHeaderLabel(), 960, tableY + tableHeaderHeight / 2)
 
-        // Helper to draw rounded rectangles
         const drawRoundRect = (x, y, w, h, r, fill, stroke) => {
             ctx.beginPath()
             ctx.moveTo(x + r, y)
@@ -514,7 +518,6 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
             }
         }
 
-        // Helper to truncate text to fit column width
         const truncateText = (text, maxWidth) => {
             if (ctx.measureText(text).width <= maxWidth) return text
             let temp = text
@@ -527,11 +530,9 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         // 6. Draw Table Rows
         let currentY = tableY + tableHeaderHeight
         activeRows.forEach((row, rIdx) => {
-            // Alternating row background
             ctx.fillStyle = rIdx % 2 === 0 ? '#ffffff' : '#f8fafc'
             ctx.fillRect(50, currentY, width - 100, rowHeight)
 
-            // Subtle row border line
             ctx.strokeStyle = '#e2e8f0'
             ctx.lineWidth = 1
             ctx.beginPath()
@@ -539,7 +540,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
             ctx.lineTo(width - 50, currentY + rowHeight)
             ctx.stroke()
 
-            // Column 1: Plan Pills (SUBMIT, CICIL, REV)
+            // Plan tags
             let tagX = 70
             const tagY = currentY + (rowHeight - 32) / 2
             
@@ -548,34 +549,31 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 ctx.font = 'bold 12px "Inter", "Segoe UI", Roboto, sans-serif'
                 const tagWidth = ctx.measureText(planTag).width + 24
                 
-                // Draw pill background
                 drawRoundRect(tagX, tagY, tagWidth, 32, 16, colors.bg, null)
-                
-                // Draw text
                 ctx.fillStyle = colors.text
                 ctx.textAlign = 'center'
                 ctx.fillText(planTag, tagX + tagWidth / 2, tagY + 16)
-                ctx.textAlign = 'left' // reset
+                ctx.textAlign = 'left'
 
                 tagX += tagWidth + 8
             })
 
-            // Column 2: Client
+            // Client
             ctx.fillStyle = '#475569'
             ctx.font = '500 16px "Inter", "Segoe UI", Roboto, sans-serif'
             ctx.fillText(truncateText(row.client || '—', 140), 250, currentY + rowHeight / 2)
 
-            // Column 3: Title
+            // Title
             ctx.fillStyle = '#0f172a'
             ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
             ctx.fillText(truncateText(row.title || '—', 310), 400, currentY + rowHeight / 2)
 
-            // Column 4: Notes
+            // Notes
             ctx.fillStyle = '#4b5563'
             ctx.font = 'italic 15px "Inter", "Segoe UI", Roboto, sans-serif'
             ctx.fillText(truncateText(row.notes || '—', 190), 740, currentY + rowHeight / 2)
 
-            // Column 5: Editor Badges (drawn side-by-side)
+            // Editors
             let editorX = 960
             const editorY = currentY + (rowHeight - 30) / 2
             
@@ -585,14 +583,11 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     ctx.font = 'bold 12px "Inter", "Segoe UI", Roboto, sans-serif'
                     const edWidth = ctx.measureText(ed).width + 20
                     
-                    // Draw badge
                     drawRoundRect(editorX, editorY, edWidth, 30, 15, col.bg, null)
-                    
-                    // Draw text
                     ctx.fillStyle = col.text
                     ctx.textAlign = 'center'
                     ctx.fillText(ed, editorX + edWidth / 2, editorY + 15)
-                    ctx.textAlign = 'left' // reset
+                    ctx.textAlign = 'left'
 
                     editorX += edWidth + 6
                 })
@@ -605,7 +600,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
             currentY += rowHeight
         })
 
-        // Draw side borders for table outline
+        // Draw side borders
         ctx.strokeStyle = '#e2e8f0'
         ctx.lineWidth = 1
         ctx.strokeRect(50, tableY, width - 100, tableHeaderHeight + (activeRows.length * rowHeight))
@@ -626,8 +621,25 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         ctx.font = '500 13px "Inter", "Segoe UI", Roboto, sans-serif'
         ctx.textAlign = 'center'
         ctx.fillText('EWO Animation Progress Report • Generated via EWO Hub', width / 2, footerY + 35)
+        ctx.textAlign = 'left'
+    }, [reportRows, reportDate, logoImage])
 
-        // Trigger Download
+    // Draw canvas automatically when state changes
+    useEffect(() => {
+        if (isOpen) {
+            drawCanvas()
+        }
+    }, [isOpen, drawCanvas])
+
+    const handleDownloadJpg = () => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const activeRows = reportRows.filter(r => r.selected)
+        if (activeRows.length === 0) {
+            alert('Silakan pilih minimal satu project untuk di-export.')
+            return
+        }
+
         try {
             const dataUrl = canvas.toDataURL('image/jpeg', 0.95)
             const link = document.createElement('a')
@@ -640,6 +652,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         }
     }
 
+    if (!isOpen) return null
+
     return (
         <div className="drm-overlay">
             <div className="drm-card">
@@ -651,20 +665,6 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                             onClick={handleRefreshModalData} 
                             disabled={isRefreshingData}
                             className="drm-refresh-btn"
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                padding: '4px 10px',
-                                border: '1px solid var(--primary-200)',
-                                borderRadius: 'var(--radius-md)',
-                                background: 'var(--primary-50)',
-                                color: 'var(--primary-700)',
-                                cursor: 'pointer',
-                                fontSize: 11,
-                                fontWeight: 600,
-                                transition: 'all 0.2s',
-                            }}
                             title="Refresh project data from sheets"
                         >
                             <RefreshCw size={12} className={isRefreshingData ? 'spin' : ''} />
@@ -676,116 +676,122 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     </button>
                 </div>
 
-                {/* Content */}
+                {/* Content - Redesigned split-screen layout */}
                 <div className="drm-content">
-                    {/* Setup block */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 20 }}>
-                        <div>
-                            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--gray-500)', marginBottom: 6 }}>
-                                Tanggal Laporan
-                            </label>
-                            <input
-                                type="date"
-                                className="input"
-                                value={reportDate}
-                                onChange={e => setReportDate(e.target.value)}
-                                style={{ width: '100%', fontSize: 13 }}
-                            />
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--gray-500)', marginBottom: 6 }}>
-                                Saring Bulan Project
-                            </label>
-                            <select
-                                className="input"
-                                value={projectMonthFilter}
-                                onChange={e => setProjectMonthFilter(e.target.value)}
-                                style={{ width: '100%', fontSize: 13, height: '36px' }}
-                            >
-                                <option value="all">Semua Bulan</option>
-                                {sortedFilterMonths.map(m => (
-                                    <option key={m} value={m}>{m}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--gray-500)', marginBottom: 6 }}>
-                                Tambah List {getRoleSingleLabel()} Terdaftar (Persisten)
-                            </label>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                                <input
-                                    type="text"
-                                    className="input"
-                                    placeholder={`Contoh: Zayn`}
-                                    value={newEditorInput}
-                                    onChange={e => setNewEditorInput(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && handleAddCustomEditorGlobal()}
-                                    style={{ flex: 1, fontSize: 13 }}
-                                />
-                                <button onClick={handleAddCustomEditorGlobal} className="drm-add-ed-btn" title={`Tambah ${getRoleSingleLabel()}`}>
-                                    <PlusCircle size={16} />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Editor list chips */}
-                    <div style={{ marginBottom: 20 }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gray-400)', display: 'block', marginBottom: 6 }}>
-                            Daftar {getRoleSingleLabel()} Tersimpan (Klik untuk menghapus):
-                        </span>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            {customEditors.map(ed => {
-                                const col = getEditorColor(ed)
-                                return (
-                                    <span 
-                                        key={ed} 
-                                        onClick={() => handleRemoveCustomEditorGlobal(ed)}
-                                        className="drm-ed-chip"
-                                        style={{ backgroundColor: col.bg, color: col.text }}
+                    <div className="drm-split-layout">
+                        {/* Left Column: Controls & Card List */}
+                        <div className="drm-controls-pane">
+                            <div className="drm-setup-grid">
+                                <div>
+                                    <label className="drm-label">Tanggal Laporan</label>
+                                    <input
+                                        type="date"
+                                        className="input"
+                                        value={reportDate}
+                                        onChange={e => setReportDate(e.target.value)}
+                                        style={{ width: '100%', fontSize: 13 }}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="drm-label">Saring Bulan Project</label>
+                                    <select
+                                        className="input"
+                                        value={projectMonthFilter}
+                                        onChange={e => setProjectMonthFilter(e.target.value)}
+                                        style={{ width: '100%', fontSize: 13, height: '36px' }}
                                     >
-                                        {ed} <X size={10} style={{ marginLeft: 4 }} />
-                                    </span>
-                                )
-                            })}
-                        </div>
-                    </div>
+                                        <option value="all">Semua Bulan</option>
+                                        {sortedFilterMonths.map(m => (
+                                            <option key={m} value={m}>{m}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
 
-                    {/* Rows Table */}
-                    <div className="drm-table-container">
-                        <table className="drm-table">
-                            <thead>
-                                <tr>
-                                    <th style={{ width: 40, textAlign: 'center' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={displayedRows.length > 0 && displayedRows.every(r => r.selected)}
-                                            onChange={e => {
-                                                const displayedIds = new Set(displayedRows.map(r => r.id))
-                                                setReportRows(prev => prev.map(r => displayedIds.has(r.id) ? { ...r, selected: e.target.checked } : r))
-                                            }}
-                                        />
-                                    </th>
-                                    <th style={{ width: 180 }}>Plan Tags</th>
-                                    <th style={{ width: 120 }}>Client</th>
-                                    <th>Title</th>
-                                    <th style={{ width: 180 }}>Notes</th>
-                                    <th style={{ width: 180 }}>{getRoleSingleLabel()}(s)</th>
-                                    <th style={{ width: 50, textAlign: 'center' }}>Hapus</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {displayedRows.map((row, rIdx) => (
-                                    <tr key={row.id}>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={row.selected}
-                                                onChange={e => handleUpdateRow(row.id, { selected: e.target.checked })}
-                                            />
-                                        </td>
-                                        <td>
-                                            <div style={{ display: 'flex', gap: 4 }}>
+                            {/* Editor global settings */}
+                            <div style={{ marginBottom: 20 }}>
+                                <label className="drm-label">Tambah List {getRoleSingleLabel()} Terdaftar (Persisten)</label>
+                                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        placeholder={`Contoh: Zayn`}
+                                        value={newEditorInput}
+                                        onChange={e => setNewEditorInput(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && handleAddCustomEditorGlobal()}
+                                        style={{ flex: 1, fontSize: 13 }}
+                                    />
+                                    <button onClick={handleAddCustomEditorGlobal} className="drm-add-ed-btn" title={`Tambah ${getRoleSingleLabel()}`}>
+                                        <PlusCircle size={16} />
+                                    </button>
+                                </div>
+
+                                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--gray-400)', display: 'block', marginBottom: 6 }}>
+                                    Daftar {getRoleSingleLabel()} Tersimpan (Klik untuk menghapus):
+                                </span>
+                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                    {customEditors.map(ed => {
+                                        const col = getEditorColor(ed)
+                                        return (
+                                            <span 
+                                                key={ed} 
+                                                onClick={() => handleRemoveCustomEditorGlobal(ed)}
+                                                className="drm-ed-chip"
+                                                style={{ backgroundColor: col.bg, color: col.text }}
+                                            >
+                                                {ed} <X size={10} style={{ marginLeft: 4 }} />
+                                            </span>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Section header for the list */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-700)' }}>
+                                    Daftar Projects ({displayedRows.length})
+                                </span>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600, color: 'var(--gray-500)' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={displayedRows.length > 0 && displayedRows.every(r => r.selected)}
+                                        onChange={e => {
+                                            const displayedIds = new Set(displayedRows.map(r => r.id))
+                                            setReportRows(prev => prev.map(r => displayedIds.has(r.id) ? { ...r, selected: e.target.checked } : r))
+                                        }}
+                                    />
+                                    Pilih Semua
+                                </label>
+                            </div>
+
+                            {/* Cards list container */}
+                            <div className="drm-cards-list">
+                                {displayedRows.length === 0 ? (
+                                    <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--gray-400)', fontStyle: 'italic', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)' }}>
+                                        Tidak ada data project untuk filter bulan ini.
+                                    </div>
+                                ) : (
+                                    displayedRows.map((row, rIdx) => (
+                                        <div key={row.id} className={`drm-row-card ${row.selected ? 'selected' : ''}`}>
+                                            <div className="drm-card-header">
+                                                <label className="drm-card-checkbox-label">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={row.selected}
+                                                        onChange={e => handleUpdateRow(row.id, { selected: e.target.checked })}
+                                                    />
+                                                    <span className="drm-card-index">Baris #{rIdx + 1}</span>
+                                                </label>
+                                                <button 
+                                                    onClick={() => handleDeleteRow(row.id)}
+                                                    className="drm-row-del-btn"
+                                                    title="Hapus baris"
+                                                >
+                                                    <Trash2 size={13} />
+                                                </button>
+                                            </div>
+
+                                            <div className="drm-card-plan">
                                                 {['SUBMIT', 'CICIL', 'REV'].map((tag) => {
                                                     const isActive = row.plan.includes(tag)
                                                     const colors = PLAN_COLORS[tag]
@@ -805,97 +811,107 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                     )
                                                 })}
                                             </div>
-                                        </td>
-                                        <td>
-                                            <input
-                                                type="text"
-                                                className="drm-inline-input"
-                                                placeholder="Klien..."
-                                                value={row.client}
-                                                onChange={e => handleUpdateRow(row.id, { client: e.target.value })}
-                                            />
-                                        </td>
-                                        <td>
-                                            <input
-                                                type="text"
-                                                className="drm-inline-input"
-                                                placeholder="Judul Project..."
-                                                value={row.title}
-                                                style={{ fontWeight: 600 }}
-                                                onChange={e => handleUpdateRow(row.id, { title: e.target.value })}
-                                            />
-                                        </td>
-                                        <td>
-                                            <input
-                                                type="text"
-                                                className="drm-inline-input"
-                                                placeholder="Catatan..."
-                                                value={row.notes || ''}
-                                                onChange={e => handleUpdateRow(row.id, { notes: e.target.value })}
-                                            />
-                                        </td>
-                                        <td style={{ position: 'relative' }}>
-                                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-                                                {row.editor.map(ed => (
-                                                    <span 
-                                                        key={ed} 
-                                                        onClick={() => handleToggleEditorInRow(row.id, ed)}
-                                                        className="drm-row-ed-chip"
-                                                    >
-                                                        {ed}
-                                                    </span>
-                                                ))}
-                                                <button 
-                                                    onClick={() => setActiveRowEditorDropdown(activeRowEditorDropdown === row.id ? null : row.id)}
-                                                    className="drm-add-row-ed-btn"
-                                                >
-                                                    + Edit
-                                                </button>
+
+                                            <div className="drm-card-fields">
+                                                <div className="drm-field-group">
+                                                    <span className="drm-field-label">Klien</span>
+                                                    <input
+                                                        type="text"
+                                                        className="drm-inline-input"
+                                                        placeholder="Client name"
+                                                        value={row.client}
+                                                        onChange={e => handleUpdateRow(row.id, { client: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div className="drm-field-group">
+                                                    <span className="drm-field-label">Judul Project</span>
+                                                    <input
+                                                        type="text"
+                                                        className="drm-inline-input"
+                                                        placeholder="Project title"
+                                                        style={{ fontWeight: 600 }}
+                                                        value={row.title}
+                                                        onChange={e => handleUpdateRow(row.id, { title: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div className="drm-field-group">
+                                                    <span className="drm-field-label">Catatan</span>
+                                                    <input
+                                                        type="text"
+                                                        className="drm-inline-input"
+                                                        placeholder="Notes/Comment"
+                                                        value={row.notes || ''}
+                                                        onChange={e => handleUpdateRow(row.id, { notes: e.target.value })}
+                                                    />
+                                                </div>
                                             </div>
 
-                                            {/* Editors select dropdown popup */}
-                                            {activeRowEditorDropdown === row.id && (
-                                                <div className="drm-ed-dropdown" ref={dropdownRef}>
-                                                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-400)', display: 'block', padding: '4px 8px 6px' }}>
-                                                        Pilih {getRoleSingleLabel()}:
-                                                    </span>
-                                                    {customEditors.length === 0 ? (
-                                                        <div style={{ padding: '6px 8px', fontSize: 12, color: 'var(--gray-400)', fontStyle: 'italic' }}>
-                                                            Tambahkan {getRoleSingleLabel().toLowerCase()} di atas terlebih dahulu.
-                                                        </div>
-                                                    ) : (
-                                                        <div style={{ maxHeight: 150, overflowY: 'auto' }}>
-                                                            {customEditors.map(edName => {
-                                                                const isChecked = row.editor.includes(edName)
-                                                                return (
-                                                                    <div 
-                                                                        key={edName} 
-                                                                        onClick={() => handleToggleEditorInRow(row.id, edName)}
-                                                                        className={`drm-ed-item ${isChecked ? 'active' : ''}`}
-                                                                    >
-                                                                        <span>{edName}</span>
-                                                                        {isChecked && <Check size={12} style={{ color: rCol.accent }} />}
-                                                                    </div>
-                                                                )
-                                                            })}
-                                                        </div>
-                                                    )}
+                                            <div className="drm-card-editors" style={{ position: 'relative' }}>
+                                                <span className="drm-field-label" style={{ display: 'block', marginBottom: 4 }}>
+                                                    {getRoleSingleLabel()} Terkait
+                                                </span>
+                                                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                                                    {row.editor.map(ed => (
+                                                        <span 
+                                                            key={ed} 
+                                                            onClick={() => handleToggleEditorInRow(row.id, ed)}
+                                                            className="drm-row-ed-chip"
+                                                        >
+                                                            {ed}
+                                                        </span>
+                                                    ))}
+                                                    <button 
+                                                        onClick={() => setActiveRowEditorDropdown(activeRowEditorDropdown === row.id ? null : row.id)}
+                                                        className="drm-add-row-ed-btn"
+                                                    >
+                                                        + Edit
+                                                    </button>
                                                 </div>
-                                            )}
-                                        </td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <button 
-                                                onClick={() => handleDeleteRow(row.id)}
-                                                className="drm-row-del-btn"
-                                                title="Hapus baris"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+
+                                                {activeRowEditorDropdown === row.id && (
+                                                    <div className="drm-ed-dropdown" ref={dropdownRef}>
+                                                        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-400)', display: 'block', padding: '4px 8px 6px' }}>
+                                                            Pilih {getRoleSingleLabel()}:
+                                                        </span>
+                                                        {customEditors.length === 0 ? (
+                                                            <div style={{ padding: '6px 8px', fontSize: 12, color: 'var(--gray-400)', fontStyle: 'italic' }}>
+                                                                Tambahkan {getRoleSingleLabel().toLowerCase()} di atas.
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ maxHeight: 150, overflowY: 'auto' }}>
+                                                                {customEditors.map(edName => {
+                                                                    const isChecked = row.editor.includes(edName)
+                                                                    return (
+                                                                        <div 
+                                                                            key={edName} 
+                                                                            onClick={() => handleToggleEditorInRow(row.id, edName)}
+                                                                            className={`drm-ed-item ${isChecked ? 'active' : ''}`}
+                                                                        >
+                                                                            <span>{edName}</span>
+                                                                            {isChecked && <Check size={12} style={{ color: rCol.accent }} />}
+                                                                        </div>
+                                                                    )
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Right Column: Real-time Image Preview */}
+                        <div className="drm-preview-pane">
+                            <div className="drm-preview-header">
+                                <span className="drm-preview-title">Realtime Preview Report</span>
+                            </div>
+                            <div className="drm-preview-canvas-container">
+                                <canvas ref={canvasRef} className="drm-preview-canvas" />
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -933,7 +949,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 }
                 .drm-card {
                     background: white; border-radius: var(--radius-xl);
-                    width: 100%; max-width: 1000px; max-height: 90vh;
+                    width: 100%; max-width: 1200px; max-height: 90vh;
                     display: flex; flex-direction: column;
                     box-shadow: var(--shadow-2xl);
                     animation: drm-zoomIn 0.2s ease-out;
@@ -955,9 +971,88 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     transition: all 0.15s;
                 }
                 .drm-close-btn:hover { color: var(--gray-900); background: var(--gray-100); }
+                
                 .drm-content {
-                    flex: 1; overflow-y: auto; padding: var(--space-5);
+                    flex: 1; overflow: hidden; padding: 0;
                 }
+                
+                .drm-split-layout {
+                    display: grid;
+                    grid-template-columns: 460px 1fr;
+                    height: 100%;
+                    max-height: calc(90vh - 140px);
+                }
+                @media (max-width: 900px) {
+                    .drm-split-layout {
+                        grid-template-columns: 1fr;
+                        overflow-y: auto;
+                    }
+                }
+                
+                .drm-controls-pane {
+                    padding: var(--space-5);
+                    overflow-y: auto;
+                    border-right: 1px solid var(--gray-100);
+                    max-height: calc(90vh - 140px);
+                }
+                
+                .drm-preview-pane {
+                    background: #f8fafc;
+                    display: flex;
+                    flex-direction: column;
+                    height: 100%;
+                    max-height: calc(90vh - 140px);
+                    border-left: 1px solid var(--gray-100);
+                }
+                
+                .drm-preview-header {
+                    padding: var(--space-4) var(--space-5);
+                    border-bottom: 1px solid var(--gray-200);
+                    background: white;
+                    display: flex;
+                    align-items: center;
+                }
+                
+                .drm-preview-title {
+                    font-size: 11px;
+                    font-weight: 700;
+                    color: var(--gray-500);
+                    letter-spacing: 0.05em;
+                    text-transform: uppercase;
+                }
+                
+                .drm-preview-canvas-container {
+                    flex: 1;
+                    overflow-y: auto;
+                    display: flex;
+                    justify-content: center;
+                    align-items: flex-start;
+                    padding: var(--space-6);
+                }
+                
+                .drm-preview-canvas {
+                    max-width: 100%;
+                    height: auto;
+                    border-radius: var(--radius-md);
+                    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(0,0,0,0.05);
+                    background: white;
+                }
+                
+                .drm-setup-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: var(--space-4);
+                    margin-bottom: var(--space-5);
+                }
+                
+                .drm-label {
+                    display: block;
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: var(--gray-500);
+                    margin-bottom: 6px;
+                }
+                
                 .drm-add-ed-btn {
                     display: flex; align-items: center; justify-content: center;
                     padding: 8px 12px; background: var(--primary-500); color: white;
@@ -965,6 +1060,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     transition: all 0.2s;
                 }
                 .drm-add-ed-btn:hover { background: var(--primary-600); }
+                
                 .drm-ed-chip {
                     display: inline-flex; align-items: center;
                     padding: 3px 10px; border-radius: var(--radius-full);
@@ -973,62 +1069,123 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     box-shadow: var(--shadow-sm);
                 }
                 .drm-ed-chip:hover { opacity: 0.8; transform: translateY(-1px); }
-                .drm-table-container {
+                
+                .drm-cards-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: var(--space-4);
+                    padding-bottom: var(--space-6);
+                }
+                
+                .drm-row-card {
+                    background: white;
                     border: 1px solid var(--gray-200);
                     border-radius: var(--radius-lg);
-                    overflow: hidden;
-                }
-                .drm-table {
-                    width: 100%; border-collapse: collapse; font-size: var(--text-sm);
-                }
-                .drm-table th {
-                    text-align: left; padding: 8px 12px; font-weight: 600;
-                    color: var(--gray-500); background: var(--gray-50);
-                    border-bottom: 2px solid var(--gray-200);
-                    font-size: 12px;
-                }
-                .drm-table td {
-                    padding: 8px 12px; border-bottom: 1px solid var(--gray-100);
-                    vertical-align: middle;
-                }
-                .drm-inline-input {
-                    width: 100%; border: 1px dashed transparent;
-                    padding: 6px 8px; border-radius: var(--radius-sm);
-                    font-size: 13px; font-family: inherit;
+                    padding: var(--space-4);
+                    display: flex;
+                    flex-direction: column;
+                    gap: var(--space-3);
                     transition: all 0.15s;
+                    box-shadow: var(--shadow-sm);
                 }
-                .drm-inline-input:hover { border-color: var(--gray-300); background: var(--gray-50); }
-                .drm-inline-input:focus { border-color: var(--primary-500); background: white; outline: none; border-style: solid; }
+                .drm-row-card:hover {
+                    border-color: var(--gray-300);
+                    box-shadow: var(--shadow-md);
+                }
+                .drm-row-card.selected {
+                    border-color: var(--primary-300);
+                    background: var(--primary-50) / 0.1;
+                }
+                
+                .drm-card-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                
+                .drm-card-checkbox-label {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-weight: 600;
+                    cursor: pointer;
+                }
+                
+                .drm-card-index {
+                    font-size: 12px;
+                    color: var(--gray-500);
+                }
+                
+                .drm-card-plan {
+                    display: flex;
+                    gap: 6px;
+                }
+                
                 .drm-plan-tag-btn {
-                    padding: 3px 8px; font-size: 11px; font-weight: 700;
+                    padding: 4px 10px; font-size: 11px; font-weight: 700;
                     border: 1px solid; border-radius: var(--radius-md);
                     cursor: pointer; transition: all 0.15s;
                     background: transparent;
                 }
+                
+                .drm-card-fields {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+                
+                .drm-field-group {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                
+                .drm-field-label {
+                    font-size: 11px;
+                    font-weight: 600;
+                    color: var(--gray-400);
+                    width: 80px;
+                    flex-shrink: 0;
+                }
+                
+                .drm-inline-input {
+                    flex: 1; border: 1px solid var(--gray-200);
+                    padding: 6px 10px; border-radius: var(--radius-md);
+                    font-size: 13px; font-family: inherit;
+                    transition: all 0.15s;
+                    background: var(--gray-50);
+                }
+                .drm-inline-input:hover { border-color: var(--gray-300); }
+                .drm-inline-input:focus { border-color: var(--primary-500); background: white; outline: none; }
+                
                 .drm-row-ed-chip {
-                    display: inline-block; padding: 1px 6px; border-radius: var(--radius-md);
+                    display: inline-block; padding: 2px 8px; border-radius: var(--radius-md);
                     background: var(--gray-100); color: var(--gray-700);
                     font-size: 11px; font-weight: 600; cursor: pointer;
                 }
                 .drm-row-ed-chip:hover { background: #fee2e2; color: #b91c1c; }
+                
                 .drm-add-row-ed-btn {
-                    padding: 2px 6px; border: 1px dashed var(--gray-300);
+                    padding: 2px 8px; border: 1px dashed var(--gray-300);
                     background: transparent; color: var(--gray-500);
                     border-radius: var(--radius-md); font-size: 11px; font-weight: 600;
                     cursor: pointer;
                 }
                 .drm-add-row-ed-btn:hover { border-color: var(--primary-500); color: var(--primary-500); }
+                
                 .drm-row-del-btn {
                     border: none; background: transparent; color: var(--gray-400);
                     cursor: pointer; padding: 4px; border-radius: var(--radius-sm);
                 }
                 .drm-row-del-btn:hover { color: #ef4444; background: #fee2e2; }
+                
                 .drm-ed-dropdown {
-                    position: absolute; left: 12px; top: calc(100% + 4px); z-index: 10;
+                    position: absolute; left: 0; bottom: calc(100% + 4px); z-index: 10;
                     background: white; border: 1px solid var(--gray-200);
                     border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
                     width: 180px; padding: 4px 0;
                 }
+                
                 .drm-ed-item {
                     display: flex; justify-content: space-between; align-items: center;
                     padding: 6px 12px; cursor: pointer; font-size: 12px;
@@ -1036,11 +1193,14 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 }
                 .drm-ed-item:hover { background: var(--gray-50); }
                 .drm-ed-item.active { font-weight: 600; color: var(--primary-600); }
+                
                 .drm-footer {
                     display: flex; justify-content: space-between; align-items: center;
                     padding: var(--space-4) var(--space-5);
                     border-top: 1px solid var(--gray-100); background: var(--gray-50);
+                    z-index: 5;
                 }
+                
                 .drm-primary-btn {
                     display: flex; align-items: center; gap: 6px;
                     padding: 8px 16px; background: var(--primary-500); color: white;
@@ -1048,6 +1208,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     font-size: var(--text-sm); cursor: pointer; transition: all 0.2s;
                 }
                 .drm-primary-btn:hover { background: var(--primary-600); }
+                
                 .drm-secondary-btn {
                     display: flex; align-items: center; gap: 6px;
                     padding: 8px 14px; background: white; color: var(--gray-700);
@@ -1056,12 +1217,39 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     transition: all 0.2s;
                 }
                 .drm-secondary-btn:hover { background: var(--gray-50); }
+                
                 .drm-cancel-btn {
                     padding: 8px 16px; background: white; color: var(--gray-600);
                     border: 1px solid var(--gray-200); border-radius: var(--radius-md);
                     font-weight: 600; font-size: var(--text-sm); cursor: pointer;
                 }
                 .drm-cancel-btn:hover { background: var(--gray-50); }
+                
+                .drm-refresh-btn {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 4px 10px;
+                    border: 1px solid var(--primary-200);
+                    border-radius: var(--radius-md);
+                    background: var(--primary-50);
+                    color: var(--primary-700);
+                    cursor: pointer;
+                    font-size: 11px;
+                    font-weight: 600;
+                    transition: all 0.2s;
+                }
+                .drm-refresh-btn:hover {
+                    background: var(--primary-100);
+                }
+                
+                .spin {
+                    animation: drm-spin 1s linear infinite;
+                }
+                @keyframes drm-spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
             `}</style>
         </div>
     )
