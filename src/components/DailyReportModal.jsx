@@ -19,7 +19,7 @@ const EDITOR_COLORS = {
 function getEditorColor(name) {
     const norm = name.toLowerCase().trim()
     if (EDITOR_COLORS[norm]) return EDITOR_COLORS[norm]
-    
+
     // Generate stable color based on string hash
     let hash = 0
     for (let i = 0; i < norm.length; i++) {
@@ -150,7 +150,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         const result = await fetchAllSheetsProjects()
         if (result.success || result.projects?.length > 0) {
             const currentReportMonth = getMonthYearFromDateStr(reportDate)
-            
+
             // Filter by logged-in user if not admin
             let projectsList = result.projects || []
             const loggedInUser = localStorage.getItem('lastUsedEditor') || localStorage.getItem('userName') || ''
@@ -237,7 +237,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
     useEffect(() => {
         if (isOpen && initialProjects.length > 0) {
             const currentReportMonth = getMonthYearFromDateStr(reportDate)
-            
+
             // Filter by logged-in user if not admin
             let projectsList = initialProjects
             const loggedInUser = localStorage.getItem('lastUsedEditor') || localStorage.getItem('userName') || ''
@@ -332,7 +332,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
             }
         })
         const list = Array.from(months)
-        
+
         const getSortVal = (mStr) => {
             const monthsOrder = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
             const match = mStr.toLowerCase().match(/^([a-z]+)\s+(\d{4})/)
@@ -341,7 +341,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
             const year = parseInt(match[2], 10)
             return year * 12 + idx
         }
-        
+
         return list.sort((a, b) => getSortVal(a) - getSortVal(b))
     }, [reportRows])
 
@@ -393,7 +393,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         const row = reportRows.find(r => r.id === id)
         if (!row) return
         const hasTag = row.plan.includes(planTag)
-        const updatedPlan = hasTag 
+        const updatedPlan = hasTag
             ? row.plan.filter(t => t !== planTag)
             : [...row.plan, planTag]
         handleUpdateRow(id, { plan: updatedPlan })
@@ -468,7 +468,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
 
         // 4. Header Titles
         const headerTextX = logoImage ? 190 : 50
-        
+
         ctx.fillStyle = '#1e293b'
         ctx.font = 'bold 24px "Inter", "Segoe UI", Roboto, sans-serif'
         ctx.fillText('EWO ANIMATION', headerTextX, 65)
@@ -492,7 +492,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
             ctx.strokeStyle = '#cbd5e1'
             ctx.lineWidth = 1
             ctx.strokeRect(50, headerHeight, width - 100, 100)
-            
+
             ctx.fillStyle = '#94a3b8'
             ctx.font = 'italic 16px "Inter", sans-serif'
             ctx.textAlign = 'center'
@@ -508,7 +508,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
 
         ctx.fillStyle = '#ffffff'
         ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
-        
+
         ctx.fillText('PLAN', 70, tableY + tableHeaderHeight / 2)
         ctx.fillText('CLIENT', 250, tableY + tableHeaderHeight / 2)
         ctx.fillText('TITLE', 400, tableY + tableHeaderHeight / 2)
@@ -558,12 +558,12 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
             // Plan tags
             let tagX = 70
             const tagY = currentY + (rowHeight - 32) / 2
-            
+
             row.plan.forEach((planTag) => {
                 const colors = PLAN_COLORS[planTag] || { bg: '#e2e8f0', text: '#4b5563', border: '#cbd5e1' }
                 ctx.font = 'bold 12px "Inter", "Segoe UI", Roboto, sans-serif'
                 const tagWidth = ctx.measureText(planTag).width + 24
-                
+
                 drawRoundRect(tagX, tagY, tagWidth, 32, 16, colors.bg, null)
                 ctx.fillStyle = colors.text
                 ctx.textAlign = 'center'
@@ -591,13 +591,13 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
             // Editors
             let editorX = 960
             const editorY = currentY + (rowHeight - 30) / 2
-            
+
             if (row.editor && row.editor.length > 0) {
                 row.editor.forEach((ed) => {
                     const col = getEditorColor(ed)
                     ctx.font = 'bold 12px "Inter", "Segoe UI", Roboto, sans-serif'
                     const edWidth = ctx.measureText(ed).width + 20
-                    
+
                     drawRoundRect(editorX, editorY, edWidth, 30, 15, col.bg, null)
                     ctx.fillStyle = col.text
                     ctx.textAlign = 'center'
@@ -624,7 +624,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         const footerY = height - footerHeight
         ctx.fillStyle = '#f8fafc'
         ctx.fillRect(50, footerY, width - 100, footerHeight - 10)
-        
+
         ctx.strokeStyle = '#e2e8f0'
         ctx.lineWidth = 1
         ctx.beginPath()
@@ -676,8 +676,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 <div className="drm-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                         <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Generate Daily Progress JPG</h2>
-                        <button 
-                            onClick={handleRefreshModalData} 
+                        <button
+                            onClick={handleRefreshModalData}
                             disabled={isRefreshingData}
                             className="drm-refresh-btn"
                             title="Refresh project data from sheets"
@@ -685,17 +685,17 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                             <RefreshCw size={12} className={isRefreshingData ? 'spin' : ''} />
                             {isRefreshingData ? 'Refreshing...' : 'Refresh Sheet Data'}
                         </button>
-                        
+
                         {/* Segmented Mode Selector */}
                         <div className="drm-view-toggle">
-                            <button 
-                                onClick={() => setViewMode('table')} 
+                            <button
+                                onClick={() => setViewMode('table')}
                                 className={`drm-toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
                             >
                                 Table Mode
                             </button>
-                            <button 
-                                onClick={() => setViewMode('list')} 
+                            <button
+                                onClick={() => setViewMode('list')}
                                 className={`drm-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
                             >
                                 List Mode
@@ -764,8 +764,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                     {customEditors.map(ed => {
                                         const col = getEditorColor(ed)
                                         return (
-                                            <span 
-                                                key={ed} 
+                                            <span
+                                                key={ed}
                                                 onClick={() => handleRemoveCustomEditorGlobal(ed)}
                                                 className="drm-ed-chip"
                                                 style={{ backgroundColor: col.bg, color: col.text }}
@@ -787,7 +787,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                         <table className="drm-table">
                                             <thead>
                                                 <tr>
-                                                    <th style={{ width: 35, textAlign: 'center', overflow: 'visible' }}>
+                                                    <th style={{ width: '4%', textAlign: 'center', overflow: 'visible' }}>
                                                         <input
                                                             type="checkbox"
                                                             checked={displayedRows.length > 0 && displayedRows.every(r => r.selected)}
@@ -797,12 +797,11 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                             }}
                                                         />
                                                     </th>
-                                                    <th style={{ width: 120 }}>Plan Tags</th>
-                                                    <th style={{ width: 130 }}>Client</th>
-                                                    <th style={{ width: 250 }}>Title</th>
-                                                    <th style={{ width: 120 }}>Notes</th>
-                                                    <th style={{ width: 150 }}>{getRoleSingleLabel()}(s)</th>
-                                                    <th style={{ width: 45, textAlign: 'center' }}>Hapus</th>
+                                                    <th style={{ width: '16%' }}>Plan Tags</th>
+                                                    <th style={{ width: '15%' }}>Client</th>
+                                                    <th style={{ width: '33%' }}>Title</th>
+                                                    <th style={{ width: '16%' }}>Notes</th>
+                                                    <th style={{ width: '16%' }}>{getRoleSingleLabel()}(s)</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -825,22 +824,27 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                                 </span>
                                                                 <span style={{ fontSize: '8px', marginLeft: 4, color: 'var(--gray-400)' }}>▼</span>
                                                             </button>
-                                                            
+
                                                             {activePlanDropdown === row.id && (
-                                                                <div className="drm-plan-dropdown-menu">
-                                                                    {['SUBMIT', 'CICIL', 'REV'].map(tag => {
-                                                                        const isSelected = row.plan.includes(tag)
-                                                                        return (
-                                                                            <label key={tag} className="drm-plan-dropdown-item">
-                                                                                <input
-                                                                                    type="checkbox"
-                                                                                    checked={isSelected}
-                                                                                    onChange={() => handleTogglePlan(row.id, tag)}
-                                                                                />
-                                                                                <span style={{ color: PLAN_COLORS[tag].text }}>{tag}</span>
-                                                                            </label>
-                                                                        )
-                                                                    })}
+                                                                <div className="drm-ed-dropdown" style={{ width: 140 }}>
+                                                                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-400)', display: 'block', padding: '4px 8px 6px' }}>
+                                                                        Pilih Plan:
+                                                                    </span>
+                                                                    <div style={{ maxHeight: 150, overflowY: 'auto' }}>
+                                                                        {['SUBMIT', 'CICIL', 'REV'].map(tag => {
+                                                                            const isSelected = row.plan.includes(tag)
+                                                                            return (
+                                                                                <div
+                                                                                    key={tag}
+                                                                                    onClick={() => handleTogglePlan(row.id, tag)}
+                                                                                    className={`drm-ed-item ${isSelected ? 'active' : ''}`}
+                                                                                >
+                                                                                    <span style={{ color: PLAN_COLORS[tag].text, fontWeight: 700 }}>{tag}</span>
+                                                                                    {isSelected && <Check size={12} style={{ color: rCol.accent }} />}
+                                                                                </div>
+                                                                            )
+                                                                        })}
+                                                                    </div>
                                                                 </div>
                                                             )}
                                                         </td>
@@ -864,51 +868,27 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                             />
                                                         </td>
                                                         <td>
-                                                            {showNotesInputForRow[row.id] || row.notes ? (
-                                                                <input
-                                                                    type="text"
-                                                                    className="drm-inline-input"
-                                                                    placeholder="Catatan..."
-                                                                    value={row.notes || ''}
-                                                                    onChange={e => handleUpdateRow(row.id, { notes: e.target.value })}
-                                                                    autoFocus
-                                                                    onBlur={e => {
-                                                                        if (!e.target.value.trim()) {
-                                                                            setShowNotesInputForRow(prev => ({ ...prev, [row.id]: false }))
-                                                                            handleUpdateRow(row.id, { notes: '' })
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            ) : (
-                                                                <button
-                                                                    onClick={() => setShowNotesInputForRow(prev => ({ ...prev, [row.id]: true }))}
-                                                                    className="drm-add-notes-btn"
-                                                                >
-                                                                    + Catatan
-                                                                </button>
-                                                            )}
+                                                            <input
+                                                                type="text"
+                                                                className="drm-inline-input"
+                                                                placeholder="Catatan..."
+                                                                value={row.notes || ''}
+                                                                onChange={e => handleUpdateRow(row.id, { notes: e.target.value })}
+                                                            />
                                                         </td>
                                                         <td className="drm-ed-dropdown-container" style={{ position: 'relative' }}>
-                                                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-                                                                {row.editor.map(ed => (
-                                                                    <span 
-                                                                        key={ed} 
-                                                                        onClick={() => handleToggleEditorInRow(row.id, ed)}
-                                                                        className="drm-row-ed-chip"
-                                                                    >
-                                                                        {ed}
-                                                                    </span>
-                                                                ))}
-                                                                <button 
-                                                                    onClick={() => setActiveRowEditorDropdown(activeRowEditorDropdown === row.id ? null : row.id)}
-                                                                    className="drm-add-row-ed-btn"
-                                                                >
-                                                                    + Edit
-                                                                </button>
-                                                            </div>
+                                                            <button
+                                                                onClick={() => setActiveRowEditorDropdown(activeRowEditorDropdown === row.id ? null : row.id)}
+                                                                className="drm-plan-dropdown-trigger"
+                                                            >
+                                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                                                                    {row.editor.length === 0 ? `Pilih ${getRoleSingleLabel()}...` : row.editor.join(', ')}
+                                                                </span>
+                                                                <span style={{ fontSize: '8px', marginLeft: 4, color: 'var(--gray-400)' }}>▼</span>
+                                                            </button>
 
                                                             {activeRowEditorDropdown === row.id && (
-                                                                <div className="drm-ed-dropdown" ref={dropdownRef}>
+                                                                <div className="drm-ed-dropdown" ref={dropdownRef} style={{ right: 0, left: 'auto', zIndex: 1000 }}>
                                                                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-400)', display: 'block', padding: '4px 8px 6px' }}>
                                                                         Pilih {getRoleSingleLabel()}:
                                                                     </span>
@@ -921,8 +901,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                                             {customEditors.map(edName => {
                                                                                 const isChecked = row.editor.includes(edName)
                                                                                 return (
-                                                                                    <div 
-                                                                                        key={edName} 
+                                                                                    <div
+                                                                                        key={edName}
                                                                                         onClick={() => handleToggleEditorInRow(row.id, edName)}
                                                                                         className={`drm-ed-item ${isChecked ? 'active' : ''}`}
                                                                                     >
@@ -935,15 +915,6 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                                     )}
                                                                 </div>
                                                             )}
-                                                        </td>
-                                                        <td style={{ textAlign: 'center' }}>
-                                                            <button 
-                                                                onClick={() => handleDeleteRow(row.id)}
-                                                                className="drm-row-del-btn"
-                                                                title="Hapus baris"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -990,12 +961,12 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                                     onChange={e => handleUpdateRow(row.id, { selected: e.target.checked })}
                                                                     style={{ cursor: 'pointer' }}
                                                                 />
-                                                                
+
                                                                 {/* Plan badges */}
                                                                 <div className="drm-row-badges">
                                                                     {row.plan.map(tag => (
-                                                                        <span 
-                                                                            key={tag} 
+                                                                        <span
+                                                                            key={tag}
                                                                             className="drm-tag-badge"
                                                                             style={{
                                                                                 background: PLAN_COLORS[tag].bg,
@@ -1024,7 +995,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                                 >
                                                                     <Edit3 size={13} />
                                                                 </button>
-                                                                <button 
+                                                                <button
                                                                     onClick={() => handleDeleteRow(row.id)}
                                                                     className="drm-row-action-btn delete"
                                                                     title="Hapus baris"
@@ -1104,15 +1075,15 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                                     </span>
                                                                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                                                                         {row.editor.map(ed => (
-                                                                            <span 
-                                                                                key={ed} 
+                                                                            <span
+                                                                                key={ed}
                                                                                 onClick={() => handleToggleEditorInRow(row.id, ed)}
                                                                                 className="drm-row-ed-chip"
                                                                             >
                                                                                 {ed}
                                                                             </span>
                                                                         ))}
-                                                                        <button 
+                                                                        <button
                                                                             onClick={() => setActiveRowEditorDropdown(activeRowEditorDropdown === row.id ? null : row.id)}
                                                                             className="drm-add-row-ed-btn"
                                                                         >
@@ -1134,8 +1105,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                                                     {customEditors.map(edName => {
                                                                                         const isChecked = row.editor.includes(edName)
                                                                                         return (
-                                                                                            <div 
-                                                                                                key={edName} 
+                                                                                            <div
+                                                                                                key={edName}
                                                                                                 onClick={() => handleToggleEditorInRow(row.id, edName)}
                                                                                                 className={`drm-ed-item ${isChecked ? 'active' : ''}`}
                                                                                             >
@@ -1174,8 +1145,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
 
                 {/* Footer Actions */}
                 <div className="drm-footer">
-                    <button 
-                        onClick={handleAddRow} 
+                    <button
+                        onClick={handleAddRow}
                         className="drm-secondary-btn"
                         style={{ color: rCol.accent, borderColor: rCol.accent }}
                     >
@@ -1185,8 +1156,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                         <button onClick={onClose} className="drm-cancel-btn">
                             Batal
                         </button>
-                        <button 
-                            onClick={handleDownloadJpg} 
+                        <button
+                            onClick={handleDownloadJpg}
                             className="drm-primary-btn"
                             style={{ backgroundColor: rCol.accent }}
                         >
@@ -1215,10 +1186,10 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     transition: max-width 0.2s ease-in-out;
                 }
                 .drm-card.view-table {
-                    max-width: 1350px;
+                    max-width: 1600px;
                 }
                 .drm-card.view-list {
-                    max-width: 1200px;
+                    max-width: 1500px;
                 }
                 @keyframes drm-zoomIn {
                     from { transform: scale(0.95); opacity: 0; }
@@ -1247,7 +1218,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     transition: grid-template-columns 0.2s ease-in-out;
                 }
                 .drm-card.view-table .drm-split-layout {
-                    grid-template-columns: 1fr 480px;
+                    grid-template-columns: 1fr 600px;
                 }
                 .drm-card.view-list .drm-split-layout {
                     grid-template-columns: 460px 1fr;
@@ -1297,7 +1268,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 /* Table Styles */
                 .drm-table-container {
                     width: 100%;
-                    overflow-x: auto;
+                    overflow: visible;
                     border: 1px solid var(--gray-200);
                     border-radius: var(--radius-md);
                     background: white;
