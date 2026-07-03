@@ -92,6 +92,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
     const [newEditorInput, setNewEditorInput] = useState('')
     const [activeRowEditorDropdown, setActiveRowEditorDropdown] = useState(null)
     const [expandedRowId, setExpandedRowId] = useState(null)
+    const [viewMode, setViewMode] = useState('table')
     const dropdownRef = useRef(null)
     const canvasRef = useRef(null)
     const [logoImage, setLogoImage] = useState(null)
@@ -657,10 +658,10 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
 
     return (
         <div className="drm-overlay">
-            <div className="drm-card">
+            <div className={`drm-card ${viewMode === 'table' ? 'view-table' : 'view-list'}`}>
                 {/* Header */}
                 <div className="drm-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                         <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Generate Daily Progress JPG</h2>
                         <button 
                             onClick={handleRefreshModalData} 
@@ -671,6 +672,22 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                             <RefreshCw size={12} className={isRefreshingData ? 'spin' : ''} />
                             {isRefreshingData ? 'Refreshing...' : 'Refresh Sheet Data'}
                         </button>
+                        
+                        {/* Segmented Mode Selector */}
+                        <div className="drm-view-toggle">
+                            <button 
+                                onClick={() => setViewMode('table')} 
+                                className={`drm-toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
+                            >
+                                Table Mode
+                            </button>
+                            <button 
+                                onClick={() => setViewMode('list')} 
+                                className={`drm-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
+                            >
+                                List Mode
+                            </button>
+                        </div>
                     </div>
                     <button onClick={onClose} className="drm-close-btn" aria-label="Close">
                         <X size={18} />
@@ -747,93 +764,45 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                 </div>
                             </div>
 
-                            {/* Section header for the list */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-700)' }}>
-                                    Daftar Projects ({displayedRows.length})
-                                </span>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600, color: 'var(--gray-500)' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={displayedRows.length > 0 && displayedRows.every(r => r.selected)}
-                                        onChange={e => {
-                                            const displayedIds = new Set(displayedRows.map(r => r.id))
-                                            setReportRows(prev => prev.map(r => displayedIds.has(r.id) ? { ...r, selected: e.target.checked } : r))
-                                        }}
-                                    />
-                                    Pilih Semua
-                                </label>
-                            </div>
-
-                            {/* Cards list container */}
-                            <div className="drm-cards-list">
-                                {displayedRows.length === 0 ? (
+                            {viewMode === 'table' ? (
+                                displayedRows.length === 0 ? (
                                     <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--gray-400)', fontStyle: 'italic', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)' }}>
                                         Tidak ada data project untuk filter bulan ini.
                                     </div>
                                 ) : (
-                                    displayedRows.map((row, rIdx) => {
-                                        const isExpanded = expandedRowId === row.id
-                                        return (
-                                            <div key={row.id} className={`drm-compact-row ${row.selected ? 'selected' : ''} ${isExpanded ? 'expanded' : ''}`}>
-                                                <div className="drm-row-main">
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                                    <div className="drm-table-container">
+                                        <table className="drm-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style={{ width: 40, textAlign: 'center' }}>
                                                         <input
                                                             type="checkbox"
-                                                            checked={row.selected}
-                                                            onChange={e => handleUpdateRow(row.id, { selected: e.target.checked })}
-                                                            style={{ cursor: 'pointer' }}
+                                                            checked={displayedRows.length > 0 && displayedRows.every(r => r.selected)}
+                                                            onChange={e => {
+                                                                const displayedIds = new Set(displayedRows.map(r => r.id))
+                                                                setReportRows(prev => prev.map(r => displayedIds.has(r.id) ? { ...r, selected: e.target.checked } : r))
+                                                            }}
                                                         />
-                                                        
-                                                        {/* Plan badges */}
-                                                        <div className="drm-row-badges">
-                                                            {row.plan.map(tag => (
-                                                                <span 
-                                                                    key={tag} 
-                                                                    className="drm-tag-badge"
-                                                                    style={{
-                                                                        background: PLAN_COLORS[tag].bg,
-                                                                        color: PLAN_COLORS[tag].text,
-                                                                        border: `1px solid ${PLAN_COLORS[tag].border}`
-                                                                    }}
-                                                                >
-                                                                    {tag.slice(0, 3)}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-
-                                                        {/* Title Info */}
-                                                        <div className="drm-row-title-info" style={{ minWidth: 0 }}>
-                                                            <span className="drm-row-title">{row.title || '(Tanpa Judul)'}</span>
-                                                            <span className="drm-row-client">{row.client ? `(${row.client})` : ''}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Actions */}
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                        <button
-                                                            onClick={() => setExpandedRowId(isExpanded ? null : row.id)}
-                                                            className={`drm-row-action-btn ${isExpanded ? 'active' : ''}`}
-                                                            title="Edit project details"
-                                                        >
-                                                            <Edit3 size={13} />
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleDeleteRow(row.id)}
-                                                            className="drm-row-action-btn delete"
-                                                            title="Hapus baris"
-                                                        >
-                                                            <Trash2 size={13} />
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                {/* Expanded editing details */}
-                                                {isExpanded && (
-                                                    <div className="drm-row-details">
-                                                        {/* Plan tags */}
-                                                        <div className="drm-detail-section">
-                                                            <span className="drm-field-label">Plan Tags</span>
+                                                    </th>
+                                                    <th style={{ width: 150 }}>Plan Tags</th>
+                                                    <th style={{ width: 110 }}>Client</th>
+                                                    <th>Title</th>
+                                                    <th style={{ width: 140 }}>Notes</th>
+                                                    <th style={{ width: 140 }}>{getRoleSingleLabel()}(s)</th>
+                                                    <th style={{ width: 40, textAlign: 'center' }}>Hapus</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {displayedRows.map((row) => (
+                                                    <tr key={row.id}>
+                                                        <td style={{ textAlign: 'center' }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={row.selected}
+                                                                onChange={e => handleUpdateRow(row.id, { selected: e.target.checked })}
+                                                            />
+                                                        </td>
+                                                        <td>
                                                             <div style={{ display: 'flex', gap: 4 }}>
                                                                 {['SUBMIT', 'CICIL', 'REV'].map((tag) => {
                                                                     const isActive = row.plan.includes(tag)
@@ -854,48 +823,36 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                                     )
                                                                 })}
                                                             </div>
-                                                        </div>
-
-                                                        {/* Inputs */}
-                                                        <div className="drm-detail-section">
-                                                            <div className="drm-field-group">
-                                                                <span className="drm-field-label">Klien</span>
-                                                                <input
-                                                                    type="text"
-                                                                    className="drm-inline-input"
-                                                                    placeholder="Client name"
-                                                                    value={row.client}
-                                                                    onChange={e => handleUpdateRow(row.id, { client: e.target.value })}
-                                                                />
-                                                            </div>
-                                                            <div className="drm-field-group" style={{ marginTop: 6 }}>
-                                                                <span className="drm-field-label">Judul Project</span>
-                                                                <input
-                                                                    type="text"
-                                                                    className="drm-inline-input"
-                                                                    placeholder="Project title"
-                                                                    style={{ fontWeight: 600 }}
-                                                                    value={row.title}
-                                                                    onChange={e => handleUpdateRow(row.id, { title: e.target.value })}
-                                                                />
-                                                            </div>
-                                                            <div className="drm-field-group" style={{ marginTop: 6 }}>
-                                                                <span className="drm-field-label">Catatan</span>
-                                                                <input
-                                                                    type="text"
-                                                                    className="drm-inline-input"
-                                                                    placeholder="Notes/Comment"
-                                                                    value={row.notes || ''}
-                                                                    onChange={e => handleUpdateRow(row.id, { notes: e.target.value })}
-                                                                />
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Editors selection list */}
-                                                        <div className="drm-detail-section" style={{ position: 'relative' }}>
-                                                            <span className="drm-field-label" style={{ display: 'block', marginBottom: 4 }}>
-                                                                {getRoleSingleLabel()} Terkait
-                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <input
+                                                                type="text"
+                                                                className="drm-inline-input"
+                                                                placeholder="Klien..."
+                                                                value={row.client}
+                                                                onChange={e => handleUpdateRow(row.id, { client: e.target.value })}
+                                                            />
+                                                        </td>
+                                                        <td>
+                                                            <input
+                                                                type="text"
+                                                                className="drm-inline-input"
+                                                                placeholder="Judul Project..."
+                                                                value={row.title}
+                                                                style={{ fontWeight: 600 }}
+                                                                onChange={e => handleUpdateRow(row.id, { title: e.target.value })}
+                                                            />
+                                                        </td>
+                                                        <td>
+                                                            <input
+                                                                type="text"
+                                                                className="drm-inline-input"
+                                                                placeholder="Catatan..."
+                                                                value={row.notes || ''}
+                                                                onChange={e => handleUpdateRow(row.id, { notes: e.target.value })}
+                                                            />
+                                                        </td>
+                                                        <td style={{ position: 'relative' }}>
                                                             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                                                                 {row.editor.map(ed => (
                                                                     <span 
@@ -942,14 +899,229 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                                                     )}
                                                                 </div>
                                                             )}
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                        </td>
+                                                        <td style={{ textAlign: 'center' }}>
+                                                            <button 
+                                                                onClick={() => handleDeleteRow(row.id)}
+                                                                className="drm-row-del-btn"
+                                                                title="Hapus baris"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )
+                            ) : (
+                                <>
+                                    {/* Section header for the list */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-700)' }}>
+                                            Daftar Projects ({displayedRows.length})
+                                        </span>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600, color: 'var(--gray-500)' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={displayedRows.length > 0 && displayedRows.every(r => r.selected)}
+                                                onChange={e => {
+                                                    const displayedIds = new Set(displayedRows.map(r => r.id))
+                                                    setReportRows(prev => prev.map(r => displayedIds.has(r.id) ? { ...r, selected: e.target.checked } : r))
+                                                }}
+                                            />
+                                            Pilih Semua
+                                        </label>
+                                    </div>
+
+                                    {/* Cards list container */}
+                                    <div className="drm-cards-list">
+                                        {displayedRows.length === 0 ? (
+                                            <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--gray-400)', fontStyle: 'italic', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)' }}>
+                                                Tidak ada data project untuk filter bulan ini.
                                             </div>
-                                        )
-                                    })
-                                )}
-                            </div>
+                                        ) : (
+                                            displayedRows.map((row, rIdx) => {
+                                                const isExpanded = expandedRowId === row.id
+                                                return (
+                                                    <div key={row.id} className={`drm-compact-row ${row.selected ? 'selected' : ''} ${isExpanded ? 'expanded' : ''}`}>
+                                                        <div className="drm-row-main">
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={row.selected}
+                                                                    onChange={e => handleUpdateRow(row.id, { selected: e.target.checked })}
+                                                                    style={{ cursor: 'pointer' }}
+                                                                />
+                                                                
+                                                                {/* Plan badges */}
+                                                                <div className="drm-row-badges">
+                                                                    {row.plan.map(tag => (
+                                                                        <span 
+                                                                            key={tag} 
+                                                                            className="drm-tag-badge"
+                                                                            style={{
+                                                                                background: PLAN_COLORS[tag].bg,
+                                                                                color: PLAN_COLORS[tag].text,
+                                                                                border: `1px solid ${PLAN_COLORS[tag].border}`
+                                                                            }}
+                                                                        >
+                                                                            {tag.slice(0, 3)}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+
+                                                                {/* Title Info */}
+                                                                <div className="drm-row-title-info" style={{ minWidth: 0 }}>
+                                                                    <span className="drm-row-title">{row.title || '(Tanpa Judul)'}</span>
+                                                                    <span className="drm-row-client">{row.client ? `(${row.client})` : ''}</span>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Actions */}
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                                <button
+                                                                    onClick={() => setExpandedRowId(isExpanded ? null : row.id)}
+                                                                    className={`drm-row-action-btn ${isExpanded ? 'active' : ''}`}
+                                                                    title="Edit project details"
+                                                                >
+                                                                    <Edit3 size={13} />
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => handleDeleteRow(row.id)}
+                                                                    className="drm-row-action-btn delete"
+                                                                    title="Hapus baris"
+                                                                >
+                                                                    <Trash2 size={13} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Expanded editing details */}
+                                                        {isExpanded && (
+                                                            <div className="drm-row-details">
+                                                                {/* Plan tags */}
+                                                                <div className="drm-detail-section">
+                                                                    <span className="drm-field-label">Plan Tags</span>
+                                                                    <div style={{ display: 'flex', gap: 4 }}>
+                                                                        {['SUBMIT', 'CICIL', 'REV'].map((tag) => {
+                                                                            const isActive = row.plan.includes(tag)
+                                                                            const colors = PLAN_COLORS[tag]
+                                                                            return (
+                                                                                <button
+                                                                                    key={tag}
+                                                                                    onClick={() => handleTogglePlan(row.id, tag)}
+                                                                                    className={`drm-plan-tag-btn ${isActive ? 'active' : ''}`}
+                                                                                    style={{
+                                                                                        borderColor: colors.border,
+                                                                                        color: isActive ? colors.text : 'var(--gray-400)',
+                                                                                        background: isActive ? colors.bg : 'transparent'
+                                                                                    }}
+                                                                                >
+                                                                                    {tag}
+                                                                                </button>
+                                                                            )
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Inputs */}
+                                                                <div className="drm-detail-section">
+                                                                    <div className="drm-field-group">
+                                                                        <span className="drm-field-label">Klien</span>
+                                                                        <input
+                                                                            type="text"
+                                                                            className="drm-inline-input"
+                                                                            placeholder="Client name"
+                                                                            value={row.client}
+                                                                            onChange={e => handleUpdateRow(row.id, { client: e.target.value })}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="drm-field-group" style={{ marginTop: 6 }}>
+                                                                        <span className="drm-field-label">Judul Project</span>
+                                                                        <input
+                                                                            type="text"
+                                                                            className="drm-inline-input"
+                                                                            placeholder="Project title"
+                                                                            style={{ fontWeight: 600 }}
+                                                                            value={row.title}
+                                                                            onChange={e => handleUpdateRow(row.id, { title: e.target.value })}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="drm-field-group" style={{ marginTop: 6 }}>
+                                                                        <span className="drm-field-label">Catatan</span>
+                                                                        <input
+                                                                            type="text"
+                                                                            className="drm-inline-input"
+                                                                            placeholder="Notes/Comment"
+                                                                            value={row.notes || ''}
+                                                                            onChange={e => handleUpdateRow(row.id, { notes: e.target.value })}
+                                                                        />
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Editors selection list */}
+                                                                <div className="drm-detail-section" style={{ position: 'relative' }}>
+                                                                    <span className="drm-field-label" style={{ display: 'block', marginBottom: 4 }}>
+                                                                        {getRoleSingleLabel()} Terkait
+                                                                    </span>
+                                                                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                                                                        {row.editor.map(ed => (
+                                                                            <span 
+                                                                                key={ed} 
+                                                                                onClick={() => handleToggleEditorInRow(row.id, ed)}
+                                                                                className="drm-row-ed-chip"
+                                                                            >
+                                                                                {ed}
+                                                                            </span>
+                                                                        ))}
+                                                                        <button 
+                                                                            onClick={() => setActiveRowEditorDropdown(activeRowEditorDropdown === row.id ? null : row.id)}
+                                                                            className="drm-add-row-ed-btn"
+                                                                        >
+                                                                            + Edit
+                                                                        </button>
+                                                                    </div>
+
+                                                                    {activeRowEditorDropdown === row.id && (
+                                                                        <div className="drm-ed-dropdown" ref={dropdownRef}>
+                                                                            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-400)', display: 'block', padding: '4px 8px 6px' }}>
+                                                                                Pilih {getRoleSingleLabel()}:
+                                                                            </span>
+                                                                            {customEditors.length === 0 ? (
+                                                                                <div style={{ padding: '6px 8px', fontSize: 12, color: 'var(--gray-400)', fontStyle: 'italic' }}>
+                                                                                    Tambahkan {getRoleSingleLabel().toLowerCase()} di atas.
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div style={{ maxHeight: 150, overflowY: 'auto' }}>
+                                                                                    {customEditors.map(edName => {
+                                                                                        const isChecked = row.editor.includes(edName)
+                                                                                        return (
+                                                                                            <div 
+                                                                                                key={edName} 
+                                                                                                onClick={() => handleToggleEditorInRow(row.id, edName)}
+                                                                                                className={`drm-ed-item ${isChecked ? 'active' : ''}`}
+                                                                                            >
+                                                                                                <span>{edName}</span>
+                                                                                                {isChecked && <Check size={12} style={{ color: rCol.accent }} />}
+                                                                                            </div>
+                                                                                        )
+                                                                                    })}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })
+                                        )}
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         {/* Right Column: Real-time Image Preview */}
@@ -998,12 +1170,19 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 }
                 .drm-card {
                     background: white; border-radius: var(--radius-xl);
-                    width: 100%; max-width: 1200px; max-height: 90vh;
+                    width: 100%; max-height: 90vh;
                     display: flex; flex-direction: column;
                     box-shadow: var(--shadow-2xl);
                     animation: drm-zoomIn 0.2s ease-out;
                     border: 1px solid var(--gray-100);
                     overflow: hidden;
+                    transition: max-width 0.2s ease-in-out;
+                }
+                .drm-card.view-table {
+                    max-width: 1350px;
+                }
+                .drm-card.view-list {
+                    max-width: 1200px;
                 }
                 @keyframes drm-zoomIn {
                     from { transform: scale(0.95); opacity: 0; }
@@ -1027,13 +1206,19 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 
                 .drm-split-layout {
                     display: grid;
-                    grid-template-columns: 460px 1fr;
                     height: 100%;
                     max-height: calc(90vh - 140px);
+                    transition: grid-template-columns 0.2s ease-in-out;
+                }
+                .drm-card.view-table .drm-split-layout {
+                    grid-template-columns: 1fr 480px;
+                }
+                .drm-card.view-list .drm-split-layout {
+                    grid-template-columns: 460px 1fr;
                 }
                 @media (max-width: 900px) {
                     .drm-split-layout {
-                        grid-template-columns: 1fr;
+                        grid-template-columns: 1fr !important;
                         overflow-y: auto;
                     }
                 }
@@ -1041,8 +1226,72 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 .drm-controls-pane {
                     padding: var(--space-5);
                     overflow-y: auto;
+                    overflow-x: auto;
                     border-right: 1px solid var(--gray-100);
                     max-height: calc(90vh - 140px);
+                }
+                
+                /* Segmented View Selector */
+                .drm-view-toggle {
+                    display: flex;
+                    background: var(--gray-100);
+                    border-radius: var(--radius-md);
+                    padding: 2px;
+                    border: 1px solid var(--gray-200);
+                }
+                
+                .drm-toggle-btn {
+                    padding: 4px 10px;
+                    font-size: 11px;
+                    font-weight: 600;
+                    border: none;
+                    background: transparent;
+                    color: var(--gray-500);
+                    border-radius: var(--radius-sm);
+                    cursor: pointer;
+                    transition: all 0.15s;
+                }
+                
+                .drm-toggle-btn.active {
+                    background: white;
+                    color: var(--gray-900);
+                    box-shadow: var(--shadow-sm);
+                }
+                
+                /* Table Styles */
+                .drm-table-container {
+                    width: 100%;
+                    overflow-x: auto;
+                    border: 1px solid var(--gray-200);
+                    border-radius: var(--radius-md);
+                    background: white;
+                    margin-bottom: var(--space-6);
+                }
+                
+                .drm-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    text-align: left;
+                    font-size: 13px;
+                }
+                
+                .drm-table th {
+                    background: var(--gray-50);
+                    color: var(--gray-600);
+                    font-weight: 700;
+                    padding: 10px 12px;
+                    border-bottom: 1px solid var(--gray-200);
+                    white-space: nowrap;
+                }
+                
+                .drm-table td {
+                    padding: 8px 12px;
+                    border-bottom: 1px solid var(--gray-100);
+                    vertical-align: middle;
+                }
+                
+                .drm-table tr:hover {
+                    background: var(--gray-50);
                 }
                 
                 .drm-preview-pane {
