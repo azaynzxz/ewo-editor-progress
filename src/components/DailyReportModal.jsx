@@ -515,8 +515,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         ctx.fillText('PLAN', 70, tableY + tableHeaderHeight / 2)
         ctx.fillText('CLIENT', 230, tableY + tableHeaderHeight / 2)
         ctx.fillText('TITLE', 370, tableY + tableHeaderHeight / 2)
-        ctx.fillText('PERCENTAGE', 640, tableY + tableHeaderHeight / 2)
-        ctx.fillText('NOTES', 740, tableY + tableHeaderHeight / 2)
+        ctx.fillText('PERCENTAGE', 630, tableY + tableHeaderHeight / 2)
+        ctx.fillText('NOTES', 760, tableY + tableHeaderHeight / 2)
         ctx.fillText(getRoleHeaderLabel(), 960, tableY + tableHeaderHeight / 2)
 
         const drawRoundRect = (x, y, w, h, r, fill, stroke) => {
@@ -585,17 +585,17 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
             // Title
             ctx.fillStyle = '#0f172a'
             ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
-            ctx.fillText(truncateText(row.title || '—', 250), 370, currentY + rowHeight / 2)
+            ctx.fillText(truncateText(row.title || '—', 240), 370, currentY + rowHeight / 2)
 
             // Percentage
             ctx.fillStyle = '#0284c7'
             ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
-            ctx.fillText(truncateText(row.progress || '0%', 80), 640, currentY + rowHeight / 2)
+            ctx.fillText(truncateText(row.progress || '0%', 110), 630, currentY + rowHeight / 2)
 
             // Notes
             ctx.fillStyle = '#4b5563'
             ctx.font = 'italic 15px "Inter", "Segoe UI", Roboto, sans-serif'
-            ctx.fillText(truncateText(row.notes || '—', 190), 740, currentY + rowHeight / 2)
+            ctx.fillText(truncateText(row.notes || '—', 180), 760, currentY + rowHeight / 2)
 
             // Editors
             let editorX = 960
