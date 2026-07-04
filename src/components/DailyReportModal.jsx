@@ -95,6 +95,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
     const [viewMode, setViewMode] = useState('table')
     const [activePlanDropdown, setActivePlanDropdown] = useState(null)
     const [showNotesInputForRow, setShowNotesInputForRow] = useState({})
+    const [showPercentageColumn, setShowPercentageColumn] = useState(true)
     const dropdownRef = useRef(null)
     const canvasRef = useRef(null)
     const [logoImage, setLogoImage] = useState(null)
@@ -515,8 +516,10 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         ctx.fillText('PLAN', 70, tableY + tableHeaderHeight / 2)
         ctx.fillText('CLIENT', 230, tableY + tableHeaderHeight / 2)
         ctx.fillText('TITLE', 370, tableY + tableHeaderHeight / 2)
-        ctx.fillText('PERCENTAGE', 630, tableY + tableHeaderHeight / 2)
-        ctx.fillText('NOTES', 760, tableY + tableHeaderHeight / 2)
+        if (showPercentageColumn) {
+            ctx.fillText('PERCENTAGE', 630, tableY + tableHeaderHeight / 2)
+        }
+        ctx.fillText('NOTES', showPercentageColumn ? 760 : 740, tableY + tableHeaderHeight / 2)
         ctx.fillText(getRoleHeaderLabel(), 960, tableY + tableHeaderHeight / 2)
 
         const drawRoundRect = (x, y, w, h, r, fill, stroke) => {
@@ -585,17 +588,19 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
             // Title
             ctx.fillStyle = '#0f172a'
             ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
-            ctx.fillText(truncateText(row.title || '—', 240), 370, currentY + rowHeight / 2)
+            ctx.fillText(truncateText(row.title || '—', showPercentageColumn ? 240 : 340), 370, currentY + rowHeight / 2)
 
             // Percentage
-            ctx.fillStyle = '#0284c7'
-            ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
-            ctx.fillText(truncateText(row.progress || '0%', 110), 630, currentY + rowHeight / 2)
+            if (showPercentageColumn) {
+                ctx.fillStyle = '#0284c7'
+                ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
+                ctx.fillText(truncateText(row.progress || '0%', 110), 630, currentY + rowHeight / 2)
+            }
 
             // Notes
             ctx.fillStyle = '#4b5563'
             ctx.font = 'italic 15px "Inter", "Segoe UI", Roboto, sans-serif'
-            ctx.fillText(truncateText(row.notes || '—', 180), 760, currentY + rowHeight / 2)
+            ctx.fillText(truncateText(row.notes || '—', showPercentageColumn ? 180 : 200), showPercentageColumn ? 760 : 740, currentY + rowHeight / 2)
 
             // Editors
             let editorX = 960
@@ -646,7 +651,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         ctx.textAlign = 'center'
         ctx.fillText('EWO Animation Progress Report • Generated via EWO Hub', width / 2, footerY + 35)
         ctx.textAlign = 'left'
-    }, [reportRows, reportDate, logoImage])
+    }, [reportRows, reportDate, logoImage, showPercentageColumn])
 
     // Draw canvas automatically when state changes
     useEffect(() => {
@@ -746,6 +751,20 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                         ))}
                                     </select>
                                 </div>
+                            </div>
+
+                            {/* Toggle columns options */}
+                            <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                <input
+                                    type="checkbox"
+                                    id="drm-toggle-percentage"
+                                    checked={showPercentageColumn}
+                                    onChange={e => setShowPercentageColumn(e.target.checked)}
+                                    style={{ cursor: 'pointer', width: 16, height: 16 }}
+                                />
+                                <label htmlFor="drm-toggle-percentage" style={{ fontSize: 13, fontWeight: 600, color: '#334155', cursor: 'pointer', userSelect: 'none' }}>
+                                    Tampilkan Kolom Persentase di JPG
+                                </label>
                             </div>
 
                             {/* Editor global settings */}
