@@ -152,8 +152,11 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         if (result.success || result.projects?.length > 0) {
             const currentReportMonth = getMonthYearFromDateStr(reportDate)
 
+            // Filter out ignored statuses
+            const ignoredStatuses = ['under review', 'on hold', 'canceled', 'done']
+            let projectsList = (result.projects || []).filter(p => !ignoredStatuses.includes((p.projectStatus || '').toLowerCase().trim()))
+
             // Filter by logged-in user if not admin
-            let projectsList = result.projects || []
             const loggedInUser = localStorage.getItem('lastUsedEditor') || localStorage.getItem('userName') || ''
             if (loggedInUser && !isAdminMode) {
                 projectsList = projectsList.filter(p => {
@@ -240,8 +243,11 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         if (isOpen && initialProjects.length > 0) {
             const currentReportMonth = getMonthYearFromDateStr(reportDate)
 
+            // Filter out ignored statuses
+            const ignoredStatuses = ['under review', 'on hold', 'canceled', 'done']
+            let projectsList = initialProjects.filter(p => !ignoredStatuses.includes((p.projectStatus || '').toLowerCase().trim()))
+
             // Filter by logged-in user if not admin
-            let projectsList = initialProjects
             const loggedInUser = localStorage.getItem('lastUsedEditor') || localStorage.getItem('userName') || ''
             if (loggedInUser && !isAdminMode) {
                 projectsList = projectsList.filter(p => {
