@@ -10,7 +10,12 @@ import {
     FileType,
     Film,
     Plus,
-    Check
+    Check,
+    Download,
+    Video,
+    Chrome,
+    Wrench,
+    FileCode
 } from 'lucide-react'
 import { PageHeader } from '../components/layout'
 import { Card, CardBody, SearchInput, Button, Badge, EmptyState, Modal, IconButton } from '../components/ui'
@@ -18,6 +23,7 @@ import { Card, CardBody, SearchInput, Button, Badge, EmptyState, Modal, IconButt
 const CATEGORIES = [
     { id: 'all', label: 'All', icon: FolderOpen },
     { id: 'assets', label: 'Assets', icon: Film },
+    { id: 'tools', label: 'Tools & Plugins', icon: Wrench },
     { id: 'links', label: 'Quick Links', icon: LinkIcon },
     { id: 'bookmarks', label: 'Bookmarks', icon: Bookmark }
 ]
@@ -37,13 +43,13 @@ export const RESOURCES = [
     {
         id: 'expression-panel',
         name: 'Expression Panel',
-        category: 'assets',
+        category: 'tools',
         type: 'AE Script',
-        description: 'After Effects expression panel script/plugin for faster workflow',
+        description: 'AE expression panel — now with lipsync auto-sync, audio copy, and number counter animations',
         url: 'https://github.com/azaynzxz/after-effects-expression-panel',
         icon: Film,
         color: 'purple',
-        tags: ['after effects', 'script', 'expressions', 'plugin', 'animation']
+        tags: ['after effects', 'script', 'expressions', 'plugin', 'animation', 'lipsync', 'counter']
     },
     {
         id: 'frequently-used-plugin',
@@ -120,6 +126,61 @@ export const RESOURCES = [
         icon: FileType,
         color: 'purple',
         tags: ['assets', 'libraries', 'ioana']
+    },
+    {
+        id: 'csv-srt-generator',
+        name: 'CSV / SRT Generator',
+        category: 'tools',
+        type: 'Google Colab',
+        description: 'Generate SRT subtitles (non-Word Level) from CSV — ready to import into OPAL',
+        url: 'https://colab.research.google.com/drive/12b2KXuxV6NzG5gyoEwaLwfvn1y0p2Jg1#scrollTo=6f7c898f',
+        icon: FileCode,
+        color: 'orange',
+        tags: ['csv', 'srt', 'subtitle', 'opal', 'colab', 'generator']
+    },
+    {
+        id: 'opal-music-search',
+        name: 'OPAL Music Search',
+        category: 'tools',
+        type: 'OPAL App',
+        description: 'Search and browse music for projects using OPAL',
+        url: 'https://opal.google/app/1QLzpPXgGlyRlLr8FzVWAlIHaiq-klNfU',
+        icon: Music,
+        color: 'teal',
+        tags: ['music', 'opal', 'search', 'audio', 'bgm']
+    },
+    {
+        id: 'audio-downloader-extension',
+        name: 'Audio Downloader (Envato)',
+        category: 'tools',
+        type: 'Chrome Extension',
+        description: 'Premiere Pro plugin to search & download music from Envato — requires Chrome/Brave extension',
+        url: 'https://github.com/azaynzxz/Audio-Downloader-Chrome-Extension',
+        icon: Download,
+        color: 'green',
+        tags: ['premiere pro', 'envato', 'music', 'chrome extension', 'audio', 'download']
+    },
+    {
+        id: 'psd-ae-tools',
+        name: 'PSD Downscale & AE Downgrade',
+        category: 'tools',
+        type: 'Google Drive',
+        description: 'Tools to downscale large PSD files and downgrade After Effects project versions',
+        url: 'https://drive.google.com/drive/folders/1idgwPTLGIRKHggz5nYEJoU70JgwpoQJU?usp=drive_link',
+        icon: Wrench,
+        color: 'blue',
+        tags: ['psd', 'after effects', 'downscale', 'downgrade', 'tools']
+    },
+    {
+        id: 'youtube-downloader',
+        name: 'YouTube Video Downloader',
+        category: 'tools',
+        type: 'Google Colab',
+        description: 'Download videos from YouTube using Google Colab',
+        url: 'https://colab.research.google.com/drive/1g0Fhrk-v2kHKoR0Q5h-6vY6kR_Gusgm2#scrollTo=norXgOlrshGx',
+        icon: Video,
+        color: 'red',
+        tags: ['youtube', 'download', 'video', 'colab']
     }
 ]
 
