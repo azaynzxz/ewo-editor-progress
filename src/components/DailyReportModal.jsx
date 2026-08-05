@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Plus, Trash2, Download, X, PlusCircle, Check, RefreshCw, Edit3 } from 'lucide-react'
 import { fetchAllSheetsProjects } from '../utils/projectFetcher'
+import SearchableDropdown from './SearchableDropdown'
 
 // Color maps matching requested designs
 const PLAN_COLORS = {
@@ -13,27 +14,19 @@ const EDITOR_COLORS = {
     'zayn': { bg: '#b91c1c', text: '#ffffff' },
     'yoki': { bg: '#7c3aed', text: '#ffffff' },
     'zurvi': { bg: '#15803d', text: '#ffffff' },
-    'hendi': { bg: '#e0f2fe', text: '#0369a1' }
+    'hendi': { bg: '#0284c7', text: '#ffffff' }
 }
 
 function getEditorColor(name) {
     const norm = name.toLowerCase().trim()
     if (EDITOR_COLORS[norm]) return EDITOR_COLORS[norm]
 
-    // Generate stable color based on string hash
     let hash = 0
     for (let i = 0; i < norm.length; i++) {
         hash = norm.charCodeAt(i) + ((hash << 5) - hash)
     }
-    const colors = [
-        { bg: '#2563eb', text: '#ffffff' },
-        { bg: '#db2777', text: '#ffffff' },
-        { bg: '#d97706', text: '#ffffff' },
-        { bg: '#0d9488', text: '#ffffff' },
-        { bg: '#4f46e5', text: '#ffffff' },
-        { bg: '#059669', text: '#ffffff' }
-    ]
-    return colors[Math.abs(hash) % colors.length]
+    const hue = Math.abs(hash) % 360
+    return { bg: `hsl(${hue}, 70%, 45%)`, text: '#ffffff' }
 }
 
 function getMonthYearFromDateString(dateStr) {
@@ -193,6 +186,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
 
                 const isCurrentMonth = projectMonths.includes(currentReportMonth)
 
+                const illustratorsArray = p.illustrator ? p.illustrator.split(',').map(e => e.trim()).filter(Boolean) : []
+
                 return {
                     id: p.rowIndex ? `${p.sourceSheet || 'unknown'}-${p.rowIndex}` : `proj-${idx}`,
                     plan: defaultPlan,
@@ -202,7 +197,10 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     notes: p.projectNotes || '',
                     editor: people ? people.split(',').map(e => e.trim()).filter(Boolean) : [],
                     selected: isCurrentMonth,
-                    projectMonths
+                    projectMonths,
+                    illustratorA: illustratorsArray[0] || '',
+                    illustratorB: illustratorsArray[1] || illustratorsArray.slice(1).join(', ') || '',
+                    kemungkinanSelesai: ''
                 }
             })
             setReportRows(mapped)
@@ -287,6 +285,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 // Only auto-select if the project has a deadline in the current report month!
                 const isCurrentMonth = projectMonths.includes(currentReportMonth)
 
+                const illustratorsArray = p.illustrator ? p.illustrator.split(',').map(e => e.trim()).filter(Boolean) : []
+
                 return {
                     id: p.rowIndex ? `${p.sourceSheet || 'unknown'}-${p.rowIndex}` : `proj-${idx}`,
                     plan: defaultPlan,
@@ -296,7 +296,12 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     notes: p.projectNotes || '',
                     editor: people ? people.split(',').map(e => e.trim()).filter(Boolean) : [],
                     selected: isCurrentMonth,
-                    projectMonths
+                    projectMonths,
+                    illustratorA: illustratorsArray[0] || '',
+                    illustratorB: illustratorsArray[1] || illustratorsArray.slice(1).join(', ') || '',
+                    illustratorAProgress: '',
+                    illustratorBProgress: '',
+                    kemungkinanSelesai: ''
                 }
             })
             setReportRows(mapped)
@@ -384,7 +389,12 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         progress: '0%',
         notes: '',
         editor: [],
-        selected: true
+        selected: true,
+        illustratorA: '',
+        illustratorB: '',
+        illustratorAProgress: '',
+        illustratorBProgress: '',
+        kemungkinanSelesai: ''
     })
 
     const handleAddRow = () => {
@@ -448,9 +458,20 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         const rowHeight = 70
         const footerHeight = 80
         const tableHeaderHeight = 55
-        const height = activeRows.length === 0
-            ? 350
-            : headerHeight + tableHeaderHeight + (activeRows.length * rowHeight) + footerHeight
+        
+        let height = 350
+        if (viewMode === 'meeting') {
+            if (activeRows.length > 0) {
+                height = headerHeight + 20
+                const numRows = Math.ceil(activeRows.length / 3)
+                height += numRows * (140 + 20)
+                height += footerHeight
+            }
+        } else {
+            height = activeRows.length === 0
+                ? 350
+                : headerHeight + tableHeaderHeight + (activeRows.length * rowHeight) + footerHeight
+        }
 
         // Generate canvas at 2x resolution for preview sharpness & high quality download
         const scale = 2
@@ -513,20 +534,23 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
 
         // 5. Draw Table Headers
         const tableY = headerHeight
-        ctx.fillStyle = rCol.headerBg
-        ctx.fillRect(50, tableY, width - 100, tableHeaderHeight)
+        
+        if (viewMode !== 'meeting') {
+            ctx.fillStyle = rCol.headerBg
+            ctx.fillRect(50, tableY, width - 100, tableHeaderHeight)
 
-        ctx.fillStyle = '#ffffff'
-        ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
+            ctx.fillStyle = '#ffffff'
+            ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
 
-        ctx.fillText('PLAN', 70, tableY + tableHeaderHeight / 2)
-        ctx.fillText('CLIENT', 230, tableY + tableHeaderHeight / 2)
-        ctx.fillText('TITLE', 370, tableY + tableHeaderHeight / 2)
-        if (showPercentageColumn) {
-            ctx.fillText('PERCENTAGE', 630, tableY + tableHeaderHeight / 2)
+            ctx.fillText('PLAN', 70, tableY + tableHeaderHeight / 2)
+            ctx.fillText('CLIENT', 230, tableY + tableHeaderHeight / 2)
+            ctx.fillText('TITLE', 370, tableY + tableHeaderHeight / 2)
+            if (showPercentageColumn) {
+                ctx.fillText('PERCENTAGE', 630, tableY + tableHeaderHeight / 2)
+            }
+            ctx.fillText('NOTES', showPercentageColumn ? 760 : 740, tableY + tableHeaderHeight / 2)
+            ctx.fillText(getRoleHeaderLabel(), 960, tableY + tableHeaderHeight / 2)
         }
-        ctx.fillText('NOTES', showPercentageColumn ? 760 : 740, tableY + tableHeaderHeight / 2)
-        ctx.fillText(getRoleHeaderLabel(), 960, tableY + tableHeaderHeight / 2)
 
         const drawRoundRect = (x, y, w, h, r, fill, stroke) => {
             ctx.beginPath()
@@ -555,90 +579,156 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
             return temp + '...'
         }
 
-        // 6. Draw Table Rows
-        let currentY = tableY + tableHeaderHeight
-        activeRows.forEach((row, rIdx) => {
-            ctx.fillStyle = rIdx % 2 === 0 ? '#ffffff' : '#f8fafc'
-            ctx.fillRect(50, currentY, width - 100, rowHeight)
-
-            ctx.strokeStyle = '#e2e8f0'
-            ctx.lineWidth = 1
-            ctx.beginPath()
-            ctx.moveTo(50, currentY + rowHeight)
-            ctx.lineTo(width - 50, currentY + rowHeight)
-            ctx.stroke()
-
-            // Plan tags
-            let tagX = 70
-            const tagY = currentY + (rowHeight - 32) / 2
-
-            row.plan.forEach((planTag) => {
-                const colors = PLAN_COLORS[planTag] || { bg: '#e2e8f0', text: '#4b5563', border: '#cbd5e1' }
-                ctx.font = 'bold 12px "Inter", "Segoe UI", Roboto, sans-serif'
-                const tagWidth = ctx.measureText(planTag).width + 24
-
-                drawRoundRect(tagX, tagY, tagWidth, 32, 16, colors.bg, null)
-                ctx.fillStyle = colors.text
-                ctx.textAlign = 'center'
-                ctx.fillText(planTag, tagX + tagWidth / 2, tagY + 16)
-                ctx.textAlign = 'left'
-
-                tagX += tagWidth + 8
+        if (viewMode === 'meeting') {
+            const sortedRows = [...activeRows].sort((a, b) => {
+                const edA = (a.editor && a.editor.length > 0) ? a.editor[0] : 'Unassigned'
+                const edB = (b.editor && b.editor.length > 0) ? b.editor[0] : 'Unassigned'
+                return edA.localeCompare(edB)
             })
 
-            // Client
-            ctx.fillStyle = '#475569'
-            ctx.font = '500 16px "Inter", "Segoe UI", Roboto, sans-serif'
-            ctx.fillText(truncateText(row.client || '—', 120), 230, currentY + rowHeight / 2)
+            let currentY = headerHeight + 20
+            const cardWidth = 330
+            const cardHeight = 140
+            const colGap = 20
+            const rowGap = 20
+            const startX = (width - (3 * cardWidth + 2 * colGap)) / 2
+            const colCount = 3
 
-            // Title
-            ctx.fillStyle = '#0f172a'
-            ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
-            ctx.fillText(truncateText(row.title || '—', showPercentageColumn ? 240 : 340), 370, currentY + rowHeight / 2)
+            sortedRows.forEach((row, idx) => {
+                const ed = (row.editor && row.editor.length > 0) ? row.editor[0] : 'Unassigned'
+                const edColor = getEditorColor(ed)
+                const col = idx % colCount
+                const rowIdx = Math.floor(idx / colCount)
+                const x = startX + col * (cardWidth + colGap)
+                const y = currentY + rowIdx * (cardHeight + rowGap)
 
-            // Percentage
-            if (showPercentageColumn) {
-                ctx.fillStyle = '#0284c7'
-                ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
-                ctx.fillText(truncateText(row.progress || '0%', 110), 630, currentY + rowHeight / 2)
-            }
+                drawRoundRect(x, y, cardWidth, cardHeight, 12, '#ffffff', '#e2e8f0')
 
-            // Notes
-            ctx.fillStyle = '#4b5563'
-            ctx.font = 'italic 15px "Inter", "Segoe UI", Roboto, sans-serif'
-            ctx.fillText(truncateText(row.notes || '—', showPercentageColumn ? 180 : 200), showPercentageColumn ? 760 : 740, currentY + rowHeight / 2)
+                ctx.fillStyle = edColor.bg
+                ctx.font = 'bold 15px "Inter", sans-serif'
+                const clientTitle = row.client ? `${row.client} "${row.title}"` : `"${row.title}"`
+                ctx.fillText(truncateText(clientTitle, cardWidth - 95), x + 16, y + 24)
 
-            // Editors
-            let editorX = 960
-            const editorY = currentY + (rowHeight - 30) / 2
+                ctx.fillStyle = edColor.bg
+                ctx.font = 'bold 12px "Inter", sans-serif'
+                ctx.textAlign = 'right'
+                ctx.fillText(`(${ed})`, x + cardWidth - 16, y + 24)
+                ctx.textAlign = 'left'
 
-            if (row.editor && row.editor.length > 0) {
-                row.editor.forEach((ed) => {
-                    const col = getEditorColor(ed)
+                ctx.strokeStyle = edColor.bg
+                ctx.lineWidth = 1
+                ctx.beginPath()
+                ctx.moveTo(x + 16, y + 42)
+                ctx.lineTo(x + cardWidth - 16, y + 42)
+                ctx.stroke()
+
+                const drawRowPair = (label, value, yPos) => {
+                    ctx.fillStyle = '#64748b'
+                    ctx.font = '500 12px "Inter", sans-serif'
+                    ctx.fillText(truncateText(label, 130), x + 16, yPos)
+                    
+                    ctx.fillStyle = '#0f172a'
+                    ctx.font = '600 13px "Inter", sans-serif'
+                    ctx.fillText(truncateText(value || '—', 160), x + 155, yPos)
+                }
+
+                drawRowPair(row.illustratorA || 'Illustrator A', row.illustratorAProgress, y + 64)
+
+                let submitY = y + 88
+
+                if (row.illustratorB) {
+                    drawRowPair(row.illustratorB, row.illustratorBProgress, y + 88)
+                    submitY = y + 112
+                }
+
+                drawRowPair('Kemungkinan Submit', row.kemungkinanSelesai, submitY)
+            })
+        } else {
+            // 6. Draw Table Rows
+            let currentY = tableY + tableHeaderHeight
+            activeRows.forEach((row, rIdx) => {
+                ctx.fillStyle = rIdx % 2 === 0 ? '#ffffff' : '#f8fafc'
+                ctx.fillRect(50, currentY, width - 100, rowHeight)
+
+                ctx.strokeStyle = '#e2e8f0'
+                ctx.lineWidth = 1
+                ctx.beginPath()
+                ctx.moveTo(50, currentY + rowHeight)
+                ctx.lineTo(width - 50, currentY + rowHeight)
+                ctx.stroke()
+
+                // Plan tags
+                let tagX = 70
+                const tagY = currentY + (rowHeight - 32) / 2
+
+                row.plan.forEach((planTag) => {
+                    const colors = PLAN_COLORS[planTag] || { bg: '#e2e8f0', text: '#4b5563', border: '#cbd5e1' }
                     ctx.font = 'bold 12px "Inter", "Segoe UI", Roboto, sans-serif'
-                    const edWidth = ctx.measureText(ed).width + 20
+                    const tagWidth = ctx.measureText(planTag).width + 24
 
-                    drawRoundRect(editorX, editorY, edWidth, 30, 15, col.bg, null)
-                    ctx.fillStyle = col.text
+                    drawRoundRect(tagX, tagY, tagWidth, 32, 16, colors.bg, null)
+                    ctx.fillStyle = colors.text
                     ctx.textAlign = 'center'
-                    ctx.fillText(ed, editorX + edWidth / 2, editorY + 15)
+                    ctx.fillText(planTag, tagX + tagWidth / 2, tagY + 16)
                     ctx.textAlign = 'left'
 
-                    editorX += edWidth + 6
+                    tagX += tagWidth + 8
                 })
-            } else {
-                ctx.fillStyle = '#94a3b8'
-                ctx.font = 'italic 16px "Inter", "Segoe UI", Roboto, sans-serif'
-                ctx.fillText('—', 960, currentY + rowHeight / 2)
-            }
 
-            currentY += rowHeight
-        })
+                // Client
+                ctx.fillStyle = '#475569'
+                ctx.font = '500 16px "Inter", "Segoe UI", Roboto, sans-serif'
+                ctx.fillText(truncateText(row.client || '—', 120), 230, currentY + rowHeight / 2)
 
-        // Draw side borders
-        ctx.strokeStyle = '#e2e8f0'
-        ctx.lineWidth = 1
-        ctx.strokeRect(50, tableY, width - 100, tableHeaderHeight + (activeRows.length * rowHeight))
+                // Title
+                ctx.fillStyle = '#0f172a'
+                ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
+                ctx.fillText(truncateText(row.title || '—', showPercentageColumn ? 240 : 340), 370, currentY + rowHeight / 2)
+
+                // Percentage
+                if (showPercentageColumn) {
+                    ctx.fillStyle = '#0284c7'
+                    ctx.font = 'bold 16px "Inter", "Segoe UI", Roboto, sans-serif'
+                    ctx.fillText(truncateText(row.progress || '0%', 110), 630, currentY + rowHeight / 2)
+                }
+
+                // Notes
+                ctx.fillStyle = '#4b5563'
+                ctx.font = 'italic 15px "Inter", "Segoe UI", Roboto, sans-serif'
+                ctx.fillText(truncateText(row.notes || '—', showPercentageColumn ? 180 : 200), showPercentageColumn ? 760 : 740, currentY + rowHeight / 2)
+
+                // Editors
+                let editorX = 960
+                const editorY = currentY + (rowHeight - 30) / 2
+
+                if (row.editor && row.editor.length > 0) {
+                    row.editor.forEach((ed) => {
+                        const col = getEditorColor(ed)
+                        ctx.font = 'bold 12px "Inter", "Segoe UI", Roboto, sans-serif'
+                        const edWidth = ctx.measureText(ed).width + 20
+
+                        drawRoundRect(editorX, editorY, edWidth, 30, 15, col.bg, null)
+                        ctx.fillStyle = col.text
+                        ctx.textAlign = 'center'
+                        ctx.fillText(ed, editorX + edWidth / 2, editorY + 15)
+                        ctx.textAlign = 'left'
+
+                        editorX += edWidth + 6
+                    })
+                } else {
+                    ctx.fillStyle = '#94a3b8'
+                    ctx.font = 'italic 16px "Inter", "Segoe UI", Roboto, sans-serif'
+                    ctx.fillText('—', 960, currentY + rowHeight / 2)
+                }
+
+                currentY += rowHeight
+            })
+
+            // Draw side borders
+            ctx.strokeStyle = '#e2e8f0'
+            ctx.lineWidth = 1
+            ctx.strokeRect(50, tableY, width - 100, tableHeaderHeight + (activeRows.length * rowHeight))
+        }
 
         // 7. Footer
         const footerY = height - footerHeight
@@ -657,7 +747,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
         ctx.textAlign = 'center'
         ctx.fillText('EWO Animation Progress Report • Generated via EWO Hub', width / 2, footerY + 35)
         ctx.textAlign = 'left'
-    }, [reportRows, reportDate, logoImage, showPercentageColumn])
+    }, [reportRows, reportDate, logoImage, showPercentageColumn, viewMode])
 
     // Draw canvas automatically when state changes
     useEffect(() => {
@@ -691,7 +781,7 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
 
     return (
         <div className="drm-overlay">
-            <div className={`drm-card ${viewMode === 'table' ? 'view-table' : 'view-list'}`}>
+            <div className={`drm-card ${viewMode === 'table' ? 'view-table' : (viewMode === 'meeting' ? 'view-meeting' : 'view-list')}`}>
                 {/* Header */}
                 <div className="drm-header">
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -719,6 +809,12 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                 className={`drm-toggle-btn ${viewMode === 'list' ? 'active' : ''}`}
                             >
                                 List Mode
+                            </button>
+                            <button
+                                onClick={() => setViewMode('meeting')}
+                                className={`drm-toggle-btn ${viewMode === 'meeting' ? 'active' : ''}`}
+                            >
+                                Meeting Mode
                             </button>
                         </div>
                     </div>
@@ -966,6 +1062,140 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                                         </table>
                                     </div>
                                 )
+                            ) : viewMode === 'meeting' ? (
+                                <>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--gray-700)' }}>
+                                            Meeting Mode Projects ({displayedRows.length})
+                                        </span>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600, color: 'var(--gray-500)' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={displayedRows.length > 0 && displayedRows.every(r => r.selected)}
+                                                onChange={e => {
+                                                    const displayedIds = new Set(displayedRows.map(r => r.id))
+                                                    setReportRows(prev => prev.map(r => displayedIds.has(r.id) ? { ...r, selected: e.target.checked } : r))
+                                                }}
+                                            />
+                                            Pilih Semua
+                                        </label>
+                                    </div>
+                                    <div className="drm-cards-list">
+                                        {displayedRows.length === 0 ? (
+                                            <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--gray-400)', fontStyle: 'italic', background: 'var(--gray-50)', borderRadius: 'var(--radius-md)' }}>
+                                                Tidak ada data project untuk filter bulan ini.
+                                            </div>
+                                        ) : (
+                                            displayedRows.map((row) => {
+                                                const isExpanded = expandedRowId === row.id
+                                                return (
+                                                    <div key={row.id} className={`drm-compact-row ${row.selected ? 'selected' : ''} ${isExpanded ? 'expanded' : ''}`}>
+                                                        <div className="drm-row-main">
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={row.selected}
+                                                                    onChange={e => handleUpdateRow(row.id, { selected: e.target.checked })}
+                                                                    style={{ cursor: 'pointer' }}
+                                                                />
+                                                                <div className="drm-row-title-info" style={{ minWidth: 0 }}>
+                                                                    <span className="drm-row-title">{row.title || '(Tanpa Judul)'}</span>
+                                                                    <span className="drm-row-client">{row.client ? `(${row.client})` : ''}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                                <button
+                                                                    onClick={() => setExpandedRowId(isExpanded ? null : row.id)}
+                                                                    className={`drm-row-action-btn ${isExpanded ? 'active' : ''}`}
+                                                                    title="Edit Meeting Details"
+                                                                >
+                                                                    <Edit3 size={13} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteRow(row.id)}
+                                                                    className="drm-row-action-btn delete"
+                                                                    title="Hapus baris"
+                                                                >
+                                                                    <Trash2 size={13} />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        {isExpanded && (
+                                                            <div className="drm-row-details">
+                                                                <div className="drm-detail-section">
+                                                                    <div className="drm-field-group">
+                                                                        <span className="drm-field-label" style={{ minWidth: 100 }}>{row.illustratorA || 'Illustrator A'}</span>
+                                                                        <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+                                                                            <SearchableDropdown
+                                                                                value={row.illustratorAProgress || ''}
+                                                                                onChange={val => handleUpdateRow(row.id, { illustratorAProgress: val })}
+                                                                                options={['Done', 'Process']}
+                                                                                placeholder="Misal: 35/40"
+                                                                                allowCustom={true}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                    {row.illustratorB && (
+                                                                        <div className="drm-field-group" style={{ marginTop: 6 }}>
+                                                                            <span className="drm-field-label" style={{ minWidth: 100 }}>{row.illustratorB}</span>
+                                                                            <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+                                                                                <SearchableDropdown
+                                                                                    value={row.illustratorBProgress || ''}
+                                                                                    onChange={val => handleUpdateRow(row.id, { illustratorBProgress: val })}
+                                                                                    options={['Done', 'Process']}
+                                                                                    placeholder="Misal: 12/20"
+                                                                                    allowCustom={true}
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="drm-field-group" style={{ marginTop: 6 }}>
+                                                                        <span className="drm-field-label" style={{ minWidth: 100 }}>Kemungkinan Submit</span>
+                                                                        <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+                                                                            <SearchableDropdown
+                                                                                value={row.kemungkinanSelesai || ''}
+                                                                                onChange={val => handleUpdateRow(row.id, { kemungkinanSelesai: val })}
+                                                                                options={['Sore', 'Malam', '18:00', '20:00']}
+                                                                                placeholder="Malam, Sore, atau 18:00"
+                                                                                allowCustom={true}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <div className="drm-detail-section" style={{ position: 'relative' }}>
+                                                                    <span className="drm-field-label" style={{ display: 'block', marginBottom: 4 }}>Editor Terkait</span>
+                                                                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                                                                        {row.editor.map(ed => (
+                                                                            <span key={ed} onClick={() => handleToggleEditorInRow(row.id, ed)} className="drm-row-ed-chip">{ed}</span>
+                                                                        ))}
+                                                                        <button onClick={() => setActiveRowEditorDropdown(activeRowEditorDropdown === row.id ? null : row.id)} className="drm-add-row-ed-btn">+ Edit</button>
+                                                                    </div>
+                                                                    {activeRowEditorDropdown === row.id && (
+                                                                        <div className="drm-ed-dropdown" ref={dropdownRef}>
+                                                                            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--gray-400)', display: 'block', padding: '4px 8px 6px' }}>Pilih Editor:</span>
+                                                                            <div style={{ maxHeight: 150, overflowY: 'auto' }}>
+                                                                                {customEditors.map(edName => {
+                                                                                    const isChecked = row.editor.includes(edName)
+                                                                                    return (
+                                                                                        <div key={edName} onClick={() => handleToggleEditorInRow(row.id, edName)} className={`drm-ed-item ${isChecked ? 'active' : ''}`}>
+                                                                                            <span>{edName}</span>
+                                                                                            {isChecked && <Check size={12} style={{ color: rCol.accent }} />}
+                                                                                        </div>
+                                                                                    )
+                                                                                })}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })
+                                        )}
+                                    </div>
+                                </>
                             ) : (
                                 <>
                                     {/* Section header for the list */}
@@ -1242,7 +1472,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 .drm-card.view-table {
                     max-width: 90vw;
                 }
-                .drm-card.view-list {
+                .drm-card.view-list,
+                .drm-card.view-meeting {
                     max-width: 1500px;
                 }
                 @keyframes drm-zoomIn {
@@ -1274,8 +1505,9 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 .drm-card.view-table .drm-split-layout {
                     grid-template-columns: 1fr 800px;
                 }
-                .drm-card.view-list .drm-split-layout {
-                    grid-template-columns: 460px 1fr;
+                .drm-card.view-list .drm-split-layout,
+                .drm-card.view-meeting .drm-split-layout {
+                    grid-template-columns: 560px 1fr;
                 }
                 @media (max-width: 900px) {
                     .drm-split-layout {

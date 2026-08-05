@@ -1,0 +1,122 @@
+client:789 [vite] connecting...
+client:912 [vite] connected.
+react-dom.development.js:29895 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+d2b6a337-3d36-4664-8c84-9ce61c6d5870:3467 Uncaught Error: This script should only be loaded in a browser extension.
+    at Object.<anonymous> (d2b6a337-3d36-4664-8c84-9ce61c6d5870:3467:430324)
+    at d2b6a337-3d36-4664-8c84-9ce61c6d5870:3467:428822
+    at 3675 (d2b6a337-3d36-4664-8c84-9ce61c6d5870:3467:429001)
+    at _0x6aab5d (d2b6a337-3d36-4664-8c84-9ce61c6d5870:3467:483372)
+    at Object.BCYPT (d2b6a337-3d36-4664-8c84-9ce61c6d5870:3467:77427)
+    at d2b6a337-3d36-4664-8c84-9ce61c6d5870:3467:776289
+    at d2b6a337-3d36-4664-8c84-9ce61c6d5870:3467:802511
+    at d2b6a337-3d36-4664-8c84-9ce61c6d5870:3467:802517
+    at d2b6a337-3d36-4664-8c84-9ce61c6d5870:3468:11
+client:883 [vite] hot updated: /src/components/DailyReportModal.jsx
+DailyReportModal.jsx?t=1783046731994:384 Uncaught ReferenceError: useCallback is not defined
+    at DailyReportModal (DailyReportModal.jsx?t=1783046731994:384:22)
+    at renderWithHooks (react-dom.development.js:15486:18)
+    at updateFunctionComponent (react-dom.development.js:19617:20)
+    at beginWork (react-dom.development.js:21640:16)
+    at HTMLUnknownElement.callCallback2 (react-dom.development.js:4164:14)
+    at Object.invokeGuardedCallbackDev (react-dom.development.js:4213:16)
+    at invokeGuardedCallback (react-dom.development.js:4277:31)
+    at beginWork$1 (react-dom.development.js:27490:7)
+    at performUnitOfWork (react-dom.development.js:26596:12)
+    at workLoopSync (react-dom.development.js:26505:5)
+DailyReportModal.jsx?t=1783046731994:384 Uncaught ReferenceError: useCallback is not defined
+    at DailyReportModal (DailyReportModal.jsx?t=1783046731994:384:22)
+    at renderWithHooks (react-dom.development.js:15486:18)
+    at updateFunctionComponent (react-dom.development.js:19617:20)
+    at beginWork (react-dom.development.js:21640:16)
+    at HTMLUnknownElement.callCallback2 (react-dom.development.js:4164:14)
+    at Object.invokeGuardedCallbackDev (react-dom.development.js:4213:16)
+    at invokeGuardedCallback (react-dom.development.js:4277:31)
+    at beginWork$1 (react-dom.development.js:27490:7)
+    at performUnitOfWork (react-dom.development.js:26596:12)
+    at workLoopSync (react-dom.development.js:26505:5)
+react-dom.development.js:12056 Uncaught ReferenceError: useCallback is not defined
+    at DailyReportModal (DailyReportModal.jsx?t=1783046731994:384:22)
+    at renderWithHooks (react-dom.development.js:15486:18)
+    at updateFunctionComponent (react-dom.development.js:19617:20)
+    at beginWork (react-dom.development.js:21640:16)
+    at beginWork$1 (react-dom.development.js:27465:14)
+    at performUnitOfWork (react-dom.development.js:26596:12)
+    at workLoopSync (react-dom.development.js:26505:5)
+    at renderRootSync (react-dom.development.js:26473:7)
+    at recoverFromConcurrentError (react-dom.development.js:25889:20)
+    at performSyncWorkOnRoot (react-dom.development.js:26135:20)
+client:883 [vite] hot updated: /src/components/DailyReportModal.jsx
+DailyReportModal.jsx:418 Uncaught ReferenceError: useCallback is not defined
+    at DailyReportModal (DailyReportModal.jsx:418:24)
+    at renderWithHooks (react-dom.development.js:15486:18)
+    at updateFunctionComponent (react-dom.development.js:19617:20)
+    at beginWork (react-dom.development.js:21640:16)
+    at HTMLUnknownElement.callCallback2 (react-dom.development.js:4164:14)
+    at Object.invokeGuardedCallbackDev (react-dom.development.js:4213:16)
+    at invokeGuardedCallback (react-dom.development.js:4277:31)
+    at beginWork$1 (react-dom.development.js:27490:7)
+    at performUnitOfWork (react-dom.development.js:26596:12)
+    at workLoopSync (react-dom.development.js:26505:5)
+DailyReportModal @ DailyReportModal.jsx:418
+renderWithHooks @ react-dom.development.js:15486
+updateFunctionComponent @ react-dom.development.js:19617
+beginWork @ react-dom.development.js:21640
+callCallback @ react-dom.development.js:4164
+invokeGuardedCallbackDev @ react-dom.development.js:4213
+invokeGuardedCallback @ react-dom.development.js:4277
+beginWork$1 @ react-dom.development.js:27490
+performUnitOfWork @ react-dom.development.js:26596
+workLoopSync @ react-dom.development.js:26505
+renderRootSync @ react-dom.development.js:26473
+performSyncWorkOnRoot @ react-dom.development.js:26124
+flushSyncCallbacks @ react-dom.development.js:12042
+anonymousCallbackTo: scheduleMicrotask @ react-dom.development.js:25690
+DailyReportModal.jsx:418 Uncaught ReferenceError: useCallback is not defined
+    at DailyReportModal (DailyReportModal.jsx:418:24)
+    at renderWithHooks (react-dom.development.js:15486:18)
+    at updateFunctionComponent (react-dom.development.js:19617:20)
+    at beginWork (react-dom.development.js:21640:16)
+    at HTMLUnknownElement.callCallback2 (react-dom.development.js:4164:14)
+    at Object.invokeGuardedCallbackDev (react-dom.development.js:4213:16)
+    at invokeGuardedCallback (react-dom.development.js:4277:31)
+    at beginWork$1 (react-dom.development.js:27490:7)
+    at performUnitOfWork (react-dom.development.js:26596:12)
+    at workLoopSync (react-dom.development.js:26505:5)
+DailyReportModal @ DailyReportModal.jsx:418
+renderWithHooks @ react-dom.development.js:15486
+updateFunctionComponent @ react-dom.development.js:19617
+beginWork @ react-dom.development.js:21640
+callCallback @ react-dom.development.js:4164
+invokeGuardedCallbackDev @ react-dom.development.js:4213
+invokeGuardedCallback @ react-dom.development.js:4277
+beginWork$1 @ react-dom.development.js:27490
+performUnitOfWork @ react-dom.development.js:26596
+workLoopSync @ react-dom.development.js:26505
+renderRootSync @ react-dom.development.js:26473
+recoverFromConcurrentError @ react-dom.development.js:25889
+performSyncWorkOnRoot @ react-dom.development.js:26135
+flushSyncCallbacks @ react-dom.development.js:12042
+anonymousCallbackTo: scheduleMicrotask @ react-dom.development.js:25690
+react-dom.development.js:12056 Uncaught ReferenceError: useCallback is not defined
+    at DailyReportModal (DailyReportModal.jsx:418:24)
+    at renderWithHooks (react-dom.development.js:15486:18)
+    at updateFunctionComponent (react-dom.development.js:19617:20)
+    at beginWork (react-dom.development.js:21640:16)
+    at beginWork$1 (react-dom.development.js:27465:14)
+    at performUnitOfWork (react-dom.development.js:26596:12)
+    at workLoopSync (react-dom.development.js:26505:5)
+    at renderRootSync (react-dom.development.js:26473:7)
+    at recoverFromConcurrentError (react-dom.development.js:25889:20)
+    at performSyncWorkOnRoot (react-dom.development.js:26135:20)
+DailyReportModal @ DailyReportModal.jsx:418
+renderWithHooks @ react-dom.development.js:15486
+updateFunctionComponent @ react-dom.development.js:19617
+beginWork @ react-dom.development.js:21640
+beginWork$1 @ react-dom.development.js:27465
+performUnitOfWork @ react-dom.development.js:26596
+workLoopSync @ react-dom.development.js:26505
+renderRootSync @ react-dom.development.js:26473
+recoverFromConcurrentError @ react-dom.development.js:25889
+performSyncWorkOnRoot @ react-dom.development.js:26135
+flushSyncCallbacks @ react-dom.development.js:12042
+anonymousCallbackTo: scheduleMicrotask @ react-dom.development.js:25690

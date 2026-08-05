@@ -1,0 +1,35 @@
+CONSOLE LOG
+782cab45-9f55-42da-9dcd-e91167f70c14:3467 Uncaught Error: This script should only be loaded in a browser extension.
+    at Object.<anonymous> (782cab45-9f55-42da-9dcd-e91167f70c14:3467:430324)
+    at 782cab45-9f55-42da-9dcd-e91167f70c14:3467:428822
+    at 3675 (782cab45-9f55-42da-9dcd-e91167f70c14:3467:429001)
+    at _0x6aab5d (782cab45-9f55-42da-9dcd-e91167f70c14:3467:483372)
+    at Object.BCYPT (782cab45-9f55-42da-9dcd-e91167f70c14:3467:77427)
+    at 782cab45-9f55-42da-9dcd-e91167f70c14:3467:776289
+    at 782cab45-9f55-42da-9dcd-e91167f70c14:3467:802511
+    at 782cab45-9f55-42da-9dcd-e91167f70c14:3467:802517
+    at 782cab45-9f55-42da-9dcd-e91167f70c14:3468:11
+782cab45-9f55-42da-9dcd-e91167f70c14:1655 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+    at wrappedSendMessageCallback (782cab45-9f55-42da-9dcd-e91167f70c14:1655:21)
+    at sandbox-content.js:13:109121
+
+
+After selecting client here:
+<div class="searchable-dropdown multi-select-dropdown"><div class="dropdown-trigger "><div class="multi-select-display"><div class="selected-tags"><span class="selected-tag">xChristine<button type="button" class="tag-remove" aria-label="Remove xChristine"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></span></div></div><div class="dropdown-icons"><button type="button" class="clear-btn" aria-label="Clear all selections"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down chevron"><path d="m6 9 6 6 6-6"></path></svg></div></div></div>
+
+it should be populating data contains project title coresponds to the client selected:
+<div class="options-list"><div class="no-results">No results found</div></div>
+
+but it says no result. this happens probably we update the data structure. last prompt i want an universal reusable data fetching from google sheet. 
+normally before this changes i click refresh button then new data fetched then the app use that data to populate the titles matcehd with the client
+but now it no longer work
+
+
+last changes :
+D:\Praktek\Progress Editor Ewo\src\pages\YourSchedule.jsx
+
+Do check git for more info.
+
+
+
+
