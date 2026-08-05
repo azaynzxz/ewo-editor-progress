@@ -3,6 +3,7 @@ import { PageHeader } from '../components/layout'
 import SearchableDropdown from '../components/SearchableDropdown'
 import { Button, IconButton, Badge } from '../components/ui'
 import { FileText, Download, Upload, Trash2, MousePointer2, Settings, Plus, Play, Edit2, SplitSquareHorizontal, Undo2, SplitSquareVertical } from 'lucide-react'
+import jsPDF from 'jspdf'
 import '../styles/script-editor.css'
 
 function ScriptEditor() {
@@ -51,6 +52,7 @@ function ScriptEditor() {
     
     const editorRef = useRef(null)
     const fileInputRef = useRef(null)
+    const csvInputRef = useRef(null)
 
     // Load Mammoth.js dynamically for .docx parsing
     useEffect(() => {
@@ -319,7 +321,216 @@ function ScriptEditor() {
         window.getSelection().removeAllRanges();
     }
 
-    const handleExport = () => {
+    const generateStoryboardPDF = (safeCustomer, safeTitle) => {
+        const doc = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a4'
+        })
+
+        const boxWidth = 89
+        const boxHeight = 50
+        const colSpacing = 5
+        const rowSpacing = 10
+        const startX = 10
+        const startY = 10
+        const textHeight = 40 // allocated space for text
+
+        let sceneIndex = 0
+
+        while (sceneIndex < scenes.length) {
+            if (sceneIndex > 0) {
+                doc.addPage()
+            }
+
+            for (let row = 0; row < 2; row++) {
+                for (let col = 0; col < 3; col++) {
+                    if (sceneIndex >= scenes.length) break
+
+                    const scene = scenes[sceneIndex]
+                    const x = startX + col * (boxWidth + colSpacing)
+                    const y = startY + row * (boxHeight + rowSpacing + textHeight)
+
+                    // Draw 16:9 box
+                    doc.setDrawColor(255, 0, 0) // Red border
+                    doc.setLineWidth(0.5)
+                    doc.rect(x, y, boxWidth, boxHeight)
+
+                    // Add text below
+                    let textY = y + boxHeight + 5
+                    doc.setTextColor(0, 0, 0)
+                    doc.setFontSize(9)
+                    
+                    // Scene ID
+                    doc.setFont("helvetica", "bold")
+                    doc.text(`Scene #${scene.scene_id}`, x, textY)
+                    textY += 4
+                    
+                    doc.setFont("helvetica", "normal")
+                    // Split scene text into lines
+                    const sceneTextLines = doc.splitTextToSize(scene.scene_text, boxWidth)
+                    doc.text(sceneTextLines, x, textY)
+                    textY += (sceneTextLines.length * 4)
+
+                    // Add actions
+                    if (scene.actions && scene.actions.length > 0) {
+                        textY += 2
+                        scene.actions.forEach(action => {
+                            const actionLabel = `[${action.id}]: `
+                            const actionLines = doc.splitTextToSize(`${actionLabel}${action.text}`, boxWidth)
+                            doc.text(actionLines, x, textY)
+                            textY += (actionLines.length * 4)
+                        })
+                    }
+
+                    sceneIndex++
+                }
+            }
+        }
+
+        // Add footer with date and pagination
+        const totalPages = doc.internal.getNumberOfPages()
+        const dateStr = new Date().toLocaleString()
+        
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i)
+            doc.setFontSize(8)
+            doc.setTextColor(150, 150, 150) // Gray color for footer
+            
+            // Date on bottom left
+            doc.text(`Generated: ${dateStr}`, 10, 202)
+            
+            // Page X of Y on bottom right
+            const pageStr = `Page ${i} of ${totalPages}`
+            const pageStrWidth = doc.getTextWidth(pageStr)
+            doc.text(pageStr, 297 - 10 - pageStrWidth, 202)
+        }
+        
+        doc.save(`${safeCustomer} - ${safeTitle} - Storyboard.pdf`)
+    }
+
+    const cleanWordForMatch = (word) => {
+        if (!word) return '';
+        return word.replace(/[^\w]/g, '').toLowerCase();
+    }
+
+    const processCsvSync = (csvText) => {
+        const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        const dataLines = lines.slice(1);
+        
+        const csvWords = [];
+        for (const line of dataLines) {
+            const parts = [];
+            let inQuotes = false;
+            let currentPart = "";
+            for(let i=0; i<line.length; i++) {
+                const char = line[i];
+                if(char === '"') {
+                    inQuotes = !inQuotes;
+                } else if(char === ',' && !inQuotes) {
+                    parts.push(currentPart);
+                    currentPart = "";
+                } else {
+                    currentPart += char;
+                }
+            }
+            parts.push(currentPart);
+            
+            if (parts.length >= 4) {
+                csvWords.push({
+                    start: parts[1],
+                    end: parts[2],
+                    originalWord: parts[3],
+                    cleanWord: cleanWordForMatch(parts[3])
+                });
+            }
+        }
+
+        const syncData = [];
+        let unmatchedCount = 0;
+        
+        scenes.forEach(scene => {
+            const sceneWords = scene.scene_text.split(/\s+/).map(cleanWordForMatch).filter(w => w.length > 0);
+            let matchIndex = -1;
+            const wordsToMatch = Math.min(sceneWords.length, 3); // match up to 3 words
+            
+            if (wordsToMatch > 0) {
+                for (let i = 0; i <= csvWords.length - wordsToMatch; i++) {
+                    let isMatch = true;
+                    for (let j = 0; j < wordsToMatch; j++) {
+                        if (csvWords[i + j].cleanWord !== sceneWords[j]) {
+                            isMatch = false;
+                            break;
+                        }
+                    }
+                    if (isMatch) {
+                        matchIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            if (matchIndex !== -1) {
+                syncData.push({
+                    sceneId: `S${scene.scene_id}`,
+                    startTime: csvWords[matchIndex].start
+                });
+            } else {
+                unmatchedCount++;
+            }
+        });
+
+        if (syncData.length === 0) {
+            alert("Could not match any scenes to the provided CSV timing data.");
+            return;
+        }
+        
+        if (unmatchedCount > 0) {
+            alert(`Matched ${syncData.length} scenes. Could not find a match for ${unmatchedCount} scenes.`);
+        }
+
+        let outCsv = "Scene Name,Start Time\n";
+        syncData.forEach(row => {
+            outCsv += `${row.sceneId},${row.startTime}\n`;
+        });
+
+        const safeCustomer = customer.trim().replace(/[\\/:*?"<>|]/g, '') || 'UnknownCustomer'
+        const safeTitle = title.trim().replace(/[\\/:*?"<>|]/g, '') || 'Untitled'
+        const blob = new Blob([outCsv], { type: 'text/csv' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${safeCustomer} - ${safeTitle} - Timeline Sync.csv`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+    }
+
+    const handleCsvSelect = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            processCsvSync(event.target.result);
+            e.target.value = null;
+        };
+        reader.readAsText(file);
+    }
+
+    const handleMatchToTime = () => {
+        if (scenes.length === 0) {
+            alert('No scenes defined to match.')
+            return
+        }
+        if (!customer.trim() || !title.trim()) {
+            setShowMetadataModal(true)
+            return
+        }
+        csvInputRef.current?.click();
+    }
+
+    const handleExportStoryboard = () => {
         if (scenes.length === 0) {
             alert('No scenes defined to export.')
             return
@@ -329,14 +540,31 @@ function ScriptEditor() {
             return
         }
         
+        const safeCustomer = customer.trim().replace(/[\\/:*?"<>|]/g, '')
+        const safeTitle = title.trim().replace(/[\\/:*?"<>|]/g, '')
+
+        generateStoryboardPDF(safeCustomer, safeTitle)
+    }
+
+    const handleExportJSON = () => {
+        if (scenes.length === 0) {
+            alert('No scenes defined to export.')
+            return
+        }
+        if (!customer.trim() || !title.trim()) {
+            setShowMetadataModal(true)
+            return
+        }
+        
+        const safeCustomer = customer.trim().replace(/[\\/:*?"<>|]/g, '')
+        const safeTitle = title.trim().replace(/[\\/:*?"<>|]/g, '')
+        
         const dataStr = JSON.stringify(scenes, null, 2)
         const blob = new Blob([dataStr], { type: 'application/json' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
         
-        const safeCustomer = customer.trim().replace(/[\\/:*?"<>|]/g, '')
-        const safeTitle = title.trim().replace(/[\\/:*?"<>|]/g, '')
         a.download = `${safeCustomer} - ${safeTitle} - Script Annotations.json`
         
         document.body.appendChild(a)
@@ -401,9 +629,14 @@ function ScriptEditor() {
                 title="Script Editor" 
                 description="Upload, annotate scenes, and export to JSON for Photoshop automation."
                 action={
-                    <Button variant="primary" icon={<Download size={18} />} onClick={handleExport} disabled={scenes.length === 0}>
-                        Export JSON
-                    </Button>
+                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                        <Button variant="secondary" icon={<Download size={18} />} onClick={handleExportStoryboard} disabled={scenes.length === 0}>
+                            Export Storyboard
+                        </Button>
+                        <Button variant="primary" icon={<Download size={18} />} onClick={handleExportJSON} disabled={scenes.length === 0}>
+                            Export JSON
+                        </Button>
+                    </div>
                 }
             />
             
@@ -478,15 +711,32 @@ function ScriptEditor() {
                                 Edit Text
                             </Button>
                             {!isEditMode && rawText && (
-                                <Button 
-                                    variant="secondary" 
-                                    size="sm"
-                                    icon={<SplitSquareHorizontal size={16} />}
-                                    onClick={handleConvertLinesToScenes}
-                                    title="Auto-convert each non-empty line into a new Scene"
-                                >
-                                    Lines to Scenes
-                                </Button>
+                                <>
+                                    <Button 
+                                        variant="secondary" 
+                                        size="sm"
+                                        icon={<SplitSquareHorizontal size={16} />}
+                                        onClick={handleConvertLinesToScenes}
+                                        title="Auto-convert each non-empty line into a new Scene"
+                                    >
+                                        Lines to Scenes
+                                    </Button>
+                                    <Button 
+                                        variant="secondary" 
+                                        size="sm"
+                                        onClick={handleMatchToTime}
+                                        title="Match scenes to a word-level timing CSV"
+                                    >
+                                        Match to Time
+                                    </Button>
+                                    <input 
+                                        type="file" 
+                                        ref={csvInputRef} 
+                                        style={{ display: 'none' }} 
+                                        accept=".csv" 
+                                        onChange={handleCsvSelect} 
+                                    />
+                                </>
                             )}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
