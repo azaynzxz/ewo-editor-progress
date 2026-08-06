@@ -173,6 +173,18 @@
     border-color: var(--gray-400);
 }
 
+/* Danger Button */
+.btn-danger {
+    background: var(--error);
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
 /* Ghost Button */
 .btn-ghost {
     background: transparent;
@@ -427,6 +439,40 @@
     background: var(--gray-50);
     border-bottom-left-radius: var(--radius-xl);
     border-bottom-right-radius: var(--radius-xl);
+}
+
+/* Confirm Modal */
+.modal-confirm {
+    max-width: 400px;
+}
+.modal-confirm .modal-header {
+    border-bottom: none;
+    justify-content: center;
+    padding-bottom: 0;
+    position: relative;
+}
+.modal-confirm .modal-header .modal-title {
+    font-size: var(--text-2xl);
+    font-weight: 700;
+}
+.modal-confirm .modal-header button {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+}
+.modal-confirm .modal-body {
+    text-align: center;
+    min-height: auto;
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-6);
+}
+.modal-confirm .modal-footer {
+    background: white;
+    padding: var(--space-4) var(--space-5);
+    display: flex;
+}
+.modal-confirm .modal-footer button {
+    flex: 1;
 }
 
 /* ==================== TABS ==================== */

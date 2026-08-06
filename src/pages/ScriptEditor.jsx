@@ -1,24 +1,40 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { PageHeader } from '../components/layout'
 import SearchableDropdown from '../components/SearchableDropdown'
-import { Button, IconButton, Badge } from '../components/ui'
+import { Button, IconButton, Badge, Modal } from '../components/ui'
 import { FileText, Download, Upload, Trash2, MousePointer2, Settings, Plus, Play, Edit2, SplitSquareHorizontal, Undo2, SplitSquareVertical } from 'lucide-react'
 import jsPDF from 'jspdf'
 import '../styles/script-editor.css'
+import Toast from '../components/Toast'
+
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
 
 function ScriptEditor() {
-    const [rawText, setRawText] = useState('')
+    const [rawText, setRawText] = useState(() => localStorage.getItem('ewo_script_rawText') || '')
     const [isEditMode, setIsEditMode] = useState(false)
-    const [scenes, setScenes] = useState([]) // { scene_id: "1", scene_text: "...", actions: [ { id: "S1", text: "..." } ] }
-    const [history, setHistory] = useState([]) // history of { scenes, rawText } for undo
+    const [scenes, setScenes] = useState(() => {
+        try {
+            const cached = localStorage.getItem('ewo_script_scenes');
+            return cached ? JSON.parse(cached) : [];
+        } catch { return []; }
+    }) // { scene_id: "1", scene_text: "...", actions: [ { id: "S1", text: "..." } ] }
+    const [history, setHistory] = useState(() => {
+        try {
+            const cached = localStorage.getItem('ewo_script_history');
+            return cached ? JSON.parse(cached) : [];
+        } catch { return []; }
+    }) // history of { scenes, rawText } for undo
     const [dragActive, setDragActive] = useState(false)
     const [activeListSceneId, setActiveListSceneId] = useState(null)
     const [selection, setSelection] = useState(null)
     const [mammothLoaded, setMammothLoaded] = useState(false)
-    const [customer, setCustomer] = useState('')
-    const [title, setTitle] = useState('')
+    const [customer, setCustomer] = useState(() => localStorage.getItem('ewo_script_customer') || '')
+    const [title, setTitle] = useState(() => localStorage.getItem('ewo_script_title') || '')
     const [showMetadataModal, setShowMetadataModal] = useState(false)
     const [allProjects, setAllProjects] = useState([])
+    const [isExporting, setIsExporting] = useState(false)
+    const [toast, setToast] = useState(null)
+    const [confirmDialog, setConfirmDialog] = useState(null)
     
     useEffect(() => {
         const loadCached = () => {
@@ -34,6 +50,17 @@ function ScriptEditor() {
         return () => window.removeEventListener('ewo_deadlines_refreshed', loadCached);
     }, []);
 
+    useEffect(() => {
+        localStorage.setItem('ewo_script_rawText', rawText);
+        localStorage.setItem('ewo_script_scenes', JSON.stringify(scenes));
+        localStorage.setItem('ewo_script_history', JSON.stringify(history));
+    }, [rawText, scenes, history]);
+
+    useEffect(() => {
+        localStorage.setItem('ewo_script_customer', customer);
+        localStorage.setItem('ewo_script_title', title);
+    }, [customer, title]);
+
     const getTitlesForClient = (clientName) => {
         if (!clientName || !allProjects.length) return [];
         const titles = allProjects
@@ -45,10 +72,15 @@ function ScriptEditor() {
             .map(p => p.projectName);
         return [...new Set(titles)];
     };
-    
-    const DEFAULT_CLIENTS = [
-        'Alex', 'Allan', 'Amanda', 'Angelo', 'Bashar', 'Bryan', 'Jordan', 'Jorge', 'Julia', 'Kristin', 'Michael', 'Ryan', 'Simon', 'Wing', 'Yannick', 'Zheng', 'Internal'
-    ];
+    const [savedClients, setSavedClients] = useState(() => {
+        try {
+            const cached = localStorage.getItem('ewo_saved_clients');
+            if (cached) return JSON.parse(cached);
+        } catch { }
+        return [
+            'Alex', 'Allan', 'Amanda', 'Angelo', 'Bashar', 'Bryan', 'Jordan', 'Jorge', 'Julia', 'Kristin', 'Michael', 'Ryan', 'Simon', 'Wing', 'Yannick', 'Zheng', 'Internal'
+        ];
+    });
     
     const editorRef = useRef(null)
     const fileInputRef = useRef(null)
@@ -216,20 +248,42 @@ function ScriptEditor() {
             if (scene.scene_id === sceneId) {
                 let newActions = [...scene.actions];
                 
-                // Smart auto-fill: if there are no actions yet and the user highlights the latter part of the scene,
-                // auto-assign the preceding text as S1.
-                if (scene.actions.length === 0) {
-                    const index = scene.scene_text.indexOf(selection.text);
-                    if (index > 0) {
-                        const beforeText = scene.scene_text.substring(0, index).trim();
-                        if (beforeText) {
-                            newActions.push({ id: 'S1', text: beforeText });
+                const startIndex = scene.scene_text.indexOf(selection.text);
+                
+                // Find the maximum end position of all existing actions that appear before the newly selected text
+                let maxEndBefore = 0;
+                scene.actions.forEach(a => {
+                    const aStart = scene.scene_text.indexOf(a.text);
+                    if (aStart !== -1) {
+                        const aEnd = aStart + a.text.length;
+                        if (aEnd <= startIndex && aEnd > maxEndBefore) {
+                            maxEndBefore = aEnd;
                         }
+                    }
+                });
+                
+                // Auto-fill the gap before the newly selected text, if there is one
+                if (startIndex > maxEndBefore) {
+                    const gapText = scene.scene_text.substring(maxEndBefore, startIndex).trim();
+                    if (gapText) {
+                        newActions.push({ id: 'temp', text: gapText });
                     }
                 }
                 
-                const newActionId = `S${newActions.length + 1}`
-                newActions.push({ id: newActionId, text: selection.text })
+                newActions.push({ id: 'temp', text: selection.text })
+                
+                // Sort actions based on their starting position in the scene text
+                newActions.sort((a, b) => {
+                    const indexA = scene.scene_text.indexOf(a.text);
+                    const indexB = scene.scene_text.indexOf(b.text);
+                    return indexA - indexB;
+                });
+                
+                // Re-assign sequential IDs to all actions
+                newActions = newActions.map((action, idx) => ({
+                    ...action,
+                    id: `S${idx + 1}`
+                }));
                 
                 return {
                     ...scene,
@@ -260,16 +314,28 @@ function ScriptEditor() {
     }
 
     const handleConvertLinesToScenes = () => {
+        const executeConvert = () => {
+            const lines = rawText.split('\n').filter(line => line.trim().length > 0);
+            const newScenes = lines.map((line, idx) => ({
+                scene_id: (idx + 1).toString(),
+                scene_text: line.trim(),
+                actions: []
+            }));
+            pushHistory(newScenes);
+        };
+
         if (scenes.length > 0) {
-            if (!window.confirm("This will overwrite your existing scenes. Are you sure?")) return;
+            setConfirmDialog({
+                title: 'Overwrite Scenes',
+                message: 'This will overwrite your existing scenes. Are you sure?',
+                onConfirm: () => {
+                    executeConvert();
+                    setConfirmDialog(null);
+                }
+            });
+        } else {
+            executeConvert();
         }
-        const lines = rawText.split('\n').filter(line => line.trim().length > 0);
-        const newScenes = lines.map((line, idx) => ({
-            scene_id: (idx + 1).toString(),
-            scene_text: line.trim(),
-            actions: []
-        }));
-        pushHistory(newScenes);
     }
 
     const handleSplitScene = () => {
@@ -546,7 +612,7 @@ function ScriptEditor() {
         generateStoryboardPDF(safeCustomer, safeTitle)
     }
 
-    const handleExportJSON = () => {
+    const handleExportJSON = async () => {
         if (scenes.length === 0) {
             alert('No scenes defined to export.')
             return
@@ -555,6 +621,8 @@ function ScriptEditor() {
             setShowMetadataModal(true)
             return
         }
+        
+        setIsExporting(true)
         
         const safeCustomer = customer.trim().replace(/[\\/:*?"<>|]/g, '')
         const safeTitle = title.trim().replace(/[\\/:*?"<>|]/g, '')
@@ -565,12 +633,32 @@ function ScriptEditor() {
         const a = document.createElement('a')
         a.href = url
         
-        a.download = `${safeCustomer} - ${safeTitle} - Script Annotations.json`
+        const filename = `${safeCustomer} - ${safeTitle} - Script Annotations.json`
+        a.download = filename
         
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
+        
+        try {
+            await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'backupJson',
+                    filename: filename,
+                    content: dataStr
+                })
+            })
+            console.log(`Json file ${filename} backed up`)
+            setToast({ message: `Backup successful: ${filename}`, type: 'success' })
+        } catch (err) {
+            console.error('Backup failed:', err)
+            setToast({ message: 'Backup to Drive failed. Please try again.', type: 'error' })
+        } finally {
+            setIsExporting(false)
+        }
     }
 
     // A helper to get a consistent color class for an action (1-5 scale)
@@ -633,13 +721,36 @@ function ScriptEditor() {
                         <Button variant="secondary" icon={<Download size={18} />} onClick={handleExportStoryboard} disabled={scenes.length === 0}>
                             Export Storyboard
                         </Button>
-                        <Button variant="primary" icon={<Download size={18} />} onClick={handleExportJSON} disabled={scenes.length === 0}>
+                        <Button variant="primary" icon={<Download size={18} />} onClick={handleExportJSON} disabled={scenes.length === 0} loading={isExporting}>
                             Export JSON
                         </Button>
                     </div>
                 }
             />
             
+            {toast && (
+                <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999 }}>
+                    <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+                </div>
+            )}
+
+            <Modal
+                isOpen={!!confirmDialog}
+                onClose={() => setConfirmDialog(null)}
+                title={confirmDialog?.title}
+                className="modal-confirm"
+                footer={
+                    <>
+                        <Button variant="secondary" onClick={() => setConfirmDialog(null)}>Cancel</Button>
+                        <Button variant="danger" onClick={confirmDialog?.onConfirm}>Confirm</Button>
+                    </>
+                }
+            >
+                <p style={{ margin: 0, fontSize: 'var(--text-base)', color: 'var(--gray-500)' }}>
+                    {confirmDialog?.message}
+                </p>
+            </Modal>
+
             {showMetadataModal && (
                 <div className="modal-backdrop" onClick={() => setShowMetadataModal(false)}>
                     <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px', width: '90%' }}>
@@ -655,7 +766,7 @@ function ScriptEditor() {
                                 <SearchableDropdown
                                     value={customer}
                                     onChange={setCustomer}
-                                    options={DEFAULT_CLIENTS}
+                                    options={savedClients}
                                     placeholder="Select customer..."
                                     allowCustom={true}
                                 />
@@ -679,6 +790,12 @@ function ScriptEditor() {
                                 if (!customer.trim() || !title.trim()) {
                                     alert("Please fill out both fields.");
                                 } else {
+                                    const custTrim = customer.trim();
+                                    if (!savedClients.includes(custTrim)) {
+                                        const newClients = [...savedClients, custTrim].sort((a, b) => a.localeCompare(b));
+                                        setSavedClients(newClients);
+                                        localStorage.setItem('ewo_saved_clients', JSON.stringify(newClients));
+                                    }
                                     setShowMetadataModal(false);
                                 }
                             }}>
@@ -745,9 +862,14 @@ function ScriptEditor() {
                             </Button>
                             {rawText && (
                                 <Button variant="ghost" size="sm" onClick={() => {
-                                    if (window.confirm("Clear all text and annotations?")) {
-                                        pushHistory([], '')
-                                    }
+                                    setConfirmDialog({
+                                        title: 'Clear All Text',
+                                        message: 'Are you sure you want to clear all text and annotations? This cannot be undone.',
+                                        onConfirm: () => {
+                                            pushHistory([], '');
+                                            setConfirmDialog(null);
+                                        }
+                                    });
                                 }}>
                                     Clear
                                 </Button>
