@@ -1,17 +1,147 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, memo } from 'react'
 import { PageHeader } from '../components/layout'
 import SearchableDropdown from '../components/SearchableDropdown'
 import { Button, IconButton, Badge, Modal } from '../components/ui'
-import { FileText, Download, Upload, Trash2, MousePointer2, Settings, Plus, Play, Edit2, SplitSquareHorizontal, Undo2, SplitSquareVertical } from 'lucide-react'
+import { FileText, Download, Upload, Trash2, MousePointer2, Settings, Plus, Play, Edit2, SplitSquareHorizontal, Undo2, Redo2, SplitSquareVertical } from 'lucide-react'
 import jsPDF from 'jspdf'
 import '../styles/script-editor.css'
 import Toast from '../components/Toast'
 
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
 
+const EditorMarkup = memo(({ html, onUpdate, onSelection, onClick, updateVersion, textSize }) => {
+    const timeoutRef = useRef(null);
+    const callbacksRef = useRef({ onUpdate, onSelection, onClick });
+    const containerRef = useRef(null);
+    
+    useEffect(() => {
+        callbacksRef.current = { onUpdate, onSelection, onClick };
+    }, [onUpdate, onSelection, onClick]);
+
+    useEffect(() => {
+        const handleSelectionChange = () => {
+            if (!containerRef.current) return;
+            const sel = window.getSelection();
+            if (!sel.rangeCount) return;
+            
+            let node = sel.anchorNode;
+            let activeScene = null;
+            while (node && node !== document.body && node !== containerRef.current) {
+                if (node.nodeType === 1 && node.classList.contains('hl-scene')) {
+                    activeScene = node;
+                    break;
+                }
+                node = node.parentNode;
+            }
+            
+            const allScenes = containerRef.current.querySelectorAll('.hl-scene');
+            allScenes.forEach(s => {
+                if (s === activeScene) {
+                    s.classList.add('is-active');
+                } else {
+                    s.classList.remove('is-active');
+                }
+            });
+        };
+        
+        document.addEventListener('selectionchange', handleSelectionChange);
+        return () => document.removeEventListener('selectionchange', handleSelectionChange);
+    }, []);
+
+    const extractAndUpdate = (container) => {
+        const scenes = container.querySelectorAll('.hl-scene');
+        const originalDisplays = [];
+        scenes.forEach(s => {
+            originalDisplays.push(s.style.display);
+            s.style.display = 'inline';
+        });
+        
+        const badges = container.querySelectorAll('.action-inline-badge, .delete-scene-icon, .remove-action-btn');
+        const badgeDisplays = [];
+        badges.forEach(b => {
+            badgeDisplays.push(b.style.display);
+            b.style.display = 'none';
+        });
+        
+        callbacksRef.current.onUpdate({ currentTarget: container });
+        
+        scenes.forEach((s, i) => {
+            s.style.display = originalDisplays[i];
+            
+            // Self-healing: If user accidentally deleted the trash icon natively, regenerate it
+            if (!s.querySelector('.delete-scene-icon')) {
+                const icon = document.createElement('span');
+                icon.className = 'delete-scene-icon';
+                icon.contentEditable = 'false';
+                icon.setAttribute('data-delete-scene-id', s.getAttribute('data-scene-id'));
+                icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>';
+                s.appendChild(icon);
+            }
+        });
+        
+        // Restore existing badges, and self-heal missing action badges
+        badges.forEach((b, i) => {
+            if (b && b.style) {
+                b.style.display = badgeDisplays[i];
+            }
+        });
+        
+        const actions = container.querySelectorAll('.hl-action');
+        actions.forEach(a => {
+            // Self-healing: If user accidentally deleted the action badge or X button natively, regenerate them
+            const actionId = a.getAttribute('data-action-id');
+            const sceneId = a.getAttribute('data-scene-id');
+            if (!a.querySelector('.action-inline-badge')) {
+                const badge = document.createElement('span');
+                badge.className = 'action-inline-badge';
+                badge.contentEditable = 'false';
+                badge.innerText = actionId;
+                a.appendChild(badge);
+            }
+            if (!a.querySelector('.remove-action-btn')) {
+                const removeBtn = document.createElement('span');
+                removeBtn.className = 'remove-action-btn';
+                removeBtn.contentEditable = 'false';
+                removeBtn.setAttribute('data-delete-action-id', actionId);
+                removeBtn.setAttribute('data-delete-scene-id', sceneId);
+                removeBtn.innerText = '×';
+                a.appendChild(removeBtn);
+            }
+        });
+    };
+
+    const handleInput = (e) => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        const container = e.currentTarget;
+        timeoutRef.current = setTimeout(() => {
+            extractAndUpdate(container);
+        }, 1000);
+    };
+
+    const handleBlur = (e) => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        extractAndUpdate(e.currentTarget);
+    };
+
+    return (
+        <div 
+            ref={containerRef}
+            className="editor-markup-view"
+            style={{ fontSize: `${textSize}px`, lineHeight: 1.6 }}
+            onMouseUp={(e) => callbacksRef.current.onSelection(e)}
+            onClick={(e) => callbacksRef.current.onClick(e)}
+            onInput={handleInput}
+            onBlur={handleBlur}
+            contentEditable={true}
+            suppressContentEditableWarning={true}
+            dangerouslySetInnerHTML={{ __html: html }}
+        />
+    );
+}, (prevProps, nextProps) => prevProps.updateVersion === nextProps.updateVersion && prevProps.textSize === nextProps.textSize);
+
 function ScriptEditor() {
     const [rawText, setRawText] = useState(() => localStorage.getItem('ewo_script_rawText') || '')
-    const [isEditMode, setIsEditMode] = useState(false)
+    const [updateVersion, setUpdateVersion] = useState(0)
     const [scenes, setScenes] = useState(() => {
         try {
             const cached = localStorage.getItem('ewo_script_scenes');
@@ -24,6 +154,7 @@ function ScriptEditor() {
             return cached ? JSON.parse(cached) : [];
         } catch { return []; }
     }) // history of { scenes, rawText } for undo
+    const [future, setFuture] = useState([])
     const [dragActive, setDragActive] = useState(false)
     const [activeListSceneId, setActiveListSceneId] = useState(null)
     const [selection, setSelection] = useState(null)
@@ -35,6 +166,9 @@ function ScriptEditor() {
     const [isExporting, setIsExporting] = useState(false)
     const [toast, setToast] = useState(null)
     const [confirmDialog, setConfirmDialog] = useState(null)
+    const [editingSceneId, setEditingSceneId] = useState(null)
+    const [editSceneText, setEditSceneText] = useState("")
+    const [textSize, setTextSize] = useState(() => parseInt(localStorage.getItem('ewo_script_text_size') || '16'))
     
     useEffect(() => {
         const loadCached = () => {
@@ -61,6 +195,10 @@ function ScriptEditor() {
         localStorage.setItem('ewo_script_title', title);
     }, [customer, title]);
 
+    useEffect(() => {
+        localStorage.setItem('ewo_script_text_size', textSize.toString());
+    }, [textSize]);
+
     const getTitlesForClient = (clientName) => {
         if (!clientName || !allProjects.length) return [];
         const titles = allProjects
@@ -85,6 +223,7 @@ function ScriptEditor() {
     const editorRef = useRef(null)
     const fileInputRef = useRef(null)
     const csvInputRef = useRef(null)
+    const jsonInputRef = useRef(null)
 
     // Load Mammoth.js dynamically for .docx parsing
     useEffect(() => {
@@ -99,34 +238,53 @@ function ScriptEditor() {
         }
     }, [])
 
-    const pushHistory = (newScenes, newRawText = rawText) => {
+    const pushHistory = (newScenes, newRawText = rawText, fromLiveEdit = false) => {
         setHistory(prev => [...prev, { scenes, rawText }])
+        setFuture([])
         setScenes(newScenes)
         if (newRawText !== rawText) {
             setRawText(newRawText)
         }
+        if (!fromLiveEdit) setUpdateVersion(v => v + 1);
     }
 
     const handleUndo = useCallback(() => {
         if (history.length > 0) {
             const previous = history[history.length - 1]
+            setFuture(prev => [{ scenes, rawText }, ...prev])
             setScenes(previous.scenes)
             setRawText(previous.rawText)
             setHistory(prev => prev.slice(0, -1))
+            setUpdateVersion(v => v + 1);
         }
-    }, [history])
+    }, [history, scenes, rawText])
+
+    const handleRedo = useCallback(() => {
+        if (future.length > 0) {
+            const next = future[0]
+            setHistory(prev => [...prev, { scenes, rawText }])
+            setScenes(next.scenes)
+            setRawText(next.rawText)
+            setFuture(prev => prev.slice(1))
+            setUpdateVersion(v => v + 1);
+        }
+    }, [future, scenes, rawText])
 
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-                if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
-                e.preventDefault()
-                handleUndo()
+            if ((e.ctrlKey || e.metaKey) && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+                if (e.key === 'z' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleUndo()
+                } else if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+                    e.preventDefault()
+                    handleRedo()
+                }
             }
         }
         document.addEventListener('keydown', handleKeyDown)
         return () => document.removeEventListener('keydown', handleKeyDown)
-    }, [handleUndo])
+    }, [handleUndo, handleRedo])
 
     const handleDrag = (e) => {
         e.preventDefault()
@@ -171,14 +329,16 @@ function ScriptEditor() {
         let normalized = text.replace(/\r\n/g, '\n')
         normalized = normalized.replace(/\n{3,}/g, '\n\n')
         setRawText(normalized)
+        setUpdateVersion(v => v + 1);
         
-        if (!customer || !title) {
-            setShowMetadataModal(true)
-        }
+        // Force user to provide a new name for the imported script
+        setCustomer("");
+        setTitle("");
+        setShowMetadataModal(true);
     }
 
     const handleMouseUp = (e) => {
-        if (isEditMode || !rawText) return
+        if (!rawText) return
         
         const sel = window.getSelection()
         const text = sel.toString().trim()
@@ -206,6 +366,7 @@ function ScriptEditor() {
             }
             
             setSelection({
+                type: 'text',
                 text,
                 activeSceneId,
                 top: rect.bottom - containerRect.top + editorRef.current.scrollTop + 10,
@@ -217,26 +378,123 @@ function ScriptEditor() {
     }
 
     const handleMarkupClick = (e) => {
-        if (isEditMode || selection) return; // Don't trigger if they are making a selection
-        const sceneNode = e.target.closest('.hl-scene');
-        if (sceneNode) {
-            const sceneId = sceneNode.getAttribute('data-scene-id');
-            setActiveListSceneId(sceneId);
-            const el = document.getElementById(`scene-list-item-${sceneId}`);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        } else {
-            setActiveListSceneId(null);
+        if (window.getSelection().toString().trim().length > 0) return;
+        
+        const deleteSceneBtn = e.target.closest('.delete-scene-icon');
+        if (deleteSceneBtn) {
+            const sceneId = deleteSceneBtn.getAttribute('data-delete-scene-id');
+            handleDeleteScene(sceneId);
+            setSelection(null);
+            return;
+        }
+
+        const deleteActionBtn = e.target.closest('.remove-action-btn');
+        if (deleteActionBtn) {
+            const actionId = deleteActionBtn.getAttribute('data-delete-action-id');
+            const sceneId = deleteActionBtn.getAttribute('data-delete-scene-id');
+            handleDeleteAction(sceneId, actionId);
+            setSelection(null);
+            return;
+        }
+        
+        setSelection(null);
+    }
+
+    const handleMarkupBlur = (e) => {
+        if (!rawText) return;
+        const container = e.currentTarget;
+        
+        let newRawText = container.innerText || "";
+        newRawText = newRawText.replace(/\r\n/g, '\n');
+        // Clean up any legacy "×" artifacts that got permanently stuck in the user's raw text
+        newRawText = newRawText.replace(/×/g, '');
+
+        let newScenes = [];
+        const sceneNodes = container.querySelectorAll('.hl-scene');
+        
+        sceneNodes.forEach(node => {
+            let sceneText = node.innerText.replace(/\r\n/g, '\n').trim();
+            sceneText = sceneText.replace(/×/g, ''); // sanitize artifact
+            
+            const actionNodes = node.querySelectorAll('.hl-action');
+            let actionMap = new Map();
+            actionNodes.forEach(aNode => {
+                let actionId = aNode.getAttribute('data-action-id') || aNode.getAttribute('title');
+                if (actionId && actionId.startsWith('Action ')) actionId = actionId.replace('Action ', '');
+                
+                let actionText = aNode.innerText.replace(/\r\n/g, '\n').trim();
+                actionText = actionText.replace(/×/g, ''); // sanitize artifact
+                
+                if (actionText) {
+                    if (actionMap.has(actionId)) {
+                        actionMap.set(actionId, actionMap.get(actionId) + '\n' + actionText);
+                    } else {
+                        actionMap.set(actionId, actionText);
+                    }
+                }
+            });
+            let newActions = Array.from(actionMap.entries()).map(([id, text]) => ({ id, text }));
+            
+            if (sceneText) {
+                newScenes.push({
+                    scene_id: '', // Will renumber below
+                    scene_text: sceneText,
+                    actions: newActions
+                });
+            }
+        });
+        // Re-number all scenes sequentially based on DOM order
+        newScenes = newScenes.map((s, idx) => {
+            const newId = (idx + 1).toString();
+            
+            // Natively mutate the DOM attribute so the CSS label updates instantly 
+            // without waiting for React to overwrite the contentEditable (which it suppresses when focused)
+            if (sceneNodes[idx]) {
+                sceneNodes[idx].setAttribute('data-scene-id', newId);
+                sceneNodes[idx].setAttribute('title', `Scene #${newId}`);
+            }
+            
+            return {
+                ...s,
+                scene_id: newId
+            };
+        });
+
+        if (newRawText !== rawText || JSON.stringify(newScenes) !== JSON.stringify(scenes)) {
+            pushHistory(newScenes, newRawText, true);
         }
     }
 
+    const sortAndRenumberScenes = (scenesList, currentRawText) => {
+        const sorted = [...scenesList].sort((a, b) => {
+            const idxA = currentRawText.indexOf(a.scene_text);
+            const idxB = currentRawText.indexOf(b.scene_text);
+            return idxA - idxB;
+        });
+        return sorted.map((s, idx) => ({ ...s, scene_id: (idx + 1).toString() }));
+    };
+
     const handleMarkScene = () => {
-        if (!selection) return
-        const newSceneId = (scenes.length + 1).toString()
-        pushHistory([...scenes, {
-            scene_id: newSceneId,
-            scene_text: selection.text,
+        if (!selection || !selection.text) return
+        
+        const selText = selection.text.replace(/\r\n/g, '\n');
+        
+        // Check if text already in a scene
+        const existingScene = scenes.find(s => s.scene_text.includes(selText) || selText.includes(s.scene_text))
+        if (existingScene) {
+            setToast({ message: 'Text is already part of a scene.', type: 'error' })
+            return
+        }
+
+        const newScenesList = [...scenes, {
+            scene_id: 'temp',
+            scene_text: selText,
             actions: []
-        }])
+        }];
+        
+        const sortedScenes = sortAndRenumberScenes(newScenesList, rawText);
+        
+        pushHistory(sortedScenes)
         setSelection(null)
         window.getSelection().removeAllRanges()
     }
@@ -298,7 +556,9 @@ function ScriptEditor() {
     }
 
     const handleDeleteScene = (sceneId) => {
-        pushHistory(scenes.filter(s => s.scene_id !== sceneId))
+        const remainingScenes = scenes.filter(s => s.scene_id !== sceneId);
+        const sortedScenes = sortAndRenumberScenes(remainingScenes, rawText);
+        pushHistory(sortedScenes);
     }
 
     const handleDeleteAction = (sceneId, actionId) => {
@@ -311,6 +571,21 @@ function ScriptEditor() {
             }
             return s
         }))
+    }
+
+    const handleSaveSceneEdit = (sceneId) => {
+        const sceneToEdit = scenes.find(s => s.scene_id === sceneId);
+        if (!sceneToEdit) return;
+
+        const oldText = sceneToEdit.scene_text;
+        const newText = editSceneText;
+
+        if (oldText !== newText) {
+            const newScenes = scenes.map(s => s.scene_id === sceneId ? { ...s, scene_text: newText } : s);
+            const newRawText = rawText.replace(oldText, newText);
+            pushHistory(newScenes, newRawText);
+        }
+        setEditingSceneId(null);
     }
 
     const handleConvertLinesToScenes = () => {
@@ -344,7 +619,30 @@ function ScriptEditor() {
         const activeScene = scenes.find(s => s.scene_id === selection.activeSceneId);
         if (!activeScene) return;
 
-        const index = activeScene.scene_text.indexOf(selection.text);
+        const selText = selection.text.replace(/\r\n/g, '\n');
+        let index = activeScene.scene_text.indexOf(selText);
+        
+        if (index === -1) {
+            // Loose match ignoring extra whitespace
+            const normalize = str => str.replace(/\s+/g, '');
+            const normScene = normalize(activeScene.scene_text);
+            const normSel = normalize(selText);
+            const normIndex = normScene.indexOf(normSel);
+            
+            if (normIndex !== -1) {
+                let charCount = 0;
+                for (let i = 0; i < activeScene.scene_text.length; i++) {
+                    if (!/\s/.test(activeScene.scene_text[i])) {
+                        if (charCount === normIndex) {
+                            index = i;
+                            break;
+                        }
+                        charCount++;
+                    }
+                }
+            }
+        }
+        
         if (index === -1) return;
         
         const part1 = activeScene.scene_text.substring(0, index).trim();
@@ -372,14 +670,11 @@ function ScriptEditor() {
             }
         });
         
-        // Re-number all scenes
-        newScenes = newScenes.map((s, idx) => ({
-            ...s,
-            scene_id: (idx + 1).toString()
-        }));
+        // Auto-sort and re-number based on exact text position
+        newScenes = sortAndRenumberScenes(newScenes, rawText);
         
         // Replace text in rawText to insert double newlines for visual separation
-        const replacementText = [part1, part2, part3].filter(Boolean).join('\n\n');
+        const replacementText = [part1, part2, part3].filter(Boolean).join('\n');
         const newRawText = rawText.replace(activeScene.scene_text, replacementText);
         
         pushHistory(newScenes, newRawText);
@@ -644,6 +939,7 @@ function ScriptEditor() {
         try {
             await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
+                mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({
                     action: 'backupJson',
@@ -661,6 +957,42 @@ function ScriptEditor() {
         }
     }
 
+    const handleJsonSelect = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const importedData = JSON.parse(event.target.result);
+                // We expect an array of scenes (or an object with a scenes array depending on how it was saved in the past)
+                let importedScenes = [];
+                if (Array.isArray(importedData)) {
+                    importedScenes = importedData;
+                } else if (importedData.scenes && Array.isArray(importedData.scenes)) {
+                    importedScenes = importedData.scenes;
+                } else {
+                    throw new Error("Invalid JSON format. Expected an array of scenes.");
+                }
+                
+                // Reconstruct rawText
+                const reconstructedRawText = importedScenes.map(s => s.scene_text).join('\n\n');
+                
+                // Clear metadata to force user to enter new name on next export
+                setCustomer("");
+                setTitle("");
+                setShowMetadataModal(true);
+                
+                pushHistory(importedScenes, reconstructedRawText);
+                setToast({ message: `Imported ${importedScenes.length} scenes successfully.`, type: 'success' });
+            } catch (err) {
+                console.error("Import failed", err);
+                alert("Failed to parse JSON file. Please ensure it's a valid script backup.");
+            }
+            e.target.value = null;
+        };
+        reader.readAsText(file);
+    }
+
     // A helper to get a consistent color class for an action (1-5 scale)
     const getColorClass = (actionId) => {
         // e.g. "S2" -> parse "2"
@@ -670,45 +1002,63 @@ function ScriptEditor() {
 
     // Function to render the text with highlights. 
     // This is simple exact-string matching.
-    const renderAnnotatedText = () => {
-        if (!rawText) return null
+    // Function to get the text with highlights as raw HTML object.
+    const getAnnotatedHtml = () => {
+        if (!rawText) return { __html: '' }
         
-        // Very basic highlighter: We will try to find scenes and wrap them in a span, 
-        // and inside those scenes, wrap actions in another span.
-        // For robustness without a full AST, we render raw text but provide visual cues 
-        // to the sides, or just rely on the right panel. Let's do simple highlighting:
-        
-        // We'll replace all action texts with a styled span. Since actions might overlap 
-        // or have same text, this is a basic greedy approach.
         let html = rawText
         
-        // Escape HTML to prevent injection
         html = html.replace(/</g, '&lt;').replace(/>/g, '&gt;')
         
-        // Highlight Scenes
         scenes.forEach(scene => {
-            // First highlight actions inside this scene's text
-            let processedSceneText = scene.scene_text.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            const sceneEscaped = scene.scene_text.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            let tokens = [{ type: 'text', content: sceneEscaped }]
             
             scene.actions.forEach(action => {
                 const escapedActionText = action.text.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                const colorClass = getColorClass(action.id)
-                // We use replace to only replace the first occurrence in the scene text to avoid messing up duplicates
-                processedSceneText = processedSceneText.replace(
-                    escapedActionText, 
-                    `<span class="hl-action ${colorClass}" title="${action.id}">${escapedActionText}</span>`
-                )
+                let replaced = false;
+                
+                const newTokens = [];
+                for (let i = 0; i < tokens.length; i++) {
+                    const token = tokens[i];
+                    if (token.type !== 'text' || replaced) {
+                        newTokens.push(token);
+                        continue;
+                    }
+                    
+                    const idx = token.content.indexOf(escapedActionText);
+                    if (idx !== -1) {
+                        const part1 = token.content.substring(0, idx);
+                        const part2 = token.content.substring(idx + escapedActionText.length);
+                        
+                        if (part1) newTokens.push({ type: 'text', content: part1 });
+                        newTokens.push({ type: 'action', action: action, content: escapedActionText });
+                        if (part2) newTokens.push({ type: 'text', content: part2 });
+                        replaced = true;
+                    } else {
+                        newTokens.push(token);
+                    }
+                }
+                tokens = newTokens;
             })
             
-            // Now replace the scene text in the main html
-            const sceneEscaped = scene.scene_text.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            let processedSceneText = '';
+            tokens.forEach(token => {
+                if (token.type === 'action') {
+                    const colorClass = getColorClass(token.action.id);
+                    processedSceneText += `<span class="hl-action ${colorClass}" data-action-id="${token.action.id}" data-scene-id="${scene.scene_id}" title="Action ${token.action.id}">${token.content}<span class="action-inline-badge" contenteditable="false">${token.action.id}</span><span class="remove-action-btn" contenteditable="false" data-delete-action-id="${token.action.id}" data-delete-scene-id="${scene.scene_id}">×</span></span>`;
+                } else {
+                    processedSceneText += token.content;
+                }
+            });
+            
             html = html.replace(
                 sceneEscaped,
-                `<div class="hl-scene" data-scene-id="${scene.scene_id}" title="Scene #${scene.scene_id}">${processedSceneText}</div>`
+                `<span class="hl-scene" data-scene-id="${scene.scene_id}" title="Scene #${scene.scene_id}">${processedSceneText}<span class="delete-scene-icon" contenteditable="false" data-delete-scene-id="${scene.scene_id}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></span></span>`
             )
         })
 
-        return <div dangerouslySetInnerHTML={{ __html: html }} />
+        return { __html: html }
     }
 
     return (
@@ -718,6 +1068,9 @@ function ScriptEditor() {
                 description="Upload, annotate scenes, and export to JSON for Photoshop automation."
                 action={
                     <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                        <Button variant="secondary" icon={<Upload size={18} />} onClick={() => jsonInputRef.current?.click()}>
+                            Import JSON
+                        </Button>
                         <Button variant="secondary" icon={<Download size={18} />} onClick={handleExportStoryboard} disabled={scenes.length === 0}>
                             Export Storyboard
                         </Button>
@@ -811,23 +1164,7 @@ function ScriptEditor() {
                 <div className="editor-panel">
                     <div className="editor-header">
                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                            <Button 
-                                variant={!isEditMode ? "primary" : "secondary"} 
-                                size="sm"
-                                icon={<MousePointer2 size={16} />}
-                                onClick={() => setIsEditMode(false)}
-                            >
-                                Annotate Mode
-                            </Button>
-                            <Button 
-                                variant={isEditMode ? "primary" : "secondary"} 
-                                size="sm"
-                                icon={<Edit2 size={16} />}
-                                onClick={() => setIsEditMode(true)}
-                            >
-                                Edit Text
-                            </Button>
-                            {!isEditMode && rawText && (
+                            {rawText && (
                                 <>
                                     <Button 
                                         variant="secondary" 
@@ -846,19 +1183,41 @@ function ScriptEditor() {
                                     >
                                         Match to Time
                                     </Button>
-                                    <input 
-                                        type="file" 
-                                        ref={csvInputRef} 
-                                        style={{ display: 'none' }} 
-                                        accept=".csv" 
-                                        onChange={handleCsvSelect} 
-                                    />
                                 </>
                             )}
+                            <input 
+                                type="file" 
+                                ref={csvInputRef} 
+                                style={{ display: 'none' }} 
+                                accept=".csv" 
+                                onChange={handleCsvSelect} 
+                            />
+                            <input 
+                                type="file" 
+                                ref={jsonInputRef} 
+                                style={{ display: 'none' }} 
+                                accept=".json" 
+                                onChange={handleJsonSelect} 
+                            />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                            <Button variant="ghost" size="sm" onClick={() => setTextSize(s => Math.max(12, s - 2))} title="Decrease Text Size">
+                                A-
+                            </Button>
+                            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', minWidth: '30px', textAlign: 'center' }}>
+                                {textSize}px
+                            </span>
+                            <Button variant="ghost" size="sm" onClick={() => setTextSize(s => Math.min(32, s + 2))} title="Increase Text Size">
+                                A+
+                            </Button>
+                            <div style={{ width: '1px', height: '24px', background: 'var(--gray-300)', margin: '0 var(--space-2)' }} />
+                            <Badge color="blue">{scenes.length} Scenes</Badge>
+                            <div style={{ width: '1px', height: '24px', background: 'var(--gray-300)', margin: '0 var(--space-2)' }} />
                             <Button variant="ghost" size="sm" onClick={handleUndo} disabled={history.length === 0} icon={<Undo2 size={16} />}>
                                 Undo
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={handleRedo} disabled={future.length === 0} icon={<Redo2 size={16} />}>
+                                Redo
                             </Button>
                             {rawText && (
                                 <Button variant="ghost" size="sm" onClick={() => {
@@ -902,7 +1261,7 @@ function ScriptEditor() {
                                 Drag and drop a .txt or .docx file here, or click to browse.
                             </p>
                             <p style={{ color: 'var(--gray-400)', fontSize: 'var(--text-sm)', margin: 0 }}>
-                                Alternatively, click "Edit Text" mode and paste your script directly.
+                                Or <a href="#" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setRawText('\n'); setUpdateVersion(v => v+1); }}>click here</a> to paste your script directly.
                             </p>
                         </div>
                     ) : (
@@ -910,27 +1269,23 @@ function ScriptEditor() {
                             className="editor-content"
                             ref={editorRef}
                         >
-                            {isEditMode ? (
-                                <textarea 
-                                    className="editor-textarea"
-                                    value={rawText}
-                                    onChange={(e) => setRawText(e.target.value)}
-                                    placeholder="Type or paste your script here..."
-                                />
-                            ) : (
+                            <EditorMarkup 
+                                html={getAnnotatedHtml().__html}
+                                onUpdate={handleMarkupBlur}
+                                onSelection={handleMouseUp}
+                                onClick={handleMarkupClick}
+                                updateVersion={updateVersion}
+                                textSize={textSize}
+                            />
+                            
+                            {/* Selection Popover */}
+                            {selection && (
                                 <div 
-                                    className="editor-markup-view"
-                                    onMouseUp={handleMouseUp}
-                                    onClick={handleMarkupClick}
+                                    className="selection-popover"
+                                    style={{ top: selection.top, left: selection.left }}
                                 >
-                                    {renderAnnotatedText()}
-                                    
-                                    {/* Selection Popover */}
-                                    {selection && (
-                                        <div 
-                                            className="selection-popover"
-                                            style={{ top: selection.top, left: selection.left }}
-                                        >
+                                    {selection.type === 'text' && (
+                                        <>
                                             <p style={{ margin: '0 0 var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--gray-500)', fontWeight: 600, padding: '0 var(--space-2)' }}>
                                                 MARK AS:
                                             </p>
@@ -960,76 +1315,12 @@ function ScriptEditor() {
                                                     New Scene
                                                 </Button>
                                             )}
-                                        </div>
+                                        </>
                                     )}
                                 </div>
                             )}
                         </div>
                     )}
-                </div>
-                
-                {/* Right Area: Annotations */}
-                <div className="annotations-panel">
-                    <div className="editor-header">
-                        <h3 style={{ margin: 0, fontSize: 'var(--text-base)', fontWeight: 600 }}>Annotations</h3>
-                        <Badge color="blue">{scenes.length} Scenes</Badge>
-                    </div>
-                    <div className="annotations-list">
-                        {scenes.length === 0 ? (
-                            <div style={{ textAlign: 'center', color: 'var(--gray-400)', marginTop: 'var(--space-8)' }}>
-                                <FileText size={48} style={{ margin: '0 auto var(--space-4)', opacity: 0.5 }} />
-                                <p>No scenes marked yet.</p>
-                                <p style={{ fontSize: 'var(--text-sm)' }}>Highlight text in Annotate Mode to create scenes and actions.</p>
-                            </div>
-                        ) : (
-                            scenes.map((scene) => (
-                                <div 
-                                    key={scene.scene_id} 
-                                    id={`scene-list-item-${scene.scene_id}`}
-                                    className={`scene-item ${activeListSceneId === scene.scene_id ? 'active' : ''}`}
-                                >
-                                    <div className="scene-item-header">
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                                            Scene #{scene.scene_id}
-                                        </span>
-                                        <IconButton size="sm" onClick={() => handleDeleteScene(scene.scene_id)}>
-                                            <Trash2 size={16} />
-                                        </IconButton>
-                                    </div>
-                                    <div className="scene-item-body">
-                                        <div style={{ fontStyle: 'italic', marginBottom: 'var(--space-2)' }}>
-                                            "{scene.scene_text.length > 60 ? scene.scene_text.substring(0, 60) + '...' : scene.scene_text}"
-                                        </div>
-                                        
-                                        <div className="action-list">
-                                            {scene.actions.length === 0 ? (
-                                                <div style={{ color: 'var(--gray-400)', fontStyle: 'italic', fontSize: 'var(--text-xs)' }}>
-                                                    No actions marked. Highlight text to add actions.
-                                                </div>
-                                            ) : (
-                                                scene.actions.map(action => {
-                                                    const colorClass = getColorClass(action.id)
-                                                    return (
-                                                        <div key={action.id} className="action-item">
-                                                            <Badge className={colorClass} style={{ fontWeight: 700 }}>
-                                                                {action.id}
-                                                            </Badge>
-                                                            <div className="action-item-text">
-                                                                {action.text}
-                                                            </div>
-                                                            <IconButton size="sm" onClick={() => handleDeleteAction(scene.scene_id, action.id)}>
-                                                                <Trash2 size={14} />
-                                                            </IconButton>
-                                                        </div>
-                                                    )
-                                                })
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
                 </div>
             </div>
         </div>

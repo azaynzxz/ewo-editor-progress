@@ -18,7 +18,7 @@
 
 /* LEFT PANEL: Editor */
 .editor-panel {
-    flex: 2;
+    flex: 1;
     display: flex;
     flex-direction: column;
     background: white;
@@ -52,7 +52,7 @@
     border: none;
     resize: none;
     font-size: var(--text-base);
-    line-height: 1.6;
+    line-height: 2.2;
     font-family: var(--font-body);
     color: var(--gray-900);
     outline: none;
@@ -61,14 +61,33 @@
 .editor-markup-view {
     flex: 1;
     width: 100%;
-    padding: var(--space-4);
+    padding: var(--space-6) var(--space-6) var(--space-6) 48px;
     overflow-y: auto;
     font-size: var(--text-base);
-    line-height: 1.8;
+    line-height: 2.2;
     font-family: var(--font-body);
     color: var(--gray-900);
     white-space: pre-wrap;
     position: relative;
+}
+
+/* Inline Action Badges */
+.action-inline-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    margin-right: 2px;
+    vertical-align: middle;
+    user-select: none;
+    background: var(--primary-600);
+    color: white;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 /* Upload State */
@@ -186,12 +205,31 @@
 
 /* Highlight Colors */
 .hl-scene {
-    background-color: rgba(245, 158, 11, 0.15); /* warning/yellow tint */
-    border-left: 3px solid var(--warning);
+    background-color: var(--gray-50); /* gray tint */
+    border-left: 3px solid var(--gray-300);
     padding: var(--space-1) var(--space-2);
     margin: var(--space-1) 0;
     border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
     display: block;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.hl-scene.is-active {
+    background-color: rgba(245, 158, 11, 0.15); /* warning/yellow tint */
+    border-left-color: var(--warning);
+}
+
+.hl-scene::before {
+    content: attr(data-scene-id);
+    position: absolute;
+    left: -28px;
+    top: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gray-400);
+    user-select: none;
+    line-height: var(--space-6);
 }
 
 .hl-action {
@@ -207,3 +245,48 @@
 .color-badge-3 { background: rgba(249, 115, 22, 0.1); color: var(--orange-600); }
 .color-badge-4 { background: rgba(20, 184, 166, 0.1); color: var(--teal-600); }
 .color-badge-5 { background: rgba(236, 72, 153, 0.1); color: #db2777; }
+
+.remove-action-btn {
+    display: none;
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ef4444; /* red */
+    color: white;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 14px;
+    font-size: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    user-select: none;
+    z-index: 10;
+}
+
+.hl-action:hover > .remove-action-btn {
+    display: block;
+}
+
+.delete-scene-icon {
+    position: absolute;
+    left: -26px;
+    bottom: 2px;
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    z-index: 10;
+    color: var(--danger);
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hl-action {
+    position: relative;
+}
