@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, memo } from 'react'
 import { PageHeader } from '../components/layout'
 import SearchableDropdown from '../components/SearchableDropdown'
 import { Button, IconButton, Badge, Modal } from '../components/ui'
-import { FileText, Download, Upload, Trash2, MousePointer2, Settings, Plus, Play, Edit2, SplitSquareHorizontal, Undo2, Redo2, SplitSquareVertical } from 'lucide-react'
+import { FileText, Download, Upload, Trash2, MousePointer2, Settings, Plus, Play, Edit2, SplitSquareHorizontal, Undo2, Redo2, SplitSquareVertical, ExternalLink, Sparkles } from 'lucide-react'
 import jsPDF from 'jspdf'
 import '../styles/script-editor.css'
 import Toast from '../components/Toast'
@@ -164,6 +164,7 @@ function ScriptEditor() {
     const [showMetadataModal, setShowMetadataModal] = useState(false)
     const [allProjects, setAllProjects] = useState([])
     const [isExporting, setIsExporting] = useState(false)
+    const [isAiSplitting, setIsAiSplitting] = useState(false)
     const [toast, setToast] = useState(null)
     const [confirmDialog, setConfirmDialog] = useState(null)
     const [editingSceneId, setEditingSceneId] = useState(null)
@@ -682,6 +683,123 @@ function ScriptEditor() {
         window.getSelection().removeAllRanges();
     }
 
+    const handleAISplitScene = async () => {
+        if (!selection || !selection.activeSceneId) return;
+        
+        const activeScene = scenes.find(s => s.scene_id === selection.activeSceneId);
+        if (!activeScene) return;
+
+        const selText = selection.text.replace(/\r\n/g, '\n');
+        let index = activeScene.scene_text.indexOf(selText);
+        
+        if (index === -1) {
+            const normalize = str => str.replace(/\s+/g, '');
+            const normScene = normalize(activeScene.scene_text);
+            const normSel = normalize(selText);
+            const normIndex = normScene.indexOf(normSel);
+            
+            if (normIndex !== -1) {
+                let charCount = 0;
+                for (let i = 0; i < activeScene.scene_text.length; i++) {
+                    if (!/\s/.test(activeScene.scene_text[i])) {
+                        if (charCount === normIndex) {
+                            index = i;
+                            break;
+                        }
+                        charCount++;
+                    }
+                }
+            }
+        }
+        
+        if (index === -1) {
+            setToast({ message: 'Could not match selection exactly.', type: 'error' });
+            return;
+        }
+
+        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (!apiKey) {
+            setToast({ message: 'Missing Gemini API key in .env', type: 'error' });
+            return;
+        }
+
+        setIsAiSplitting(true);
+        try {
+            const prompt = `You are an assistant that splits raw text into logical scenes (1-3 sentences per scene).
+CRITICAL RULES:
+1. DO NOT change, paraphrase, add, or remove ANY words from the original text.
+2. You must only output the exact original text, inserting newlines (\\n) to separate the scenes.
+3. Do not output markdown formatting, code blocks, or any conversational text.
+
+Raw text to split:
+${selText}`;
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature: 0.1,
+                        topK: 1,
+                        topP: 1
+                    }
+                })
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error?.message || 'API request failed');
+
+            const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!aiText) throw new Error('No text returned from AI');
+
+            const aiParts = aiText.split('\n').map(p => p.trim()).filter(Boolean);
+
+            const part1 = activeScene.scene_text.substring(0, index).trim();
+            const part3 = activeScene.scene_text.substring(index + selection.text.length).trim();
+            
+            let newScenes = [];
+            scenes.forEach(scene => {
+                if (scene.scene_id === selection.activeSceneId) {
+                    const getActionsForPart = (partText) => {
+                        return scene.actions.filter(a => partText.includes(a.text));
+                    };
+                    
+                    if (part1) {
+                        newScenes.push({ scene_id: '', scene_text: part1, actions: getActionsForPart(part1) });
+                    }
+                    aiParts.forEach(part => {
+                        newScenes.push({ scene_id: '', scene_text: part, actions: getActionsForPart(part) });
+                    });
+                    if (part3) {
+                        newScenes.push({ scene_id: '', scene_text: part3, actions: getActionsForPart(part3) });
+                    }
+                } else {
+                    newScenes.push(scene);
+                }
+            });
+            
+            // Auto-sort and re-number based on exact text position
+            newScenes = sortAndRenumberScenes(newScenes, rawText);
+            
+            // Replace text in rawText to insert double newlines for visual separation
+            const replacementText = [part1, ...aiParts, part3].filter(Boolean).join('\n');
+            const newRawText = rawText.replace(activeScene.scene_text, replacementText);
+            
+            pushHistory(newScenes, newRawText);
+            setSelection(null);
+            window.getSelection().removeAllRanges();
+            setToast({ message: 'Split by AI successfully!', type: 'success' });
+        } catch (error) {
+            console.error(error);
+            setToast({ message: 'AI Split failed: ' + error.message, type: 'error' });
+        } finally {
+            setIsAiSplitting(false);
+        }
+    }
+
     const generateStoryboardPDF = (safeCustomer, safeTitle) => {
         const doc = new jsPDF({
             orientation: 'landscape',
@@ -1052,8 +1170,11 @@ function ScriptEditor() {
                 }
             });
             
+            const escapedForRegex = sceneEscaped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(escapedForRegex + '[ \\t]*(\\r?\\n)?');
+            
             html = html.replace(
-                sceneEscaped,
+                regex,
                 `<span class="hl-scene" data-scene-id="${scene.scene_id}" title="Scene #${scene.scene_id}">${processedSceneText}<span class="delete-scene-icon" contenteditable="false" data-delete-scene-id="${scene.scene_id}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></span></span>`
             )
         })
@@ -1068,14 +1189,17 @@ function ScriptEditor() {
                 description="Upload, annotate scenes, and export to JSON for Photoshop automation."
                 action={
                     <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                        <Button variant="secondary" icon={<Upload size={18} />} onClick={() => jsonInputRef.current?.click()}>
-                            Import JSON
+                        <Button variant="secondary" icon={<Upload size={18} />} onClick={() => jsonInputRef.current?.click()} title="Import previously exported JSON annotations">
+                            Import
                         </Button>
-                        <Button variant="secondary" icon={<Download size={18} />} onClick={handleExportStoryboard} disabled={scenes.length === 0}>
-                            Export Storyboard
+                        <Button variant="secondary" icon={<Download size={18} />} onClick={handleExportStoryboard} disabled={scenes.length === 0} title="Export the scenes and actions as a Storyboard PDF">
+                            Storyboard
                         </Button>
-                        <Button variant="primary" icon={<Download size={18} />} onClick={handleExportJSON} disabled={scenes.length === 0} loading={isExporting}>
-                            Export JSON
+                        <Button variant="primary" icon={<Download size={18} />} onClick={handleExportJSON} disabled={scenes.length === 0} loading={isExporting} title="Export the annotated scenes to JSON for automation">
+                            JSON
+                        </Button>
+                        <Button variant="secondary" icon={<ExternalLink size={18} />} onClick={() => window.open('https://drive.google.com/open?id=1cQ-XJmmwPNXHfkEP745US-cslo5EL3FU&usp=drive_fs', '_blank', 'noopener,noreferrer')} title="Open the Google Drive project to convert the JSON to PSD">
+                            To PSD
                         </Button>
                     </div>
                 }
@@ -1299,6 +1423,16 @@ function ScriptEditor() {
                                                         icon={<Play size={12} />}
                                                     >
                                                         Add as Action (S{(scenes.find(s => s.scene_id === selection.activeSceneId)?.actions?.length || 0) + 1})
+                                                    </Button>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        style={{ justifyContent: 'flex-start', fontSize: '13px' }} 
+                                                        onClick={handleAISplitScene}
+                                                        icon={<Sparkles size={12} />}
+                                                        loading={isAiSplitting}
+                                                    >
+                                                        AI Split
                                                     </Button>
                                                     <Button 
                                                         variant="ghost" 

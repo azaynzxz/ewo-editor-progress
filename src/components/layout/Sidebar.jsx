@@ -22,7 +22,6 @@ const NAV_ITEMS = [
             { path: '/schedule', icon: CalendarDays, label: 'Your Schedule' },
             { path: '/leave', icon: CalendarRange, label: 'Pengajuan Cuti' },
             { path: '/leave-status', icon: ClipboardList, label: 'Status Cuti' },
-            { path: '/script-editor', icon: FileText, label: 'Script Editor' },
         ]
     },
     {
