@@ -1,21 +1,17 @@
 import { useState, useEffect } from 'react'
 import { Users, Inbox } from 'lucide-react'
 
-const ALL_EMPLOYEES = [
-    { name: 'Zayn', role: 'Video Editor' },
-    { name: 'Ari', role: 'Video Editor' },
-    { name: 'Hendi', role: 'Video Editor' },
-    { name: 'Rosdiana', role: 'Illustrator' },
-    { name: 'Dayah', role: 'Illustrator' },
-    { name: 'Manda', role: 'Illustrator' },
-    { name: 'Luky', role: 'Illustrator' },
-    { name: 'Mike', role: 'Illustrator' },
-    { name: 'Dian', role: 'Illustrator' },
-    { name: 'Beka', role: 'Illustrator' },
-    { name: 'Derrick', role: 'Illustrator' },
-    { name: 'Vanda', role: 'Illustrator' },
-    { name: 'Bagas', role: 'Illustrator' },
-]
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
+
+/**
+ * Normalize a name for fuzzy comparison — mirrors the backend normalizeName().
+ * Lowercases, trims, collapses repeated trailing chars (e.g. 'Arii' → 'ari').
+ */
+function normalizeName(name) {
+    return String(name || '').trim().toLowerCase()
+        .replace(/\s+/g, ' ')
+        .replace(/(.)\1+$/, '$1')
+}
 
 /**
  * Normalize raw time strings from Google Sheets.
@@ -52,10 +48,25 @@ function getStatusBadge(clockIn, clockOut) {
 
 function AttendancePanel({ attendance, loading, selectedDate, onDateChange }) {
     const [roleFilter, setRoleFilter] = useState('all')
+    const [employees, setEmployees] = useState([])
 
-    // Merge employee roster with attendance data
-    const mergedRows = ALL_EMPLOYEES.map(emp => {
-        const record = attendance.find(a => a.name.toLowerCase() === emp.name.toLowerCase())
+    // Fetch active employee list from backend (reads 'Employee List' sheet)
+    useEffect(() => {
+        fetch(`${APPS_SCRIPT_URL}?action=getEmployeeList`)
+            .then(r => r.json())
+            .then(json => {
+                if (json.success && Array.isArray(json.data?.employees)) {
+                    setEmployees(json.data.employees)
+                }
+            })
+            .catch(() => { /* silently fail — table still shows attendance data */ })
+    }, [])
+
+    // Merge employee roster with attendance data.
+    // Uses normalizeName for fuzzy matching (handles 'Ari' vs 'Arii' etc.)
+    const mergedRows = employees.map(emp => {
+        const normEmp = normalizeName(emp.name)
+        const record = attendance.find(a => normalizeName(a.name) === normEmp)
         return {
             name: emp.name,
             role: emp.role,
@@ -65,6 +76,25 @@ function AttendancePanel({ attendance, loading, selectedDate, onDateChange }) {
             scenes: record?.scenes || 0,
             status: record?.status || '',
             todo: record?.todo || '',
+        }
+    })
+
+    // Also include any attendance records not matched to the employee list
+    // (e.g. someone who submitted but isn’t in the sheet yet)
+    attendance.forEach(a => {
+        const normA = normalizeName(a.name)
+        const alreadyMerged = mergedRows.some(r => normalizeName(r.name) === normA)
+        if (!alreadyMerged) {
+            mergedRows.push({
+                name: a.name,
+                role: a.role || '',
+                clockIn: a.clockIn || '',
+                clockOut: a.clockOut || '',
+                duration: a.duration || '',
+                scenes: a.scenes || 0,
+                status: a.status || '',
+                todo: a.todo || '',
+            })
         }
     })
 
@@ -151,7 +181,7 @@ function AttendancePanel({ attendance, loading, selectedDate, onDateChange }) {
                                         <td>{formatTime(row.clockOut) || '—'}</td>
                                         <td>{row.duration || '—'}</td>
                                         <td style={{ fontWeight: 600 }}>{row.scenes || '—'}</td>
-                                        <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        <td style={{ maxWidth: 220, whiteSpace: 'normal', wordBreak: 'break-word', verticalAlign: 'top' }}>
                                             {row.todo || '—'}
                                         </td>
                                     </tr>

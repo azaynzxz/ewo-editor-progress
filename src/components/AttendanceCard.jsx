@@ -150,23 +150,25 @@ function AttendanceCard() {
                 .then(result => {
                     if (result.success && result.data) {
                         if (result.data.isClockedIn) {
+                            const sDate = result.data.sessionDate || todayStr;
                             setIsClockedIn(true);
                             setClockInTime(result.data.clockInTime);
                             setAttendanceId(result.data.attendanceId);
-                            setSessionDate(todayStr);
+                            setSessionDate(sDate);
                             // Re-persist to localStorage so subsequent reloads are instant
-                            localStorage.setItem(`attendance_${todayStr}`, JSON.stringify({
+                            localStorage.setItem(`attendance_${sDate}`, JSON.stringify({
                                 isClockedIn: true,
                                 clockInTime: result.data.clockInTime,
                                 attendanceId: result.data.attendanceId
                             }));
                         } else if (result.data.clockOutTime) {
-                            // Already clocked out today — restore label from server
+                            // Already clocked out — restore label from server
+                            const sDate = result.data.sessionDate || todayStr;
                             setIsClockedIn(false);
                             setClockInTime(result.data.clockInTime);
                             setClockOutTime(result.data.clockOutTime);
-                            setSessionDate(todayStr);
-                            localStorage.setItem(`attendance_${todayStr}`, JSON.stringify({
+                            setSessionDate(sDate);
+                            localStorage.setItem(`attendance_${sDate}`, JSON.stringify({
                                 isClockedIn: false,
                                 clockInTime: result.data.clockInTime,
                                 clockOutTime: result.data.clockOutTime
@@ -269,7 +271,7 @@ function AttendanceCard() {
             currentStatus = "Late";
         }
 
-        let generatedTodo = "I Will do:\n";
+        let generatedTodo = "";
         entries.forEach((entry, idx) => {
             const title = entry.title || '';
             const notes = entry.notes || '';

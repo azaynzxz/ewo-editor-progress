@@ -63,6 +63,46 @@ function EditableCell({ value, onSave, style }) {
     )
 }
 
+// ========== EDITABLE DATE CELL ==========
+function EditableDateCell({ value, onSave }) {
+    const [editing, setEditing] = useState(false)
+    const [draft, setDraft] = useState(value)
+    const inputRef = useRef(null)
+
+    useEffect(() => { setDraft(value) }, [value])
+    useEffect(() => { if (editing && inputRef.current) inputRef.current.focus() }, [editing])
+
+    const commit = () => {
+        setEditing(false)
+        if (draft !== value) onSave(draft)
+    }
+
+    if (!editing) {
+        return (
+            <span
+                onClick={() => setEditing(true)}
+                style={{ cursor: 'pointer', fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}
+                title="Click to edit date"
+            >
+                {value || <span style={{ color: 'var(--gray-400)' }}>—</span>}
+            </span>
+        )
+    }
+
+    return (
+        <input
+            ref={inputRef}
+            type="date"
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(value); setEditing(false) } }}
+            className="admin-editable-input"
+            style={{ minWidth: 120, padding: '2px 4px' }}
+        />
+    )
+}
+
 // ========== EDITABLE MULTI-SELECT CELL ==========
 function EditableMultiSelectCell({ value, onSave, options, placeholder }) {
     const [editing, setEditing] = useState(false)
@@ -452,8 +492,18 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
                                                 <span style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>—</span>
                                             )}
                                         </td>
-                                        <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlIllustrator || '—'}</td>
-                                        <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlEditor || '—'}</td>
+                                        <td style={{ fontSize: 'var(--text-xs)' }}>
+                                            <EditableDateCell
+                                                value={p.dlIllustrator}
+                                                onSave={val => handleInlineUpdate(p.rowIndex, 'dlIllustrator', val)}
+                                            />
+                                        </td>
+                                        <td style={{ fontSize: 'var(--text-xs)' }}>
+                                            <EditableDateCell
+                                                value={p.dlEditor}
+                                                onSave={val => handleInlineUpdate(p.rowIndex, 'dlEditor', val)}
+                                            />
+                                        </td>
                                         <td>
                                             <select value={p.risk} onChange={e => handleInlineUpdate(p.rowIndex, 'risk', e.target.value)} className="admin-inline-select"
                                                 style={{ color: p.risk?.includes('High') ? '#ef4444' : p.risk?.includes('Med') ? '#f59e0b' : 'var(--gray-500)' }}>

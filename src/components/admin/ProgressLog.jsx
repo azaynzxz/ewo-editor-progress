@@ -100,7 +100,7 @@ function ProgressLog({ progress, loading, filters, onFiltersChange }) {
                         value={filters.editor}
                         onChange={e => onFiltersChange({ ...filters, editor: e.target.value })}
                     >
-                        <option value="">All Editors</option>
+                        <option value="">All Employees</option>
                         {EDITORS.map(e => <option key={e} value={e}>{e}</option>)}
                     </select>
                     <select
@@ -160,7 +160,7 @@ function ProgressLog({ progress, loading, filters, onFiltersChange }) {
                                     <td>{row.title}</td>
                                     <td>{row.client}</td>
                                     <td style={{ fontWeight: 600, textAlign: 'center' }}>{row.scenes}</td>
-                                    <td style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    <td style={{ maxWidth: 220, whiteSpace: 'normal', wordBreak: 'break-word', verticalAlign: 'top' }}>
                                         {row.comment || '—'}
                                     </td>
                                 </tr>

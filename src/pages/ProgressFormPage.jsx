@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
-import { Calendar, Upload, Send, X, Users, Hash, Tag, Copy } from 'lucide-react'
+import { Calendar, Upload, Send, X, Users, Hash, Tag, Copy, Clock } from 'lucide-react'
 import { PageHeader } from '../components/layout'
 import SearchableDropdown from '../components/SearchableDropdown'
 import MultiSelectDropdown from '../components/MultiSelectDropdown'
@@ -50,6 +50,25 @@ function ProgressFormPage() {
 
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [toast, setToast] = useState(null)
+
+    // Detect an active attendance session from a prior day (forgotten clock-out)
+    const [priorDaySession, setPriorDaySession] = useState(null)
+    useEffect(() => {
+        const todayKey = getTodayKey()
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i)
+            if (key && key.startsWith('attendance_') && key !== `attendance_${todayKey}`) {
+                try {
+                    const data = JSON.parse(localStorage.getItem(key))
+                    if (data.isClockedIn) {
+                        const sessionDate = key.replace('attendance_', '')
+                        setPriorDaySession(sessionDate)
+                        break
+                    }
+                } catch (e) { }
+            }
+        }
+    }, [])
 
     // Get custom editors from localStorage (filter out corrupted non-string entries)
     const [customEditors, setCustomEditors] = useState(() => {
@@ -324,6 +343,10 @@ function ProgressFormPage() {
         setIsSubmitting(true)
         setToast(null)
 
+        // Generate a unique ID for this submission attempt.
+        // The backend rejects any second request with the same ID, preventing double-writes.
+        const submissionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
         const userRole = localStorage.getItem('userRole') || 'video_editor'
         localStorage.setItem('lastUsedEditor', formData.editor) // Save to grab for Attendance name
 
@@ -355,6 +378,7 @@ function ProgressFormPage() {
 
             const payload = {
                 action: 'submitProgress',
+                submissionId: submissionId,
                 role: userRole,
                 tanggal: formatDate(formData.tanggal),
                 editor: formData.editor || '',
@@ -442,6 +466,8 @@ function ProgressFormPage() {
 
                 if (autoClockOutSuccess) {
                     setToast({ type: 'success', message: 'Progress submitted & Automatically Clocked Out!' })
+                    // Clear the prior-day session banner once clock-out succeeds
+                    setPriorDaySession(null)
                 } else {
                     setToast({ type: 'success', message: 'Progress submitted successfully!' })
                 }
@@ -659,6 +685,28 @@ function ProgressFormPage() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Prior-day session banner */}
+                            {priorDaySession && (
+                                <div style={{
+                                    padding: 'var(--space-3) var(--space-4)',
+                                    background: 'rgba(251, 146, 60, 0.1)',
+                                    border: '1px solid rgba(251, 146, 60, 0.4)',
+                                    borderRadius: 'var(--radius-md)',
+                                    fontSize: 'var(--text-sm)',
+                                    color: 'var(--orange-700, #c2410c)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 'var(--space-2)',
+                                    marginBottom: 'var(--space-4)'
+                                }}>
+                                    <Clock size={15} style={{ flexShrink: 0 }} />
+                                    <span>
+                                        You have an <strong>open session from {priorDaySession}</strong> that was never clocked out.
+                                        Submitting this form will automatically clock you out of that session.
+                                    </span>
+                                </div>
+                            )}
 
                             {/* Submit Button */}
                             <button
