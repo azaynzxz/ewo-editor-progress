@@ -2,9 +2,10 @@ import { Navigate, Outlet } from 'react-router-dom';
 
 function ProtectedRoute({ allowedRoles }) {
     const userRole = localStorage.getItem('userRole');
+    const userName = localStorage.getItem('userName');
 
-    // If no role is selected, redirect to login
-    if (!userRole) {
+    // If no role OR no userName is present, redirect to login
+    if (!userRole || !userName) {
         return <Navigate to="/login" replace />;
     }
 
