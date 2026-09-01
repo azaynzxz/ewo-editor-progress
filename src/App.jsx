@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { AnimatePresence } from 'framer-motion'
 import { Layout, ProtectedRoute } from './components/layout'
 import { PageWrapper } from './components/layout/PageWrapper'
-import { Dashboard, Wiki, Resources, Onboarding, ProgressFormPage, RoleSelection, LeaveFormPage, LeaveStatusPage, AdminPage, YourSchedule, Learn, ScriptEditor } from './pages'
+import { LoginPage, Dashboard, Wiki, Resources, Onboarding, ProgressFormPage, LeaveFormPage, LeaveStatusPage, AdminPage, YourSchedule, Learn, ScriptEditor } from './pages'
 import NotFoundPage from './pages/NotFoundPage'
 
 import './styles/variables.css'
@@ -22,9 +22,9 @@ function AnimatedRoutes() {
         <AnimatePresence mode="wait">
             <Routes location={location} key={baseKey}>
                 {/* Public Routes */}
-                <Route path="/role-selection" element={
+                <Route path="/login" element={
                     <PageWrapper>
-                        <RoleSelection />
+                        <LoginPage />
                     </PageWrapper>
                 } />
                 <Route path="/admin" element={

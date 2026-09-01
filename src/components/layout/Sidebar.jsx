@@ -50,6 +50,7 @@ const QUICK_LINKS = [
 
 function Sidebar({ isOpen, onClose }) {
     const userRole = localStorage.getItem('userRole') || 'video_editor'
+    const userName = localStorage.getItem('userName') || 'Employee'
 
     const filteredNavItems = NAV_ITEMS.filter(section => {
         if (userRole === 'illustrator' && section.section === 'Resources') {
@@ -133,12 +134,12 @@ function Sidebar({ isOpen, onClose }) {
                 {/* Switch Role Footer */}
                 <div className="sidebar-footer" style={{ padding: 'var(--space-4)', borderTop: '1px solid var(--gray-200)' }}>
                     <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', margin: '0 0 var(--space-2)' }}>
-                        Logged in as: <strong style={{ textTransform: 'capitalize' }}>{userRole.replace('_', ' ')}</strong>
+                        Logged in as: <strong style={{ textTransform: 'capitalize' }}>{userName}</strong> ({userRole.replace('_', ' ')})
                     </p>
                     <button
                         onClick={() => {
-                            localStorage.removeItem('userRole');
-                            window.location.href = '/role-selection';
+                            localStorage.clear();
+                            window.location.href = '/login';
                         }}
                         style={{
                             width: '100%',
@@ -146,15 +147,22 @@ function Sidebar({ isOpen, onClose }) {
                             borderRadius: 'var(--radius-md)',
                             border: '1px solid var(--gray-300)',
                             background: 'transparent',
-                            color: 'var(--gray-700)',
+                            color: '#dc2626',
                             cursor: 'pointer',
                             fontSize: 'var(--text-sm)',
+                            fontWeight: 600,
                             transition: 'background 0.2s',
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--gray-50)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#fef2f2'
+                            e.currentTarget.style.borderColor = '#fca5a5'
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent'
+                            e.currentTarget.style.borderColor = 'var(--gray-300)'
+                        }}
                     >
-                        Switch Role
+                        Log Out
                     </button>
                 </div>
             </aside>

@@ -102,7 +102,7 @@ function ProgressFormPage() {
 
     const [formData, setFormData] = useState({
         tanggal: new Date(),
-        editor: localStorage.getItem('lastUsedEditor') || '',
+        editor: localStorage.getItem('userName') || localStorage.getItem('lastUsedEditor') || '',
         comment: ''
     })
 
@@ -528,14 +528,14 @@ function ProgressFormPage() {
                                 {/* Editor/Illustrator Name */}
                                 <div className="form-group">
                                     <label htmlFor="editor">{roleLabel} Name</label>
-                                    <SearchableDropdown
-                                        value={formData.editor}
-                                        onChange={handleEditorChange}
-                                        options={editorList}
-                                        placeholder={`Select or add ${roleLabel.toLowerCase()}`}
-                                        allowCustom={true}
-                                        customItems={customEditors}
-                                        onDelete={handleDeleteEditor}
+                                    <input
+                                        type="text"
+                                        id="editor"
+                                        className="input"
+                                        value={formData.editor || 'Unknown'}
+                                        readOnly
+                                        disabled
+                                        style={{ backgroundColor: 'var(--gray-50)', color: 'var(--gray-600)', cursor: 'not-allowed' }}
                                     />
                                 </div>
 

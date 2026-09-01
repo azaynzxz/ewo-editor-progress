@@ -61,8 +61,8 @@ function AttendanceCard() {
     });
     const clientList = [...DEFAULT_CLIENTS, ...customClients];
 
-    const [userName, setUserName] = useState(localStorage.getItem('lastUsedEditor') || '');
-    const [isEditingName, setIsEditingName] = useState(!localStorage.getItem('lastUsedEditor'));
+    const [userName, setUserName] = useState(localStorage.getItem('userName') || '');
+    const [isEditingName, setIsEditingName] = useState(false); // Locked for logged-in user
 
     // Cache all projects for autocomplete
     const [allProjects, setAllProjects] = useState([]);
