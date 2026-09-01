@@ -5,7 +5,6 @@ import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import Modal from '../ui/Modal';
-import { useToast } from '../Toast';
 
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec';
 
@@ -16,7 +15,6 @@ function EmployeeManager() {
     const [editingEmployee, setEditingEmployee] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const { showToast } = useToast();
 
     const [formData, setFormData] = useState({
         name: '',
@@ -48,11 +46,11 @@ function EmployeeManager() {
             if (result.success) {
                 setEmployees(result.data);
             } else {
-                showToast('Failed to load employees', 'error');
+                alert('Failed to load employees');
             }
         } catch (error) {
             console.error('Error:', error);
-            showToast('Connection error', 'error');
+            alert('Connection error');
         } finally {
             setLoading(false);
         }
@@ -118,15 +116,15 @@ function EmployeeManager() {
             const result = await response.json();
 
             if (result.success) {
-                showToast(`Employee ${editingEmployee ? 'updated' : 'added'} successfully`, 'success');
+                alert(`Employee ${editingEmployee ? 'updated' : 'added'} successfully`);
                 setIsModalOpen(false);
                 fetchEmployees();
             } else {
-                showToast(result.message || 'Failed to save', 'error');
+                alert(result.message || 'Failed to save');
             }
         } catch (error) {
             console.error('Error:', error);
-            showToast('Connection error', 'error');
+            alert('Connection error');
         } finally {
             setIsSubmitting(false);
         }
@@ -143,15 +141,15 @@ function EmployeeManager() {
             });
             const result = await response.json();
             if (result.success) {
-                showToast('Employee deleted', 'success');
+                alert('Employee deleted');
             } else {
                 fetchEmployees(); // revert
-                showToast(result.message || 'Failed to delete', 'error');
+                alert(result.message || 'Failed to delete');
             }
         } catch (error) {
             console.error('Error:', error);
             fetchEmployees(); // revert
-            showToast('Connection error', 'error');
+            alert('Connection error');
         }
     };
 
