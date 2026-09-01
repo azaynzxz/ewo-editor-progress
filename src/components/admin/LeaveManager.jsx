@@ -78,14 +78,14 @@ function LeaveManager({ leaves, loading, statusFilter, onStatusFilterChange, onA
                                                 {leave.role?.toLowerCase().includes('illustr') ? 'ILL' : 'VE'}
                                             </span>
                                         </td>
-                                        <td style={{ whiteSpace: 'nowrap', fontSize: 'var(--text-xs)' }}>
+                                        <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'normal', wordBreak: 'break-word', maxWidth: 100, verticalAlign: 'top' }}>
                                             {leave.start} → {leave.end}
                                         </td>
                                         <td>{leave.duration} day{leave.duration > 1 ? 's' : ''}</td>
-                                        <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        <td style={{ maxWidth: 160, whiteSpace: 'normal', wordBreak: 'break-word', verticalAlign: 'top' }}>
                                             {leave.alasan || '—'}
                                         </td>
-                                        <td style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        <td style={{ maxWidth: 140, whiteSpace: 'normal', wordBreak: 'break-word', verticalAlign: 'top' }}>
                                             {leave.notes || '—'}
                                         </td>
                                         <td>

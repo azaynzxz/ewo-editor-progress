@@ -40,9 +40,10 @@ function formatTime(raw) {
     return str
 }
 
-function getStatusBadge(clockIn, clockOut) {
-    if (clockIn && !clockOut) return { label: 'Working', className: 'working' }
-    if (clockIn && clockOut) return { label: 'Clocked Out', className: 'clocked-out' }
+function getStatusBadge(status, clockIn, clockOut) {
+    if (status && status.toLowerCase() === 'cuti') return { label: 'Cuti', className: 'absent' }
+    if (clockIn && clockIn !== '—' && (!clockOut || clockOut === '—')) return { label: 'Working', className: 'working' }
+    if (clockIn && clockIn !== '—' && clockOut && clockOut !== '—') return { label: 'Clocked Out', className: 'clocked-out' }
     return { label: 'Not Clocked In', className: 'not-in' }
 }
 
@@ -162,7 +163,7 @@ function AttendancePanel({ attendance, loading, selectedDate, onDateChange }) {
                         </thead>
                         <tbody>
                             {filtered.map(row => {
-                                const badge = getStatusBadge(row.clockIn, row.clockOut)
+                                const badge = getStatusBadge(row.status, row.clockIn, row.clockOut)
                                 return (
                                     <tr key={row.name}>
                                         <td style={{ fontWeight: 600 }}>{row.name}</td>
