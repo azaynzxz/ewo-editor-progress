@@ -5,6 +5,7 @@ import AttendancePanel from '../components/admin/AttendancePanel'
 import ProgressLog from '../components/admin/ProgressLog'
 import LeaveManager from '../components/admin/LeaveManager'
 import ProjectManager from '../components/admin/ProjectManager'
+import EmployeeManager from '../components/admin/EmployeeManager'
 import AdminAuthGate from '../components/admin/AdminAuthGate'
 import DailyReportModal from '../components/DailyReportModal'
 import { fetchAllSheetsProjects } from '../utils/projectFetcher'
@@ -17,6 +18,7 @@ const TABS = [
     { id: 'progress', label: 'Progress', icon: FileText },
     { id: 'projects', label: 'Projects', icon: FolderKanban },
     { id: 'leaves', label: 'Leaves', icon: CalendarRange },
+    { id: 'employees', label: 'Employees', icon: Shield },
 ]
 
 function todayStr() {
@@ -172,14 +174,14 @@ function AdminPage() {
         if (!match) return null
         const monthName = match[1]
         const year = parseInt(match[2], 10)
-        
+
         const mIdx = months.indexOf(monthName)
         if (mIdx === -1) return null
-        
+
         const prevMIdx = mIdx === 0 ? 11 : mIdx - 1
         const prevYear = mIdx === 0 ? year - 1 : year
         const prevLabel = `${months[prevMIdx]} ${prevYear}`
-        
+
         if (available.includes(prevLabel)) {
             return prevLabel
         }
@@ -192,7 +194,7 @@ function AdminPage() {
         try {
             const cached = localStorage.getItem('ewo_all_projects_cache')
             if (cached) cachedProjects = JSON.parse(cached)
-        } catch {}
+        } catch { }
 
         if (cachedProjects.length === 0) {
             const result = await fetchAllSheetsProjects()
@@ -417,12 +419,15 @@ function AdminPage() {
                     syncState={syncState}
                 />
             )}
-            
+            {activeTab === 'employees' && (
+                <EmployeeManager />
+            )}
+
             {/* Daily Report Modal */}
-            <DailyReportModal 
-                isOpen={showReportModal} 
-                onClose={() => setShowReportModal(false)} 
-                initialProjects={reportProjects} 
+            <DailyReportModal
+                isOpen={showReportModal}
+                onClose={() => setShowReportModal(false)}
+                initialProjects={reportProjects}
                 isAdminMode={true}
             />
         </div>
