@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, Loader2, Save, X, Eye, EyeOff } from 'lucide-react';
-import Card from '../ui/Card';
+import { Plus, Edit2, Trash2, Loader2, Save, X, Eye, EyeOff, Shield, Search, Inbox } from 'lucide-react';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import Modal from '../ui/Modal';
@@ -15,6 +14,8 @@ function EmployeeManager() {
     const [editingEmployee, setEditingEmployee] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [filterText, setFilterText] = useState('');
+    const [statusFilter, setStatusFilter] = useState('All');
 
     const [formData, setFormData] = useState({
         name: '',
@@ -30,6 +31,18 @@ function EmployeeManager() {
     const roles = ['Video Editor', 'Admin', 'Illustrator', 'Ads Design'];
     const types = ['Full Time', 'Freelance'];
     const statuses = ['Active', 'Inactive'];
+
+    const filteredEmployees = employees.filter(emp => {
+        const matchesSearch = emp.name.toLowerCase().includes(filterText.toLowerCase()) ||
+            emp.role.toLowerCase().includes(filterText.toLowerCase()) ||
+            emp.email.toLowerCase().includes(filterText.toLowerCase());
+        const matchesStatus = statusFilter === 'All' || emp.status === statusFilter;
+        return matchesSearch && matchesStatus;
+    }).sort((a, b) => {
+        if (a.status === 'Active' && b.status !== 'Active') return -1;
+        if (a.status !== 'Active' && b.status === 'Active') return 1;
+        return (parseInt(a.no) || 0) - (parseInt(b.no) || 0); // Keep original order among equals
+    });
 
     useEffect(() => {
         fetchEmployees();
@@ -157,103 +170,120 @@ function EmployeeManager() {
     };
 
     return (
-        <div className="employee-manager">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
-                <div>
-                    <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--gray-900)' }}>Employee Directory</h2>
-                    <p style={{ color: 'var(--gray-500)', fontSize: 'var(--text-sm)' }}>Manage team members, roles, and access credentials.</p>
+        <div className="admin-panel">
+            <div className="admin-panel-header">
+                <h2><Shield size={18} /> Employee Directory</h2>
+                <div className="admin-filters">
+                    <div style={{ position: 'relative' }}>
+                        <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)' }} />
+                        <input
+                            type="text"
+                            className="admin-filter-input"
+                            placeholder="Search name, role, email..."
+                            value={filterText}
+                            onChange={(e) => setFilterText(e.target.value)}
+                            style={{ paddingLeft: 30 }}
+                        />
+                    </div>
+                    <select
+                        className="admin-filter-select"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                        <option value="All">All Statuses</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                    <Button onClick={() => handleOpenModal()} style={{ padding: '8px 16px', fontSize: '13px' }}>
+                        Add Employee
+                    </Button>
                 </div>
-                <Button onClick={() => handleOpenModal()} style={{ gap: '8px' }}>
-                    <Plus size={16} /> Add Employee
-                </Button>
             </div>
 
-            <Card>
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <div className="admin-table-wrap">
+                {loading && employees.length === 0 ? (
+                    <div style={{ padding: 'var(--space-4)' }}>
+                        {Array.from({ length: 5 }).map((_, i) => (
+                            <div key={i} className="admin-skeleton-row">
+                                <div className="admin-skeleton admin-skeleton-cell" style={{ width: '5%' }} />
+                                <div className="admin-skeleton admin-skeleton-cell" style={{ width: '20%' }} />
+                                <div className="admin-skeleton admin-skeleton-cell" style={{ width: '10%' }} />
+                                <div className="admin-skeleton admin-skeleton-cell" style={{ width: '10%' }} />
+                                <div className="admin-skeleton admin-skeleton-cell" style={{ width: '10%' }} />
+                                <div className="admin-skeleton admin-skeleton-cell" style={{ width: '10%' }} />
+                                <div className="admin-skeleton admin-skeleton-cell" style={{ width: '10%' }} />
+                                <div className="admin-skeleton admin-skeleton-cell" style={{ width: '15%' }} />
+                                <div className="admin-skeleton admin-skeleton-cell" style={{ width: '10%' }} />
+                            </div>
+                        ))}
+                    </div>
+                ) : filteredEmployees.length === 0 ? (
+                    <div className="admin-empty">
+                        <Inbox size={40} />
+                        <p>{filterText || statusFilter !== 'All' ? "No employees match your search" : "No employees found"}</p>
+                    </div>
+                ) : (
+                    <table className="admin-table">
                         <thead>
-                            <tr style={{ borderBottom: '1px solid var(--gray-200)', color: 'var(--gray-500)', fontSize: 'var(--text-xs)' }}>
-                                <th style={{ padding: 'var(--space-3) var(--space-4)', fontWeight: 500 }}>No</th>
-                                <th style={{ padding: 'var(--space-3) var(--space-4)', fontWeight: 500 }}>Name</th>
-                                <th style={{ padding: 'var(--space-3) var(--space-4)', fontWeight: 500 }}>Role</th>
-                                <th style={{ padding: 'var(--space-3) var(--space-4)', fontWeight: 500 }}>Status</th>
-                                <th style={{ padding: 'var(--space-3) var(--space-4)', fontWeight: 500 }}>Type</th>
-                                <th style={{ padding: 'var(--space-3) var(--space-4)', fontWeight: 500 }}>Contact Info</th>
-                                <th style={{ padding: 'var(--space-3) var(--space-4)', fontWeight: 500, textAlign: 'right' }}>Actions</th>
+                            <tr>
+                                <th>NO</th>
+                                <th>NAME</th>
+                                <th>ROLE</th>
+                                <th>STATUS</th>
+                                <th>TYPE</th>
+                                <th>JOIN DATE</th>
+                                <th>END PROBATION</th>
+                                <th>CONTACT INFO</th>
+                                <th style={{ textAlign: 'right' }}>ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <AnimatePresence>
-                                {loading && employees.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="7" style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
-                                            <Loader2 size={24} className="spin" style={{ color: 'var(--primary-600)', margin: '0 auto' }} />
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    employees.map((emp) => (
-                                        <motion.tr
-                                            key={emp.id}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0 }}
-                                            style={{ borderBottom: '1px solid var(--gray-100)' }}
-                                        >
-                                            <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>
-                                                {emp.no}
-                                            </td>
-                                            <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--gray-900)' }}>
-                                                {emp.name}
-                                            </td>
-                                            <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--gray-600)' }}>
-                                                {emp.role}
-                                            </td>
-                                            <td style={{ padding: 'var(--space-4)' }}>
-                                                <Badge variant={emp.status === 'Active' ? 'success' : 'default'}>
-                                                    {emp.status}
-                                                </Badge>
-                                            </td>
-                                            <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--gray-600)' }}>
-                                                {emp.type}
-                                            </td>
-                                            <td style={{ padding: 'var(--space-4)', fontSize: 'var(--text-sm)', color: 'var(--gray-500)' }}>
-                                                {emp.email}
-                                            </td>
-                                            <td style={{ padding: 'var(--space-4)', textAlign: 'right' }}>
-                                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="small"
-                                                        onClick={() => handleOpenModal(emp)}
-                                                        style={{ padding: '6px' }}
-                                                    >
-                                                        <Edit2 size={14} />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="small"
-                                                        onClick={() => handleDelete(emp.id)}
-                                                        style={{ padding: '6px', color: 'var(--danger-600)' }}
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        </motion.tr>
-                                    ))
-                                )}
-                                {!loading && employees.length === 0 && (
-                                    <tr>
-                                        <td colSpan="7" style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--gray-500)' }}>
-                                            No employees found.
-                                        </td>
-                                    </tr>
-                                )}
-                            </AnimatePresence>
+                            {filteredEmployees.map((emp) => (
+                                <tr key={emp.id}>
+                                    <td style={{ color: 'var(--gray-500)', whiteSpace: 'nowrap' }}>{emp.no}</td>
+                                    <td style={{ fontWeight: 600 }}>{emp.name}</td>
+                                    <td>
+                                        <span className={`admin-role-pill ${emp.role === 'Video Editor' ? 've' : 'ill'}`}>
+                                            {emp.role === 'Video Editor' ? 'VE' : emp.role === 'Illustrator' ? 'ILL' : emp.role}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <Badge color={emp.status === 'Active' ? 'success' : 'error'}>
+                                            {emp.status}
+                                        </Badge>
+                                    </td>
+                                    <td style={{ color: 'var(--gray-600)' }}>{emp.type}</td>
+                                    <td style={{ color: 'var(--gray-500)' }}>{emp.joinDate || '—'}</td>
+                                    <td style={{ color: 'var(--gray-500)' }}>{emp.endProbation || '—'}</td>
+                                    <td style={{ color: 'var(--gray-500)' }}>{emp.email}</td>
+                                    <td style={{ textAlign: 'right' }}>
+                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
+                                            <Button
+                                                variant="ghost"
+                                                size="small"
+                                                onClick={() => handleOpenModal(emp)}
+                                                style={{ padding: '6px' }}
+                                                title="Edit"
+                                            >
+                                                <Edit2 size={14} />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="small"
+                                                onClick={() => handleDelete(emp.id)}
+                                                style={{ padding: '6px', color: 'var(--danger-600)' }}
+                                                title="Delete"
+                                            >
+                                                <Trash2 size={14} />
+                                            </Button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
-                </div>
-            </Card>
+                )}
+            </div>
 
             <Modal
                 isOpen={isModalOpen}
