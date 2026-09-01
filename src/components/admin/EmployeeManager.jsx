@@ -40,7 +40,8 @@ function EmployeeManager() {
             setLoading(true);
             const response = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
-                body: new URLSearchParams({ action: 'getEmployees' })
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'getEmployees' })
             });
             const result = await response.json();
             if (result.success) {
@@ -111,7 +112,8 @@ function EmployeeManager() {
         try {
             const response = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
-                body: new URLSearchParams(payload)
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
             });
             const result = await response.json();
 
@@ -137,7 +139,8 @@ function EmployeeManager() {
             setEmployees(prev => prev.filter(emp => emp.id !== id)); // optimistically remove
             const response = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
-                body: new URLSearchParams({ action: 'deleteEmployee', id })
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'deleteEmployee', id })
             });
             const result = await response.json();
             if (result.success) {
