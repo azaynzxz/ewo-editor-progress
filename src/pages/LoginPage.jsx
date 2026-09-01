@@ -77,6 +77,7 @@ function LoginPage() {
                 localStorage.setItem('userRole', roleSlug);
                 localStorage.setItem('userRoleRaw', user.role);
                 localStorage.setItem('userType', user.type);
+                localStorage.setItem('loginTimestamp', Date.now().toString());
 
                 // Reset failed attempts
                 localStorage.removeItem('loginAttempts');
