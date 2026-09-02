@@ -26,7 +26,19 @@ const CustomTaskListTable = ({ rowHeight, rowWidth, tasks, fontFamily, fontSize 
                 );
             })}
         </div>
+        </div>
     );
+};
+
+const CustomTooltip = ({ task, fontSize, fontFamily }) => {
+    return (
+        <div style={{ backgroundColor: 'white', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '6px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', minWidth: '180px' }}>
+            <b style={{ fontSize: '14px', fontFamily, color: '#111827' }}>{task.projectName}</b>
+            <div style={{ fontSize: '12px', fontFamily, color: '#6b7280', marginTop: '4px' }}>
+                {task.start.toLocaleDateString()} - {task.end.toLocaleDateString()}
+            </div>
+        </div>
+    )
 };
 
 const APPS_SCRIPT_URL = '/api/exec'
@@ -242,7 +254,7 @@ function YourSchedule() {
                 const color = getStatusColor(p.projectStatus) || ROW_COLORS[index % ROW_COLORS.length]
                 return {
                     id: String(p.rowIndex),
-                    name: p.projectName || `Project #${p.no}`,
+                    name: '',
                     projectName: p.projectName || `Project #${p.no}`,
                     start, end,
                     progress: (p.projectStatus || '').toLowerCase() === 'done' ? 100 : 50,
@@ -453,6 +465,7 @@ function YourSchedule() {
                                     tasks={ganttTasks} viewMode={viewMode} listCellWidth="240px"
                                     TaskListHeader={CustomTaskListHeader}
                                     TaskListTable={CustomTaskListTable}
+                                    TooltipContent={CustomTooltip}
                                     columnWidth={viewMode === ViewMode.Month ? 200 : viewMode === ViewMode.Week ? 100 : 50}
                                     barCornerRadius={6} barFill={70} fontSize="12"
                                     headerHeight={50} rowHeight={38}
@@ -639,6 +652,7 @@ function YourSchedule() {
                                 tasks={ganttTasks} viewMode={viewMode} listCellWidth="240px"
                                 TaskListHeader={CustomTaskListHeader}
                                 TaskListTable={CustomTaskListTable}
+                                TooltipContent={CustomTooltip}
                                 columnWidth={viewMode === ViewMode.Month ? 200 : viewMode === ViewMode.Week ? 100 : 50}
                                 barCornerRadius={6} barFill={70} fontSize="12"
                                 headerHeight={50} rowHeight={38}

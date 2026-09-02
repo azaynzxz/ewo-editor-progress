@@ -7,6 +7,51 @@ import { fetchAllSheetsProjects } from '../utils/projectFetcher'
 const APPS_SCRIPT_URL = '/api/exec'
 const CACHE_KEY = 'ewo_upcoming_deadlines'
 
+const ROW_COLORS = [
+    '#3b82f6', // blue
+    '#10b981', // green
+    '#f59e0b', // amber
+    '#8b5cf6', // purple
+    '#ec4899', // pink
+    '#0ea5e9', // sky
+    '#14b8a6', // teal
+    '#f43f5e', // rose
+]
+
+const CustomTaskListHeader = ({ headerHeight, fontFamily, fontSize }) => {
+    return (
+        <div style={{ height: headerHeight, fontFamily, fontSize, display: 'flex', alignItems: 'center', paddingLeft: '16px', borderBottom: '1px solid #e5e7eb', fontWeight: 600, color: '#4b5563', background: '#f9fafb', borderRight: '1px solid #e5e7eb' }}>
+            Project Name
+        </div>
+    );
+};
+
+const CustomTaskListTable = ({ rowHeight, rowWidth, tasks, fontFamily, fontSize }) => {
+    return (
+        <div style={{ borderRight: '1px solid #e5e7eb' }}>
+            {tasks.map(t => {
+                if (t.id === 'today-bounds-fix') return null;
+                return (
+                    <div key={t.id} style={{ height: rowHeight, width: rowWidth, fontFamily, fontSize: '13px', display: 'flex', alignItems: 'center', paddingLeft: '16px', paddingRight: '8px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={t.projectName}>
+                        {t.projectName}
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+const CustomTooltip = ({ task, fontSize, fontFamily }) => {
+    return (
+        <div style={{ backgroundColor: 'white', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '6px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', minWidth: '180px' }}>
+            <b style={{ fontSize: '14px', fontFamily, color: '#111827' }}>{task.projectName}</b>
+            <div style={{ fontSize: '12px', fontFamily, color: '#6b7280', marginTop: '4px' }}>
+                {task.start.toLocaleDateString()} - {task.end.toLocaleDateString()}
+            </div>
+        </div>
+    )
+};
+
 function UpcomingDeadlines({ compact = false }) {
     const [projects, setProjects] = useState(() => {
         try {
@@ -89,22 +134,49 @@ function UpcomingDeadlines({ compact = false }) {
     }
 
     const ganttTasks = useMemo(() => {
-        return projects
+        let tasks = projects
             .filter(p => p.dlIllustrator && p.deadline)
             .map((p, i) => {
                 const start = new Date(p.dlIllustrator)
+                start.setHours(0, 0, 0, 0)
                 let end = new Date(p.deadline)
-                if (end <= start) end = new Date(start.getTime() + 86400000)
+                end.setHours(23, 59, 59, 999)
+                
+                if (end <= start) {
+                    end = new Date(start.getTime())
+                    end.setHours(23, 59, 59, 999)
+                }
                 const isDone = (p.projectStatus || '').toLowerCase() === 'done'
-                const color = isDone ? '#10b981' : (p.risk || '').includes('High') ? '#ef4444' : '#3b82f6'
+                const color = isDone ? '#10b981' : (p.risk || '').includes('High') ? '#ef4444' : ROW_COLORS[i % ROW_COLORS.length]
                 return {
-                    id: `dl-${i}`, name: p.title || 'Untitled',
+                    id: `dl-${i}`, 
+                    name: '',
+                    projectName: p.title || 'Untitled',
                     start, end,
                     progress: isDone ? 100 : 50,
                     type: 'task',
                     styles: { backgroundColor: color, backgroundSelectedColor: color, progressColor: color + 'cc', progressSelectedColor: color + 'cc' },
                 }
             })
+            
+        if (tasks.length > 0) {
+            const now = new Date()
+            now.setHours(0,0,0,0)
+            tasks.push({
+                id: 'today-bounds-fix',
+                name: '',
+                start: now,
+                end: now,
+                type: 'task',
+                progress: 0,
+                isDisabled: true,
+                styles: { 
+                    backgroundColor: 'transparent', backgroundSelectedColor: 'transparent',
+                    progressColor: 'transparent', progressSelectedColor: 'transparent' 
+                }
+            })
+        }
+        return tasks
     }, [projects])
 
     useEffect(() => {
@@ -144,10 +216,13 @@ function UpcomingDeadlines({ compact = false }) {
                         <div style={{ overflow: 'auto', padding: '0 var(--space-2) var(--space-3)' }}>
                             {ganttTasks.length > 0 ? (
                                 <Gantt
-                                    tasks={ganttTasks} viewMode={ViewMode.Day} listCellWidth=""
-                                    columnWidth={80} barCornerRadius={4} barFill={65}
+                                    tasks={ganttTasks} viewMode={ViewMode.Day} listCellWidth="240px"
+                                    TaskListHeader={CustomTaskListHeader}
+                                    TaskListTable={CustomTaskListTable}
+                                    TooltipContent={CustomTooltip}
+                                    columnWidth={80} barCornerRadius={6} barFill={70}
                                     fontSize="11" headerHeight={40} rowHeight={32}
-                                    todayColor="rgba(59, 130, 246, 0.08)"
+                                    todayColor="rgba(59, 130, 246, 0.2)"
                                 />
                             ) : (
                                 <div className="upcoming-empty">No valid date ranges for Gantt</div>
@@ -216,10 +291,13 @@ function UpcomingDeadlines({ compact = false }) {
                     <div style={{ flex: 1, overflow: 'auto', padding: 'var(--space-4)' }}>
                         {ganttTasks.length > 0 ? (
                             <Gantt
-                                tasks={ganttTasks} viewMode={ViewMode.Day} listCellWidth=""
-                                columnWidth={100} barCornerRadius={4} barFill={65}
+                                tasks={ganttTasks} viewMode={ViewMode.Day} listCellWidth="240px"
+                                TaskListHeader={CustomTaskListHeader}
+                                TaskListTable={CustomTaskListTable}
+                                TooltipContent={CustomTooltip}
+                                columnWidth={100} barCornerRadius={6} barFill={70}
                                 fontSize="12" headerHeight={50} rowHeight={38}
-                                todayColor="rgba(59, 130, 246, 0.08)"
+                                todayColor="rgba(59, 130, 246, 0.2)"
                             />
                         ) : (
                             <div className="upcoming-empty">No valid date ranges for Gantt</div>
