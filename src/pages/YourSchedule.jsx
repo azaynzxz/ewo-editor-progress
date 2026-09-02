@@ -277,42 +277,43 @@ function YourSchedule() {
     return (
         <div className="ys-page">
             {/* Header */}
-            <div className="ys-header">
-                <div>
-                    <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, fontSize: '1.25rem' }}>
-                        <CalendarDays size={20} /> Your Schedule
-                    </h2>
-                    <p style={{ margin: '4px 0 0', color: 'var(--gray-500)', fontSize: 'var(--text-sm)' }}>
-                        Projects assigned to <strong style={{ color: 'var(--primary-600)' }}>{userName}</strong>
-                        {myRole && <span className="ys-role-tag">{myRole}</span>}
-                        {lastFetched && <span style={{ marginLeft: 8, fontSize: 'var(--text-xs)', color: 'var(--gray-400)' }}>Updated {lastFetched}</span>}
-                    </p>
-                </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <div className="ys-view-toggle">
-                        <button onClick={() => setView('table')} className={`ys-view-btn ${view === 'table' ? 'active' : ''}`}>
-                            <List size={12} /> Table
-                        </button>
-                        <button onClick={() => setView('gantt')} className={`ys-view-btn ${view === 'gantt' ? 'active' : ''}`}>
-                            <BarChart3 size={12} /> Gantt
+            <div className="admin-header" style={{ marginBottom: 'var(--space-6)' }}>
+                <div className="admin-header-content">
+                    <div>
+                        <h1><CalendarDays size={24} /> Your Schedule</h1>
+                        <p style={{ marginTop: 'var(--space-2)' }}>
+                            Projects assigned to <strong style={{ color: '#93c5fd' }}>{userName}</strong>
+                            {myRole && <span style={{ marginLeft: 8, background: 'rgba(255,255,255,0.1)', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 600 }}>{myRole}</span>}
+                            {lastFetched && <span style={{ marginLeft: 8, fontSize: 'var(--text-xs)', color: 'rgba(255,255,255,0.5)' }}>Updated {lastFetched}</span>}
+                        </p>
+                    </div>
+                    <div className="admin-header-actions" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.1)', padding: '4px', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <button onClick={() => setView('table')} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', border: 'none', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', background: view === 'table' ? 'white' : 'transparent', color: view === 'table' ? 'var(--gray-900)' : 'white' }}>
+                                <List size={14} /> Table
+                            </button>
+                            <button onClick={() => setView('gantt')} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', border: 'none', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', background: view === 'gantt' ? 'white' : 'transparent', color: view === 'gantt' ? 'var(--gray-900)' : 'white' }}>
+                                <BarChart3 size={14} /> Gantt
+                            </button>
+                        </div>
+                        
+                        {view === 'gantt' && (
+                            <>
+                                <select className="admin-filter-select" style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }} value={viewMode} onChange={e => setViewMode(e.target.value)}>
+                                    <option value={ViewMode.Day} style={{ color: 'black' }}>Day</option>
+                                    <option value={ViewMode.Week} style={{ color: 'black' }}>Week</option>
+                                    <option value={ViewMode.Month} style={{ color: 'black' }}>Month</option>
+                                </select>
+                                <button onClick={() => setGanttFullscreen(true)} className="admin-refresh-btn" title="Fullscreen" style={{ padding: '8px' }}>
+                                    <Maximize2 size={16} />
+                                </button>
+                            </>
+                        )}
+                        <button onClick={() => fetchProjects(true)} disabled={isLoading} className={`admin-refresh-btn ${isLoading ? 'spinning' : ''}`}>
+                            <RefreshCw size={14} />
+                            {isLoading ? 'Fetching…' : 'Refresh'}
                         </button>
                     </div>
-                    {view === 'gantt' && (
-                        <>
-                            <select className="ys-select" value={viewMode} onChange={e => setViewMode(e.target.value)}>
-                                <option value={ViewMode.Day}>Day</option>
-                                <option value={ViewMode.Week}>Week</option>
-                                <option value={ViewMode.Month}>Month</option>
-                            </select>
-                            <button onClick={() => setGanttFullscreen(true)} className="ys-icon-btn" title="Fullscreen">
-                                <Maximize2 size={14} />
-                            </button>
-                        </>
-                    )}
-                    <button onClick={() => fetchProjects(true)} disabled={isLoading} className="ys-refresh-btn">
-                        <RefreshCw size={14} className={isLoading ? 'spin' : ''} />
-                        {isLoading ? 'Fetching…' : 'Refresh'}
-                    </button>
                 </div>
             </div>
 
@@ -364,112 +365,120 @@ function YourSchedule() {
             </div>
 
             {/* Content */}
-            <div className="card" style={{ overflow: 'hidden' }}>
+            <div>
                 {isLoading && myProjects.length === 0 ? (
-                    <div className="ys-empty">
-                        <RefreshCw size={32} className="spin" style={{ color: 'var(--gray-300)' }} />
-                        <p>Loading your projects…</p>
+                    <div className="card" style={{ overflow: 'hidden' }}>
+                        <div className="ys-empty">
+                            <RefreshCw size={32} className="spin" style={{ color: 'var(--gray-300)' }} />
+                            <p>Loading your projects…</p>
+                        </div>
                     </div>
                 ) : myProjects.length === 0 ? (
-                    <div className="ys-empty">
-                        <Inbox size={40} style={{ color: 'var(--gray-300)' }} />
-                        <p>No projects assigned to you</p>
+                    <div className="card" style={{ overflow: 'hidden' }}>
+                        <div className="ys-empty">
+                            <Inbox size={40} style={{ color: 'var(--gray-300)' }} />
+                            <p>No projects assigned to you</p>
+                        </div>
                     </div>
                 ) : view === 'gantt' ? (
-                    <div style={{ overflow: 'auto', padding: 'var(--space-3)' }}>
-                        {ganttTasks.length > 0 ? (
-                            <Gantt
-                                tasks={ganttTasks} viewMode={viewMode} listCellWidth=""
-                                columnWidth={viewMode === ViewMode.Month ? 200 : viewMode === ViewMode.Week ? 100 : 50}
-                                barCornerRadius={4} barFill={65} fontSize="12"
-                                headerHeight={50} rowHeight={38}
-                                todayColor="rgba(59, 130, 246, 0.08)"
-                            />
-                        ) : (
-                            <div className="ys-empty">
-                                <Inbox size={40} style={{ color: 'var(--gray-300)' }} />
-                                <p>No projects with valid dates for Gantt view</p>
-                            </div>
-                        )}
+                    <div className="card" style={{ overflow: 'hidden' }}>
+                        <div style={{ overflow: 'auto', padding: 'var(--space-3)' }}>
+                            {ganttTasks.length > 0 ? (
+                                <Gantt
+                                    tasks={ganttTasks} viewMode={viewMode} listCellWidth=""
+                                    columnWidth={viewMode === ViewMode.Month ? 200 : viewMode === ViewMode.Week ? 100 : 50}
+                                    barCornerRadius={4} barFill={65} fontSize="12"
+                                    headerHeight={50} rowHeight={38}
+                                    todayColor="rgba(59, 130, 246, 0.08)"
+                                />
+                            ) : (
+                                <div className="ys-empty">
+                                    <Inbox size={40} style={{ color: 'var(--gray-300)' }} />
+                                    <p>No projects with valid dates for Gantt view</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 ) : (
                     <>
                         {/* Desktop View */}
-                        <div className="admin-table-wrap desktop-only">
-                            <table className="admin-table">
-                                <thead>
-                                    <tr>
-                                        <th style={{ width: 40 }}>#</th>
-                                        <th>Project</th>
-                                        <th>Client</th>
-                                        <th>Role</th>
-                                        <th>Brief</th>
-                                        <th>DL Illustrator</th>
-                                        <th>DL Editor</th>
-                                        <th>Status</th>
-                                        <th>Risk</th>
-                                        <th>Notes</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredProjects.map(p => {
-                                        const isIll = matchesUser(p.illustrator, userName)
-                                        const isEd = matchesUser(p.editor, userName)
-                                        const roleLabel = isIll && isEd ? 'Both' : isIll ? 'Illustrator' : 'Editor'
-                                        const statusColor = getStatusColor(p.projectStatus)
-                                        return (
-                                            <tr key={p.rowIndex}>
-                                                <td style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>{p.no}</td>
-                                                <td style={{ fontWeight: 600, whiteSpace: 'nowrap', minWidth: 180 }}>{p.projectName}</td>
-                                                <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.clients || '—'}</td>
-                                                <td>
-                                                    <span className={`ys-role-badge ${isIll ? 'ys-role-ill' : 'ys-role-ed'}`}>
-                                                        {roleLabel}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    {p.briefLinks ? (
-                                                        <a href={p.briefLinks} target="_blank" rel="noopener noreferrer" className="ys-brief-chip">
-                                                            <ExternalLink size={11} />
-                                                            {p.briefLinksLabel || 'Open'}
-                                                        </a>
-                                                    ) : '—'}
-                                                </td>
-                                                <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlIllustrator || '—'}</td>
-                                                <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlEditor || '—'}</td>
-                                                <td>
-                                                    {p.projectStatus ? (
-                                                        <span className="ys-status-badge" style={{ color: statusColor, borderColor: statusColor + '33', background: statusColor + '11' }}>
-                                                            {p.projectStatus}
+                        <div className="card desktop-only" style={{ overflow: 'hidden' }}>
+                            <div className="admin-table-wrap">
+                                <table className="admin-table">
+                                    <thead>
+                                        <tr>
+                                            <th style={{ width: 40 }}>#</th>
+                                            <th>Project</th>
+                                            <th>Client</th>
+                                            <th>Role</th>
+                                            <th>Brief</th>
+                                            <th>DL Illustrator</th>
+                                            <th>DL Editor</th>
+                                            <th>Status</th>
+                                            <th>Risk</th>
+                                            <th>Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredProjects.map(p => {
+                                            const isIll = matchesUser(p.illustrator, userName)
+                                            const isEd = matchesUser(p.editor, userName)
+                                            const roleLabel = isIll && isEd ? 'Both' : isIll ? 'Illustrator' : 'Editor'
+                                            const statusColor = getStatusColor(p.projectStatus)
+                                            return (
+                                                <tr key={p.rowIndex}>
+                                                    <td style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>{p.no}</td>
+                                                    <td style={{ fontWeight: 600, whiteSpace: 'nowrap', minWidth: 180 }}>{p.projectName}</td>
+                                                    <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.clients || '—'}</td>
+                                                    <td>
+                                                        <span className={`ys-role-badge ${isIll ? 'ys-role-ill' : 'ys-role-ed'}`}>
+                                                            {roleLabel}
                                                         </span>
-                                                    ) : '—'}
-                                                </td>
-                                                <td>
-                                                    {p.risk ? (
-                                                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: p.risk.includes('High') ? '#ef4444' : '#f59e0b' }}>
-                                                            {p.risk}
-                                                        </span>
-                                                    ) : '—'}
-                                                </td>
-                                                <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                                                    title={p.projectNotes}>
-                                                    {p.projectNotes || '—'}
-                                                </td>
-                                            </tr>
-                                        )
-                                    })}
-                                </tbody>
-                            </table>
-                            {filteredProjects.length === 0 && (
-                                <div className="ys-empty" style={{ padding: 'var(--space-8)' }}>
-                                    <Inbox size={40} style={{ color: 'var(--gray-300)' }} />
-                                    <p>No projects match the current filter</p>
-                                </div>
-                            )}
+                                                    </td>
+                                                    <td>
+                                                        {p.briefLinks ? (
+                                                            <a href={p.briefLinks} target="_blank" rel="noopener noreferrer" className="ys-brief-chip">
+                                                                <ExternalLink size={11} />
+                                                                {p.briefLinksLabel || 'Open'}
+                                                            </a>
+                                                        ) : '—'}
+                                                    </td>
+                                                    <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlIllustrator || '—'}</td>
+                                                    <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlEditor || '—'}</td>
+                                                    <td>
+                                                        {p.projectStatus ? (
+                                                            <span className="ys-status-badge" style={{ color: statusColor, borderColor: statusColor + '33', background: statusColor + '11' }}>
+                                                                {p.projectStatus}
+                                                            </span>
+                                                        ) : '—'}
+                                                    </td>
+                                                    <td>
+                                                        {p.risk ? (
+                                                            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: p.risk.includes('High') ? '#ef4444' : '#f59e0b' }}>
+                                                                {p.risk}
+                                                            </span>
+                                                        ) : '—'}
+                                                    </td>
+                                                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                                        title={p.projectNotes}>
+                                                        {p.projectNotes || '—'}
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
+                                    </tbody>
+                                </table>
+                                {filteredProjects.length === 0 && (
+                                    <div className="ys-empty" style={{ padding: 'var(--space-8)' }}>
+                                        <Inbox size={40} style={{ color: 'var(--gray-300)' }} />
+                                        <p>No projects match the current filter</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {/* Mobile View */}
-                        <div className="mobile-only" style={{ padding: 'var(--space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', background: 'var(--gray-50)' }}>
+                        <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
                             {filteredProjects.map(p => {
                                 const isIll = matchesUser(p.illustrator, userName)
                                 const isEd = matchesUser(p.editor, userName)
