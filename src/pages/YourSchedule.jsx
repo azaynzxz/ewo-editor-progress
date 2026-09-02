@@ -446,11 +446,11 @@ function YourSchedule() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {filteredProjects.map(p => {
+                                        {filteredProjects.map((p, index) => {
                                             const isIll = matchesUser(p.illustrator, userName)
                                             const isEd = matchesUser(p.editor, userName)
                                             const roleLabel = isIll && isEd ? 'Both' : isIll ? 'Illustrator' : 'Editor'
-                                            const statusColor = getStatusColor(p.projectStatus) || '#9ca3af'
+                                            const statusColor = getTaskColor(p.projectStatus, p.risk, p.projectName, index) || '#9ca3af'
                                             return (
                                                 <tr key={p.rowIndex}>
                                                     <td style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>{p.no}</td>
@@ -505,11 +505,11 @@ function YourSchedule() {
 
                         {/* Mobile View */}
                         <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                            {filteredProjects.map(p => {
+                            {filteredProjects.map((p, index) => {
                                 const isIll = matchesUser(p.illustrator, userName)
                                 const isEd = matchesUser(p.editor, userName)
                                 const roleLabel = isIll && isEd ? 'Both' : isIll ? 'Illustrator' : 'Editor'
-                                const statusColor = getStatusColor(p.projectStatus) || '#9ca3af'
+                                const statusColor = getTaskColor(p.projectStatus, p.risk, p.projectName, index) || '#9ca3af'
                                 
                                 return (
                                     <div key={p.rowIndex} style={{ background: '#ffffff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
