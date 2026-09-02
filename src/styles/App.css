@@ -1495,4 +1495,9 @@ select.input {
     font-size: var(--text-xs);
     min-width: unset;
   }
+}
+
+/* Hide text labels drawn next to the Gantt bars */
+.barLabel {
+    display: none !important;
 }

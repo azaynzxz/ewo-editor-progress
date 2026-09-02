@@ -22,8 +22,19 @@ const STATUS_COLORS = {
 }
 
 function getStatusColor(status) {
-    return STATUS_COLORS[(status || '').toLowerCase()] || '#3b82f6'
+    return STATUS_COLORS[(status || '').toLowerCase()] || null
 }
+
+const ROW_COLORS = [
+    '#3b82f6', // blue
+    '#10b981', // green
+    '#f59e0b', // amber
+    '#8b5cf6', // purple
+    '#ec4899', // pink
+    '#0ea5e9', // sky
+    '#14b8a6', // teal
+    '#f43f5e', // rose
+]
 
 const CustomTaskListHeader = ({ headerHeight, fontFamily, fontSize }) => {
     return (
@@ -39,8 +50,8 @@ const CustomTaskListTable = ({ rowHeight, rowWidth, tasks, fontFamily, fontSize 
             {tasks.map(t => {
                 if (t.id === 'today-bounds-fix') return null;
                 return (
-                    <div key={t.id} style={{ height: rowHeight, width: rowWidth, fontFamily, fontSize: '13px', display: 'flex', alignItems: 'center', paddingLeft: '16px', paddingRight: '8px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={t.name}>
-                        {t.name}
+                    <div key={t.id} style={{ height: rowHeight, width: rowWidth, fontFamily, fontSize: '13px', display: 'flex', alignItems: 'center', paddingLeft: '16px', paddingRight: '8px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={t.projectName}>
+                        {t.projectName}
                     </div>
                 );
             })}
@@ -337,7 +348,7 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
     const ganttTasks = useMemo(() => {
         let tasks = filtered
             .filter(p => p.dlIllustrator && p.dlEditor)
-            .map(p => {
+            .map((p, index) => {
                 const start = new Date(p.dlIllustrator)
                 start.setHours(0, 0, 0, 0)
                 let end = new Date(p.dlEditor)
@@ -347,10 +358,11 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
                     end = new Date(start.getTime())
                     end.setHours(23, 59, 59, 999)
                 }
-                const color = getStatusColor(p.projectStatus)
+                const color = getStatusColor(p.projectStatus) || ROW_COLORS[index % ROW_COLORS.length]
                 return {
                     id: String(p.rowIndex),
                     name: p.projectName || `Project #${p.no}`,
+                    projectName: p.projectName || `Project #${p.no}`,
                     start, end,
                     progress: p.projectStatus?.toLowerCase() === 'done' ? 100 : 50,
                     type: 'task',
@@ -502,7 +514,7 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
                         </thead>
                         <tbody>
                             {filtered.map(p => {
-                                const statusColor = getStatusColor(p.projectStatus)
+                                const statusColor = getStatusColor(p.projectStatus) || '#9ca3af'
                                 return (
                                     <tr key={p.rowIndex}>
                                         <td style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>{p.no}</td>

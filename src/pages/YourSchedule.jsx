@@ -20,8 +20,8 @@ const CustomTaskListTable = ({ rowHeight, rowWidth, tasks, fontFamily, fontSize 
             {tasks.map(t => {
                 if (t.id === 'today-bounds-fix') return null;
                 return (
-                    <div key={t.id} style={{ height: rowHeight, width: rowWidth, fontFamily, fontSize: '13px', display: 'flex', alignItems: 'center', paddingLeft: '16px', paddingRight: '8px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={t.name}>
-                        {t.name}
+                    <div key={t.id} style={{ height: rowHeight, width: rowWidth, fontFamily, fontSize: '13px', display: 'flex', alignItems: 'center', paddingLeft: '16px', paddingRight: '8px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={t.projectName}>
+                        {t.projectName}
                     </div>
                 );
             })}
@@ -40,8 +40,19 @@ const STATUS_COLORS = {
 }
 
 function getStatusColor(status) {
-    return STATUS_COLORS[(status || '').toLowerCase()] || '#3b82f6'
+    return STATUS_COLORS[(status || '').toLowerCase()] || null
 }
+
+const ROW_COLORS = [
+    '#3b82f6', // blue
+    '#10b981', // green
+    '#f59e0b', // amber
+    '#8b5cf6', // purple
+    '#ec4899', // pink
+    '#0ea5e9', // sky
+    '#14b8a6', // teal
+    '#f43f5e', // rose
+]
 
 function matchesUser(field, userName) {
     if (!field || !userName) return false
@@ -218,7 +229,7 @@ function YourSchedule() {
     const ganttTasks = useMemo(() => {
         let tasks = filteredProjects
             .filter(p => p.dlIllustrator && p.dlEditor)
-            .map(p => {
+            .map((p, index) => {
                 const start = new Date(p.dlIllustrator)
                 start.setHours(0, 0, 0, 0)
                 let end = new Date(p.dlEditor)
@@ -228,10 +239,11 @@ function YourSchedule() {
                     end = new Date(start.getTime())
                     end.setHours(23, 59, 59, 999)
                 }
-                const color = getStatusColor(p.projectStatus)
+                const color = getStatusColor(p.projectStatus) || ROW_COLORS[index % ROW_COLORS.length]
                 return {
                     id: String(p.rowIndex),
                     name: p.projectName || `Project #${p.no}`,
+                    projectName: p.projectName || `Project #${p.no}`,
                     start, end,
                     progress: (p.projectStatus || '').toLowerCase() === 'done' ? 100 : 50,
                     type: 'task',
@@ -479,7 +491,7 @@ function YourSchedule() {
                                             const isIll = matchesUser(p.illustrator, userName)
                                             const isEd = matchesUser(p.editor, userName)
                                             const roleLabel = isIll && isEd ? 'Both' : isIll ? 'Illustrator' : 'Editor'
-                                            const statusColor = getStatusColor(p.projectStatus)
+                                            const statusColor = getStatusColor(p.projectStatus) || '#9ca3af'
                                             return (
                                                 <tr key={p.rowIndex}>
                                                     <td style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>{p.no}</td>
@@ -538,7 +550,7 @@ function YourSchedule() {
                                 const isIll = matchesUser(p.illustrator, userName)
                                 const isEd = matchesUser(p.editor, userName)
                                 const roleLabel = isIll && isEd ? 'Both' : isIll ? 'Illustrator' : 'Editor'
-                                const statusColor = getStatusColor(p.projectStatus)
+                                const statusColor = getStatusColor(p.projectStatus) || '#9ca3af'
                                 
                                 return (
                                     <div key={p.rowIndex} style={{ background: '#ffffff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
@@ -624,11 +636,13 @@ function YourSchedule() {
                     <div style={{ flex: 1, overflow: 'auto', padding: 'var(--space-4)' }}>
                         {ganttTasks.length > 0 ? (
                             <Gantt
-                                tasks={ganttTasks} viewMode={viewMode} listCellWidth=""
+                                tasks={ganttTasks} viewMode={viewMode} listCellWidth="240px"
+                                TaskListHeader={CustomTaskListHeader}
+                                TaskListTable={CustomTaskListTable}
                                 columnWidth={viewMode === ViewMode.Month ? 200 : viewMode === ViewMode.Week ? 100 : 50}
-                                barCornerRadius={4} barFill={65} fontSize="12"
+                                barCornerRadius={6} barFill={70} fontSize="12"
                                 headerHeight={50} rowHeight={38}
-                                todayColor="rgba(59, 130, 246, 0.08)"
+                                todayColor="rgba(59, 130, 246, 0.2)"
                             />
                         ) : (
                             <div className="ys-empty"><p>No valid Gantt data</p></div>
