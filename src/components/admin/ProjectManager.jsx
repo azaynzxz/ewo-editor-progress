@@ -354,8 +354,8 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
                 const result = await res.json()
                 if (result.success && result.data) {
                     const active = result.data.filter(e => e.status === 'Active')
-                    const eds = active.filter(e => e.role === 'Video Editor' || e.role === 'Admin').map(e => e.name)
-                    const ills = active.filter(e => e.role === 'Illustrator').map(e => e.name)
+                    const eds = active.filter(e => e.role?.includes('Editor') || e.role?.includes('Admin')).map(e => e.name)
+                    const ills = active.filter(e => e.role?.includes('Illustrator')).map(e => e.name)
                     if (eds.length > 0) setEditorsList(eds)
                     if (ills.length > 0) setIllustratorsList(ills)
                 }
