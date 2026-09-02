@@ -19,8 +19,8 @@ function Layout() {
                 <IconButton onClick={() => setSidebarOpen(prev => !prev)}>
                     <Menu size={24} />
                 </IconButton>
-                <img src="/logo.jpg" alt="EWO Logo" className="mobile-header-logo" />
-                <span style={{ fontWeight: 600 }}>EWO Editor Hub</span>
+                <img src="/logo.jpg" alt="Ewo Logo" className="mobile-header-logo" />
+                <span style={{ fontWeight: 600 }}>Ewo Hub</span>
             </header>
 
             <main className="main-content">

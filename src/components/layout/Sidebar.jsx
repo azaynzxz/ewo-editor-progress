@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
     LayoutDashboard,
     FileEdit,
@@ -76,24 +77,30 @@ function Sidebar({ isOpen, onClose }) {
     return (
         <>
             {/* Backdrop for mobile */}
-            {isOpen && (
-                <div
-                    className="sidebar-backdrop"
-                    onClick={onClose}
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        background: 'rgba(0,0,0,0.5)',
-                        zIndex: 199
-                    }}
-                />
-            )}
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        className="sidebar-backdrop"
+                        onClick={onClose}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            background: 'rgba(0,0,0,0.5)',
+                            zIndex: 199
+                        }}
+                    />
+                )}
+            </AnimatePresence>
 
             <aside className={`sidebar ${isOpen ? 'open' : ''}`} style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
                 <div className="sidebar-header">
                     <img src="/logo.jpg" alt="EWO Logo" className="sidebar-logo" />
                     <div>
-                        <h1 className="sidebar-title">EWO Editor Hub</h1>
+                        <h1 className="sidebar-title">Ewo Hub</h1>
                         <p className="sidebar-subtitle">
                             {userRole === 'illustrator' ? 'Illustrator Resources' : 'Editor Resources'}
                         </p>

@@ -1,6 +1,6 @@
 /* =====================================================
    Layout Styles
-   EWO Editor Hub Design System
+   Ewo Hub Design System
    ===================================================== */
 
 /* ==================== APP LAYOUT ==================== */
@@ -24,7 +24,7 @@
     left: 0;
     bottom: 0;
     z-index: var(--z-sticky);
-    transition: width var(--transition-slow);
+    transition: width var(--transition-slow), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-header {

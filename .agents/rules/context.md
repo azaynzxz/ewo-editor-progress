@@ -1,7 +1,7 @@
-# EWO Editor Hub - Project Context
+# Ewo Hub - Project Context
 
 ## Project Overview
-The EWO Editor Hub is an internal management portal for video editors, illustrators, and ads design teams. It serves as a unified workspace offering daily progress reporting, attendance logging (clock-in/out), schedule viewing, leave application, and team resources/wiki.
+The Ewo Hub is an internal management portal for video editors, illustrators, and ads design teams. It serves as a unified workspace offering daily progress reporting, attendance logging (clock-in/out), schedule viewing, leave application, and team resources/wiki.
 
 ## Tech Stack
 -   **Frontend**: React.js, Vite, React Router DOM, Framer Motion (for animations), Lucide React (for icons).

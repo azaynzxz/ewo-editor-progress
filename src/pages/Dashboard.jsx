@@ -109,7 +109,7 @@ function Dashboard() {
             <AttendanceCard />
 
             {/* Stats Overview */}
-            <div className={`grid grid-${filteredStats.length}`} style={{ marginBottom: 'var(--space-8)' }}>
+            <div className="stat-grid">
                 {filteredStats.map((stat) => (
                     <Card key={stat.label} className="stat-card">
                         <CardBody>
