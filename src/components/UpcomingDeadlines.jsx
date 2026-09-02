@@ -102,6 +102,7 @@ function UpcomingDeadlines({ compact = false }) {
                     end = new Date(start.getTime())
                     end.setHours(23, 59, 59, 999)
                 }
+                const isDone = (p.projectStatus || '').toLowerCase() === 'done'
                 const color = getTaskColor(p.projectStatus, p.risk, p.projectName, i)
                 return {
                     id: `dl-${i}`, 
