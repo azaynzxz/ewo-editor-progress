@@ -6,6 +6,26 @@ import {
     ExternalLink, Maximize2, Minimize2, User
 } from 'lucide-react'
 
+const CustomTaskListHeader = ({ headerHeight, fontFamily, fontSize }) => {
+    return (
+        <div style={{ height: headerHeight, fontFamily, fontSize, display: 'flex', alignItems: 'center', paddingLeft: '16px', borderBottom: '1px solid #e5e7eb', fontWeight: 600, color: '#4b5563', background: '#f9fafb', borderRight: '1px solid #e5e7eb' }}>
+            Project Name
+        </div>
+    );
+};
+
+const CustomTaskListTable = ({ rowHeight, rowWidth, tasks, fontFamily, fontSize }) => {
+    return (
+        <div style={{ borderRight: '1px solid #e5e7eb' }}>
+            {tasks.map(t => (
+                <div key={t.id} style={{ height: rowHeight, width: rowWidth, fontFamily, fontSize: '13px', display: 'flex', alignItems: 'center', paddingLeft: '16px', paddingRight: '8px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={t.name}>
+                    {t.name}
+                </div>
+            ))}
+        </div>
+    );
+};
+
 const APPS_SCRIPT_URL = '/api/exec'
 const CACHE_KEY = 'ewo_my_schedule'
 
@@ -390,7 +410,9 @@ function YourSchedule() {
                         <div style={{ overflow: 'auto', padding: 'var(--space-3)' }}>
                             {ganttTasks.length > 0 ? (
                                 <Gantt
-                                    tasks={ganttTasks} viewMode={viewMode} listCellWidth="160px"
+                                    tasks={ganttTasks} viewMode={viewMode} listCellWidth="240px"
+                                    TaskListHeader={CustomTaskListHeader}
+                                    TaskListTable={CustomTaskListTable}
                                     columnWidth={viewMode === ViewMode.Month ? 200 : viewMode === ViewMode.Week ? 100 : 50}
                                     barCornerRadius={6} barFill={70} fontSize="12"
                                     headerHeight={50} rowHeight={38}
