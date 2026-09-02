@@ -17,11 +17,14 @@ const CustomTaskListHeader = ({ headerHeight, fontFamily, fontSize }) => {
 const CustomTaskListTable = ({ rowHeight, rowWidth, tasks, fontFamily, fontSize }) => {
     return (
         <div style={{ borderRight: '1px solid #e5e7eb' }}>
-            {tasks.map(t => (
-                <div key={t.id} style={{ height: rowHeight, width: rowWidth, fontFamily, fontSize: '13px', display: 'flex', alignItems: 'center', paddingLeft: '16px', paddingRight: '8px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={t.name}>
-                    {t.name}
-                </div>
-            ))}
+            {tasks.map(t => {
+                if (t.id === 'today-bounds-fix') return null;
+                return (
+                    <div key={t.id} style={{ height: rowHeight, width: rowWidth, fontFamily, fontSize: '13px', display: 'flex', alignItems: 'center', paddingLeft: '16px', paddingRight: '8px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={t.name}>
+                        {t.name}
+                    </div>
+                );
+            })}
         </div>
     );
 };
@@ -213,7 +216,7 @@ function YourSchedule() {
     }, [myProjects, selectedMonth])
 
     const ganttTasks = useMemo(() => {
-        return filteredProjects
+        let tasks = filteredProjects
             .filter(p => p.dlIllustrator && p.dlEditor)
             .map(p => {
                 const start = new Date(p.dlIllustrator)
@@ -232,6 +235,25 @@ function YourSchedule() {
                     },
                 }
             })
+            
+        if (tasks.length > 0) {
+            const now = new Date()
+            now.setHours(0,0,0,0)
+            tasks.push({
+                id: 'today-bounds-fix',
+                name: '',
+                start: now,
+                end: now,
+                type: 'task',
+                progress: 0,
+                isDisabled: true,
+                styles: { 
+                    backgroundColor: 'transparent', backgroundSelectedColor: 'transparent',
+                    progressColor: 'transparent', progressSelectedColor: 'transparent' 
+                }
+            })
+        }
+        return tasks
     }, [filteredProjects])
 
     // Only auto-fetch if no cached data
@@ -416,7 +438,7 @@ function YourSchedule() {
                                     columnWidth={viewMode === ViewMode.Month ? 200 : viewMode === ViewMode.Week ? 100 : 50}
                                     barCornerRadius={6} barFill={70} fontSize="12"
                                     headerHeight={50} rowHeight={38}
-                                    todayColor="rgba(59, 130, 246, 0.08)"
+                                    todayColor="rgba(59, 130, 246, 0.2)"
                                 />
                             ) : (
                                 <div className="ys-empty">
