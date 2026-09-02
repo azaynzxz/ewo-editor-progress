@@ -17,7 +17,7 @@ const STATUS_COLORS = {
 }
 
 function getStatusColor(status) {
-    return STATUS_COLORS[(status || '').toLowerCase()] || '#9ca3af'
+    return STATUS_COLORS[(status || '').toLowerCase()] || '#3b82f6'
 }
 
 function matchesUser(field, userName) {
@@ -390,9 +390,9 @@ function YourSchedule() {
                         <div style={{ overflow: 'auto', padding: 'var(--space-3)' }}>
                             {ganttTasks.length > 0 ? (
                                 <Gantt
-                                    tasks={ganttTasks} viewMode={viewMode} listCellWidth=""
+                                    tasks={ganttTasks} viewMode={viewMode} listCellWidth="160px"
                                     columnWidth={viewMode === ViewMode.Month ? 200 : viewMode === ViewMode.Week ? 100 : 50}
-                                    barCornerRadius={4} barFill={65} fontSize="12"
+                                    barCornerRadius={6} barFill={70} fontSize="12"
                                     headerHeight={50} rowHeight={38}
                                     todayColor="rgba(59, 130, 246, 0.08)"
                                 />
