@@ -198,7 +198,7 @@ function LoginPage() {
                                     Username or Email
                                 </label>
                                 <div style={{ position: 'relative' }}>
-                                    <User size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)' }} />
+                                    <User size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)', pointerEvents: 'none' }} />
                                     <input
                                         type="text"
                                         placeholder="Enter your name or email"
@@ -215,7 +215,9 @@ function LoginPage() {
                                             background: '#ffffff',
                                             boxSizing: 'border-box',
                                             transition: 'border-color 0.2s',
-                                            outline: 'none'
+                                            outline: 'none',
+                                            WebkitUserSelect: 'text',
+                                            userSelect: 'text'
                                         }}
                                         onFocus={(e) => e.target.style.borderColor = 'var(--primary-500)'}
                                         onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
@@ -228,7 +230,7 @@ function LoginPage() {
                                     Password
                                 </label>
                                 <div style={{ position: 'relative' }}>
-                                    <Lock size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)' }} />
+                                    <Lock size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)', pointerEvents: 'none' }} />
                                     <input
                                         type="password"
                                         placeholder="••••••••"
@@ -245,7 +247,9 @@ function LoginPage() {
                                             background: '#ffffff',
                                             boxSizing: 'border-box',
                                             transition: 'border-color 0.2s',
-                                            outline: 'none'
+                                            outline: 'none',
+                                            WebkitUserSelect: 'text',
+                                            userSelect: 'text'
                                         }}
                                         onFocus={(e) => e.target.style.borderColor = 'var(--primary-500)'}
                                         onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
