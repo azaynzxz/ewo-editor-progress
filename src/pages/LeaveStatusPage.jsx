@@ -170,23 +170,23 @@ function LeaveStatusPage() {
                                     </div>
 
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-                                        <div style={{ flex: '1 1 30%' }}>
+                                        <div style={{ flex: '1 1 auto', minWidth: '90px' }}>
                                             <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '700', marginBottom: '4px', letterSpacing: '0.5px' }}>Dari</div>
-                                            <div style={{ color: '#334155', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
+                                            <div style={{ color: '#334155', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                                                 <Calendar size={12} color="#94a3b8" />
                                                 {req.start}
                                             </div>
                                         </div>
-                                        <div style={{ flex: '1 1 30%' }}>
+                                        <div style={{ flex: '1 1 auto', minWidth: '90px' }}>
                                             <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '700', marginBottom: '4px', letterSpacing: '0.5px' }}>Sampai</div>
-                                            <div style={{ color: '#334155', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
+                                            <div style={{ color: '#334155', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                                                 <Calendar size={12} color="#94a3b8" />
                                                 {req.end}
                                             </div>
                                         </div>
-                                        <div style={{ flex: '1 1 20%' }}>
+                                        <div style={{ flex: '1 1 auto', minWidth: '90px' }}>
                                             <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '700', marginBottom: '4px', letterSpacing: '0.5px' }}>Durasi</div>
-                                            <div style={{ color: '#334155', fontWeight: '600', fontSize: '0.85rem' }}>{req.duration} Hari</div>
+                                            <div style={{ color: '#334155', fontWeight: '600', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{req.duration} Hari</div>
                                         </div>
 
                                         {req.notes && (

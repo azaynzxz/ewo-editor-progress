@@ -393,78 +393,149 @@ function YourSchedule() {
                         )}
                     </div>
                 ) : (
-                    <div className="admin-table-wrap">
-                        <table className="admin-table">
-                            <thead>
-                                <tr>
-                                    <th style={{ width: 40 }}>#</th>
-                                    <th>Project</th>
-                                    <th>Client</th>
-                                    <th>Role</th>
-                                    <th>Brief</th>
-                                    <th>DL Illustrator</th>
-                                    <th>DL Editor</th>
-                                    <th>Status</th>
-                                    <th>Risk</th>
-                                    <th>Notes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredProjects.map(p => {
-                                    const isIll = matchesUser(p.illustrator, userName)
-                                    const isEd = matchesUser(p.editor, userName)
-                                    const roleLabel = isIll && isEd ? 'Both' : isIll ? 'Illustrator' : 'Editor'
-                                    const statusColor = getStatusColor(p.projectStatus)
-                                    return (
-                                        <tr key={p.rowIndex}>
-                                            <td style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>{p.no}</td>
-                                            <td style={{ fontWeight: 600, whiteSpace: 'nowrap', minWidth: 180 }}>{p.projectName}</td>
-                                            <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.clients || '—'}</td>
-                                            <td>
-                                                <span className={`ys-role-badge ${isIll ? 'ys-role-ill' : 'ys-role-ed'}`}>
-                                                    {roleLabel}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                {p.briefLinks ? (
-                                                    <a href={p.briefLinks} target="_blank" rel="noopener noreferrer" className="ys-brief-chip">
-                                                        <ExternalLink size={11} />
-                                                        {p.briefLinksLabel || 'Open'}
-                                                    </a>
-                                                ) : '—'}
-                                            </td>
-                                            <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlIllustrator || '—'}</td>
-                                            <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlEditor || '—'}</td>
-                                            <td>
+                    <>
+                        {/* Desktop View */}
+                        <div className="admin-table-wrap desktop-only">
+                            <table className="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th style={{ width: 40 }}>#</th>
+                                        <th>Project</th>
+                                        <th>Client</th>
+                                        <th>Role</th>
+                                        <th>Brief</th>
+                                        <th>DL Illustrator</th>
+                                        <th>DL Editor</th>
+                                        <th>Status</th>
+                                        <th>Risk</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredProjects.map(p => {
+                                        const isIll = matchesUser(p.illustrator, userName)
+                                        const isEd = matchesUser(p.editor, userName)
+                                        const roleLabel = isIll && isEd ? 'Both' : isIll ? 'Illustrator' : 'Editor'
+                                        const statusColor = getStatusColor(p.projectStatus)
+                                        return (
+                                            <tr key={p.rowIndex}>
+                                                <td style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>{p.no}</td>
+                                                <td style={{ fontWeight: 600, whiteSpace: 'nowrap', minWidth: 180 }}>{p.projectName}</td>
+                                                <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.clients || '—'}</td>
+                                                <td>
+                                                    <span className={`ys-role-badge ${isIll ? 'ys-role-ill' : 'ys-role-ed'}`}>
+                                                        {roleLabel}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {p.briefLinks ? (
+                                                        <a href={p.briefLinks} target="_blank" rel="noopener noreferrer" className="ys-brief-chip">
+                                                            <ExternalLink size={11} />
+                                                            {p.briefLinksLabel || 'Open'}
+                                                        </a>
+                                                    ) : '—'}
+                                                </td>
+                                                <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlIllustrator || '—'}</td>
+                                                <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlEditor || '—'}</td>
+                                                <td>
+                                                    {p.projectStatus ? (
+                                                        <span className="ys-status-badge" style={{ color: statusColor, borderColor: statusColor + '33', background: statusColor + '11' }}>
+                                                            {p.projectStatus}
+                                                        </span>
+                                                    ) : '—'}
+                                                </td>
+                                                <td>
+                                                    {p.risk ? (
+                                                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: p.risk.includes('High') ? '#ef4444' : '#f59e0b' }}>
+                                                            {p.risk}
+                                                        </span>
+                                                    ) : '—'}
+                                                </td>
+                                                <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                                    title={p.projectNotes}>
+                                                    {p.projectNotes || '—'}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                            {filteredProjects.length === 0 && (
+                                <div className="ys-empty" style={{ padding: 'var(--space-8)' }}>
+                                    <Inbox size={40} style={{ color: 'var(--gray-300)' }} />
+                                    <p>No projects match the current filter</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Mobile View */}
+                        <div className="mobile-only" style={{ padding: 'var(--space-3)', display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', background: 'var(--gray-50)' }}>
+                            {filteredProjects.map(p => {
+                                const isIll = matchesUser(p.illustrator, userName)
+                                const isEd = matchesUser(p.editor, userName)
+                                const roleLabel = isIll && isEd ? 'Both' : isIll ? 'Illustrator' : 'Editor'
+                                const statusColor = getStatusColor(p.projectStatus)
+                                
+                                return (
+                                    <div key={p.rowIndex} style={{ background: '#ffffff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                            <div>
+                                                <div style={{ color: 'var(--gray-500)', fontSize: '0.7rem', fontWeight: 700, marginBottom: '4px' }}>#{p.no} {p.clients ? `• ${p.clients}` : ''}</div>
+                                                <div style={{ fontWeight: 600, color: 'var(--gray-900)', fontSize: '0.95rem', lineHeight: 1.3, marginBottom: '4px' }}>{p.projectName}</div>
+                                                {p.projectNotes && (
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)', fontStyle: 'italic' }}>"{p.projectNotes}"</div>
+                                                )}
+                                            </div>
+                                            <span className={`ys-role-badge ${isIll ? 'ys-role-ill' : 'ys-role-ed'}`} style={{ flexShrink: 0, marginLeft: '8px' }}>
+                                                {roleLabel}
+                                            </span>
+                                        </div>
+                                        
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '12px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                                            <div style={{ flex: '1 1 auto', minWidth: '80px' }}>
+                                                <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>DL Illustrator</div>
+                                                <div style={{ color: '#334155', fontWeight: '600', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{p.dlIllustrator || '—'}</div>
+                                            </div>
+                                            <div style={{ flex: '1 1 auto', minWidth: '80px' }}>
+                                                <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>DL Editor</div>
+                                                <div style={{ color: '#334155', fontWeight: '600', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{p.dlEditor || '—'}</div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                                                 {p.projectStatus ? (
-                                                    <span className="ys-status-badge" style={{ color: statusColor, borderColor: statusColor + '33', background: statusColor + '11' }}>
+                                                    <span className="ys-status-badge" style={{ color: statusColor, borderColor: statusColor + '33', background: statusColor + '11', padding: '3px 10px', fontSize: '0.7rem' }}>
                                                         {p.projectStatus}
                                                     </span>
-                                                ) : '—'}
-                                            </td>
-                                            <td>
-                                                {p.risk ? (
-                                                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: p.risk.includes('High') ? '#ef4444' : '#f59e0b' }}>
+                                                ) : <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>No status</span>}
+                                                
+                                                {p.risk && (
+                                                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: p.risk.includes('High') ? '#ef4444' : '#f59e0b', background: p.risk.includes('High') ? '#fef2f2' : '#fffbeb', padding: '3px 8px', borderRadius: '4px', border: `1px solid ${p.risk.includes('High') ? '#fecaca' : '#fde68a'}` }}>
                                                         {p.risk}
                                                     </span>
-                                                ) : '—'}
-                                            </td>
-                                            <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                                                title={p.projectNotes}>
-                                                {p.projectNotes || '—'}
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
-                        {filteredProjects.length === 0 && (
-                            <div className="ys-empty" style={{ padding: 'var(--space-8)' }}>
-                                <Inbox size={40} style={{ color: 'var(--gray-300)' }} />
-                                <p>No projects match the current filter</p>
-                            </div>
-                        )}
-                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            {p.briefLinks ? (
+                                                <a href={p.briefLinks} target="_blank" rel="noopener noreferrer" className="ys-brief-chip" style={{ background: 'white', border: '1px solid #cbd5e1' }}>
+                                                    <ExternalLink size={12} />
+                                                    {p.briefLinksLabel || 'Brief'}
+                                                </a>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                            
+                            {filteredProjects.length === 0 && (
+                                <div className="ys-empty" style={{ padding: 'var(--space-8)' }}>
+                                    <Inbox size={40} style={{ color: 'var(--gray-300)' }} />
+                                    <p>No projects match the current filter</p>
+                                </div>
+                            )}
+                        </div>
+                    </>
                 )}
             </div>
 
