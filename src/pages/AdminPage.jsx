@@ -350,14 +350,6 @@ function AdminPage() {
                         >
                             {loadingReportProjects ? 'Loading…' : 'Daily Report'}
                         </button>
-                        <button
-                            className="admin-refresh-btn"
-                            onClick={handleLogout}
-                            style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}
-                        >
-                            <LogOut size={16} />
-                            Logout
-                        </button>
                     </div>
                 </div>
             </div>
