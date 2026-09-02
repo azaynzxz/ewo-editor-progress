@@ -3,7 +3,8 @@ import { Gantt, ViewMode } from 'gantt-task-react'
 import 'gantt-task-react/dist/index.css'
 import {
     CalendarDays, RefreshCw, List, BarChart3, Inbox,
-    ExternalLink, Maximize2, Minimize2, User
+    ExternalLink, Maximize2, Minimize2, User, Check, FolderOpen,
+    AlertCircle
 } from 'lucide-react'
 import { CustomTaskListHeader, CustomTaskListTable, CustomTooltip, getTaskColor } from '../utils/ganttUtils'
 
@@ -64,7 +65,7 @@ function getMonthYearFromDateString(dateStr) {
 
 import { fetchAllSheetsProjects } from '../utils/projectFetcher'
 
-function YourSchedule() {
+function YourSchedule({ isWidget = false }) {
     const [userName, setUserName] = useState(
         () => localStorage.getItem('lastUsedEditor') || localStorage.getItem('userName') || ''
     )
@@ -84,6 +85,7 @@ function YourSchedule() {
     const [isLoading, setIsLoading] = useState(false)
     const [view, setView] = useState('table')
     const [selectedMonth, setSelectedMonth] = useState('all')
+    const [statusFilter, setStatusFilter] = useState('active')
     const [hasInitializedMonth, setHasInitializedMonth] = useState(false)
     const [viewMode, setViewMode] = useState(ViewMode.Day)
     const [ganttFullscreen, setGanttFullscreen] = useState(false)
@@ -133,10 +135,12 @@ function YourSchedule() {
         }
 
         if (availableSheets.length > 0) {
-            return availableSheets.map(sheet => ({
-                label: sheet,
-                sortKey: getSortVal(sheet)
-            })).sort((a, b) => a.sortKey - b.sortKey)
+            return availableSheets
+                .filter(sheet => sheet !== 'Membuka Mata Batin Internal')
+                .map(sheet => ({
+                    label: sheet,
+                    sortKey: getSortVal(sheet)
+                })).sort((a, b) => a.sortKey - b.sortKey)
         }
 
         // Fallback to computing from projects if cache is not yet populated
@@ -172,8 +176,34 @@ function YourSchedule() {
 
     const filteredProjects = useMemo(() => {
         let list = myProjects
+
+        if (statusFilter === 'active') {
+            const EXCLUDED = ['done', 'on hold', 'under review', 'canceled', 'finished', 'postponed', 'ready to illus tag']
+            const MMB_ACTIVE_PROGRESS = ['on progress', 'need revision', 'ready to edit']
+            
+            list = list.filter(p => {
+                const s1 = (p.projectStatus || '').toLowerCase()
+                const s2 = (p.progress || '').toLowerCase()
+                
+                if (p.clients === 'Internal MMB') {
+                    return MMB_ACTIVE_PROGRESS.includes(s2)
+                }
+                
+                return !EXCLUDED.includes(s1) && !EXCLUDED.includes(s2)
+            })
+        } else if (statusFilter === 'done') {
+            const EXCLUDED = ['done', 'canceled', 'finished', 'postponed', 'ready to illus tag']
+            list = list.filter(p => {
+                const s1 = (p.projectStatus || '').toLowerCase()
+                const s2 = (p.progress || '').toLowerCase()
+                return EXCLUDED.includes(s1) || EXCLUDED.includes(s2)
+            })
+        }
+
         if (selectedMonth !== 'all') {
             list = list.filter(p => {
+                // Bypass filter for Internal projects or projects missing deadlines so they don't disappear
+                if (p.clients === 'Internal MMB' || (!p.dlIllustrator && !p.dlEditor)) return true
                 return ['dlIllustrator', 'dlEditor'].some(key => {
                     const val = p[key]
                     const parsed = getMonthYearFromDateString(val)
@@ -182,7 +212,7 @@ function YourSchedule() {
             })
         }
         return list
-    }, [myProjects, selectedMonth])
+    }, [myProjects, selectedMonth, statusFilter])
 
     const ganttTasks = useMemo(() => {
         let tasks = filteredProjects
@@ -192,7 +222,7 @@ function YourSchedule() {
                 start.setHours(0, 0, 0, 0)
                 let end = new Date(p.dlEditor)
                 end.setHours(23, 59, 59, 999)
-                
+
                 if (end <= start) {
                     end = new Date(start.getTime())
                     end.setHours(23, 59, 59, 999)
@@ -211,10 +241,10 @@ function YourSchedule() {
                     },
                 }
             })
-            
+
         if (tasks.length > 0) {
             const now = new Date()
-            now.setHours(0,0,0,0)
+            now.setHours(0, 0, 0, 0)
             tasks.push({
                 id: 'today-bounds-fix',
                 name: '',
@@ -223,9 +253,9 @@ function YourSchedule() {
                 type: 'task',
                 progress: 0,
                 isDisabled: true,
-                styles: { 
+                styles: {
                     backgroundColor: 'transparent', backgroundSelectedColor: 'transparent',
-                    progressColor: 'transparent', progressSelectedColor: 'transparent' 
+                    progressColor: 'transparent', progressSelectedColor: 'transparent'
                 }
             })
         }
@@ -255,6 +285,23 @@ function YourSchedule() {
     }
 
     if (!userName) {
+        if (isWidget) {
+            return (
+                <div className="card schedule-widget-wrapper" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ padding: 'var(--space-4)', borderBottom: '1px solid var(--gray-100)' }}>
+                        <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--gray-900)' }}>
+                            <CalendarDays size={18} style={{ color: 'var(--primary-500)' }} /> Your Schedule
+                        </h3>
+                    </div>
+                    <div className="ys-empty" style={{ flex: 1, padding: 'var(--space-4)', textAlign: 'center' }}>
+                        <User size={32} style={{ color: 'var(--primary-300)', marginBottom: '8px' }} />
+                        <p style={{ margin: '0 0 8px', fontSize: 'var(--text-sm)' }}>Siapa namamu?</p>
+                        <a href="/schedule" style={{ fontSize: 'var(--text-xs)', color: 'white', background: 'var(--primary-500)', padding: '6px 12px', borderRadius: '4px', textDecoration: 'none', fontWeight: 600 }}>Set Nama</a>
+                    </div>
+                </div>
+            )
+        }
+
         return (
             <div className="ys-page">
                 <div className="card" style={{ maxWidth: 400, margin: '0 auto', padding: 'var(--space-6)', textAlign: 'center' }}>
@@ -292,6 +339,133 @@ function YourSchedule() {
         )
     }
 
+    if (isWidget) {
+        const today = new Date();
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const currentMonthLabel = `${months[today.getMonth()]} ${today.getFullYear()}`;
+
+        const EXCLUDED_STATUS = ['done', 'on hold', 'under review', 'canceled', 'finished', 'postponed', 'ready to illus tag'];
+        const MMB_ACTIVE_PROGRESS = ['on progress', 'need revision', 'ready to edit'];
+
+        const sortedProjects = [...myProjects].filter(p => {
+            const status = (p.projectStatus || '').toLowerCase();
+            const progress = (p.progress || '').toLowerCase();
+            const isInternal = p.clients === 'Internal MMB';
+
+            if (isInternal) {
+                if (!MMB_ACTIVE_PROGRESS.includes(progress)) return false;
+            } else {
+                if (EXCLUDED_STATUS.includes(status) || EXCLUDED_STATUS.includes(progress)) return false;
+            }
+
+            const isCurrentMonth = ['dlIllustrator', 'dlEditor'].some(key => {
+                const val = p[key];
+                const parsed = getMonthYearFromDateString(val);
+                return parsed && parsed.label === currentMonthLabel;
+            });
+
+            return isCurrentMonth || isInternal;
+        }).sort((a, b) => {
+            const aIsMMB = a.clients === 'Internal MMB';
+            const bIsMMB = b.clients === 'Internal MMB';
+            if (aIsMMB && !bIsMMB) return 1;
+            if (!aIsMMB && bIsMMB) return -1;
+
+            const dateA = new Date(a.dlEditor || a.dlIllustrator || '2099-01-01');
+            const dateB = new Date(b.dlEditor || b.dlIllustrator || '2099-01-01');
+            return dateA - dateB;
+        }).slice(0, 4);
+
+        return (
+            <div className="card schedule-widget-wrapper" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: 'var(--space-4)', borderBottom: '1px solid var(--gray-100)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--gray-900)' }}>
+                        <CalendarDays size={18} style={{ color: 'var(--primary-500)' }} /> Your Schedule
+                    </h3>
+                    <a href="/schedule" style={{ fontSize: 'var(--text-xs)', color: 'var(--primary-600)', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        View All <ExternalLink size={12} />
+                    </a>
+                </div>
+                <div style={{ padding: 'var(--space-3)', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {isLoading && myProjects.length === 0 ? (
+                        <div className="ys-empty" style={{ padding: 'var(--space-4)' }}>
+                            <RefreshCw size={24} className="spin" style={{ color: 'var(--gray-300)' }} />
+                        </div>
+                    ) : myProjects.length === 0 ? (
+                        <div className="ys-empty" style={{ padding: 'var(--space-4)' }}>
+                            <Inbox size={24} style={{ color: 'var(--gray-300)' }} />
+                            <p style={{ margin: 0, fontSize: '0.8rem' }}>No projects assigned</p>
+                        </div>
+                    ) : sortedProjects.length === 0 ? (
+                        <div className="ys-empty" style={{ padding: 'var(--space-4)' }}>
+                            <Check size={24} style={{ color: '#10b981' }} />
+                            <p style={{ margin: 0, fontSize: '0.8rem' }}>All caught up!</p>
+                        </div>
+                    ) : (
+                        sortedProjects.map((p, idx) => {
+                            const dlDateStr = p.dlEditor || p.dlIllustrator;
+                            let formattedDate = '—';
+                            let isOverdue = false;
+
+                            if (dlDateStr) {
+                                const d = new Date(dlDateStr);
+                                if (!isNaN(d.getTime())) {
+                                    const monthsId = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                                    formattedDate = `${d.getDate()} ${monthsId[d.getMonth()]} ${d.getFullYear()}`;
+
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    isOverdue = d < today;
+                                } else {
+                                    formattedDate = dlDateStr;
+                                }
+                            }
+
+                            return (
+                                <div key={p.rowIndex} style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px 12px', background: 'var(--gray-50)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--gray-200)', borderLeft: p.clients === 'Internal MMB' ? '4px solid #9333ea' : '4px solid #16a34a', transition: 'all 0.2s' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--gray-900)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {p.projectName}
+                                        </div>
+                                        {p.briefLinks && (
+                                            <a href={p.briefLinks} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, padding: '4px', background: 'white', color: 'var(--primary-600)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--gray-200)', textDecoration: 'none' }} title="Open Google Drive">
+                                                <FolderOpen size={14} />
+                                            </a>
+                                        )}
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '6px' }}>
+                                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-full)', background: isOverdue ? '#fef2f2' : 'white', color: isOverdue ? '#ef4444' : 'var(--gray-600)', border: `1px solid ${isOverdue ? '#fecaca' : 'var(--gray-200)'}`, whiteSpace: 'nowrap' }}>
+                                                {formattedDate}
+                                            </span>
+                                            {isOverdue && (
+                                                <span title="Overdue" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <AlertCircle size={16} color="#ef4444" strokeWidth={2.5} />
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                            {p.risk && (
+                                                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: p.risk.includes('High') ? '#ef4444' : '#f59e0b', whiteSpace: 'nowrap' }}>
+                                                    {p.risk}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            </div>
+        )
+    }
+
+    const projectGroups = [
+        { title: 'Client Projects', data: filteredProjects.filter(p => p.clients !== 'Internal MMB') },
+        { title: 'Internal Projects', data: filteredProjects.filter(p => p.clients === 'Internal MMB') }
+    ].filter(g => g.data.length > 0)
+
     return (
         <div className="ys-page">
             {/* Header */}
@@ -314,7 +488,7 @@ function YourSchedule() {
                                 <BarChart3 size={14} /> Gantt
                             </button>
                         </div>
-                        
+
                         {view === 'gantt' && (
                             <>
                                 <select className="admin-filter-select" style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }} value={viewMode} onChange={e => setViewMode(e.target.value)}>
@@ -327,9 +501,9 @@ function YourSchedule() {
                                 </button>
                             </>
                         )}
-                        <button 
-                            onClick={() => fetchProjects(true)} 
-                            disabled={isLoading} 
+                        <button
+                            onClick={() => fetchProjects(true)}
+                            disabled={isLoading}
                             className={`admin-refresh-btn ${isLoading ? 'spinning' : ''}`}
                             style={{ padding: '8px', borderRadius: '50%' }}
                             title="Refresh Schedule"
@@ -384,6 +558,18 @@ function YourSchedule() {
                             </option>
                         ))}
                     </select>
+
+                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--gray-600)', marginLeft: 8 }}>Status:</span>
+                    <select
+                        className="ys-select"
+                        value={statusFilter}
+                        onChange={e => setStatusFilter(e.target.value)}
+                        style={{ minWidth: 120 }}
+                    >
+                        <option value="all">All Statuses</option>
+                        <option value="active">Active Only</option>
+                        <option value="done">Done / Canceled</option>
+                    </select>
                 </div>
             </div>
 
@@ -428,149 +614,163 @@ function YourSchedule() {
                 ) : (
                     <>
                         {/* Desktop View */}
-                        <div className="card desktop-only" style={{ overflow: 'hidden' }}>
-                            <div className="admin-table-wrap">
-                                <table className="admin-table">
-                                    <thead>
-                                        <tr>
-                                            <th style={{ width: 40 }}>#</th>
-                                            <th>Project</th>
-                                            <th>Client</th>
-                                            <th>Role</th>
-                                            <th>Brief</th>
-                                            <th>DL Illustrator</th>
-                                            <th>DL Editor</th>
-                                            <th>Status</th>
-                                            <th>Risk</th>
-                                            <th>Notes</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {filteredProjects.map((p, index) => {
-                                            const isIll = matchesUser(p.illustrator, userName)
-                                            const isEd = matchesUser(p.editor, userName)
-                                            const roleLabel = isIll && isEd ? 'Both' : isIll ? 'Illustrator' : 'Editor'
-                                            const statusColor = getTaskColor(p.projectStatus, p.risk, p.projectName, index) || '#9ca3af'
-                                            return (
-                                                <tr key={p.rowIndex}>
-                                                    <td style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>{p.no}</td>
-                                                    <td style={{ fontWeight: 600, whiteSpace: 'nowrap', minWidth: 180 }}>{p.projectName}</td>
-                                                    <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.clients || '—'}</td>
-                                                    <td>
-                                                        <span className={`ys-role-badge ${isIll ? 'ys-role-ill' : 'ys-role-ed'}`}>
-                                                            {roleLabel}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        {p.briefLinks ? (
-                                                            <a href={p.briefLinks} target="_blank" rel="noopener noreferrer" className="ys-brief-chip">
-                                                                <ExternalLink size={11} />
-                                                                {p.briefLinksLabel || 'Open'}
-                                                            </a>
-                                                        ) : '—'}
-                                                    </td>
-                                                    <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlIllustrator || '—'}</td>
-                                                    <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlEditor || '—'}</td>
-                                                    <td>
-                                                        {p.projectStatus ? (
-                                                            <span className="ys-status-badge" style={{ color: statusColor, borderColor: statusColor + '33', background: statusColor + '11' }}>
-                                                                {p.projectStatus}
-                                                            </span>
-                                                        ) : '—'}
-                                                    </td>
-                                                    <td>
-                                                        {p.risk ? (
-                                                            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: p.risk.includes('High') ? '#ef4444' : '#f59e0b' }}>
-                                                                {p.risk}
-                                                            </span>
-                                                        ) : '—'}
-                                                    </td>
-                                                    <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                                                        title={p.projectNotes}>
-                                                        {p.projectNotes || '—'}
-                                                    </td>
+                        <div className="desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+                            {projectGroups.map(group => (
+                                <div key={group.title} className="card" style={{ overflow: 'hidden' }}>
+                                    <div style={{ padding: 'var(--space-4)', background: 'var(--gray-50)', borderBottom: '1px solid var(--gray-200)', fontWeight: 600, color: 'var(--gray-800)', fontSize: '0.95rem' }}>
+                                        {group.title}
+                                    </div>
+                                    <div className="admin-table-wrap">
+                                        <table className="admin-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style={{ width: 80 }}>#</th>
+                                                    <th>Project</th>
+                                                    <th>Client</th>
+                                                    <th>Role</th>
+                                                    <th>Brief</th>
+                                                    <th>DL Illustrator</th>
+                                                    <th>DL Editor</th>
+                                                    <th>Status</th>
+                                                    <th>Risk</th>
+                                                    <th>Notes</th>
                                                 </tr>
-                                            )
-                                        })}
-                                    </tbody>
-                                </table>
-                                {filteredProjects.length === 0 && (
-                                    <div className="ys-empty" style={{ padding: 'var(--space-8)' }}>
-                                        <Inbox size={40} style={{ color: 'var(--gray-300)' }} />
-                                        <p>No projects match the current filter</p>
+                                            </thead>
+                                            <tbody>
+                                                {group.data.map((p, index) => {
+                                                    const isIll = matchesUser(p.illustrator, userName)
+                                                    const isEd = matchesUser(p.editor, userName)
+                                                    const roleLabel = isIll && isEd ? 'Both' : isIll ? 'Illustrator' : 'Editor'
+                                                    const statusColor = getTaskColor(p.projectStatus, p.risk, p.projectName, index) || '#9ca3af'
+                                                    return (
+                                                        <tr key={p.rowIndex}>
+                                                            <td style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>{p.no}</td>
+                                                            <td style={{ fontWeight: 600, whiteSpace: 'nowrap', minWidth: 180 }}>{p.projectName}</td>
+                                                            <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.clients || '—'}</td>
+                                                            <td>
+                                                                <span className={`ys-role-badge ${isIll ? 'ys-role-ill' : 'ys-role-ed'}`}>
+                                                                    {roleLabel}
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                {p.briefLinks ? (
+                                                                    <a href={p.briefLinks} target="_blank" rel="noopener noreferrer" className="ys-brief-chip">
+                                                                        <ExternalLink size={11} />
+                                                                        {p.briefLinksLabel || 'Open'}
+                                                                    </a>
+                                                                ) : '—'}
+                                                            </td>
+                                                            <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlIllustrator || '—'}</td>
+                                                            <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlEditor || '—'}</td>
+                                                            <td>
+                                                                {p.projectStatus ? (
+                                                                    <span className="ys-status-badge" style={{ color: statusColor, borderColor: statusColor + '33', background: statusColor + '11' }}>
+                                                                        {p.projectStatus}
+                                                                    </span>
+                                                                ) : '—'}
+                                                            </td>
+                                                            <td>
+                                                                {p.risk ? (
+                                                                    <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: p.risk.includes('High') ? '#ef4444' : '#f59e0b' }}>
+                                                                        {p.risk}
+                                                                    </span>
+                                                                ) : '—'}
+                                                            </td>
+                                                            <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                                                title={p.projectNotes}>
+                                                                {p.projectNotes || '—'}
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                })}
+                                            </tbody>
+                                        </table>
                                     </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Mobile View */}
-                        <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                            {filteredProjects.map((p, index) => {
-                                const isIll = matchesUser(p.illustrator, userName)
-                                const isEd = matchesUser(p.editor, userName)
-                                const roleLabel = isIll && isEd ? 'Both' : isIll ? 'Illustrator' : 'Editor'
-                                const statusColor = getTaskColor(p.projectStatus, p.risk, p.projectName, index) || '#9ca3af'
-                                
-                                return (
-                                    <div key={p.rowIndex} style={{ background: '#ffffff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                                            <div>
-                                                <div style={{ color: 'var(--gray-500)', fontSize: '0.7rem', fontWeight: 700, marginBottom: '4px' }}>#{p.no} {p.clients ? `• ${p.clients}` : ''}</div>
-                                                <div style={{ fontWeight: 600, color: 'var(--gray-900)', fontSize: '0.95rem', lineHeight: 1.3, marginBottom: '4px' }}>{p.projectName}</div>
-                                                {p.projectNotes && (
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)', fontStyle: 'italic' }}>"{p.projectNotes}"</div>
-                                                )}
-                                            </div>
-                                            <span className={`ys-role-badge ${isIll ? 'ys-role-ill' : 'ys-role-ed'}`} style={{ flexShrink: 0, marginLeft: '8px' }}>
-                                                {roleLabel}
-                                            </span>
-                                        </div>
-                                        
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '12px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-                                            <div style={{ flex: '1 1 auto', minWidth: '80px' }}>
-                                                <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>DL Illustrator</div>
-                                                <div style={{ color: '#334155', fontWeight: '600', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{p.dlIllustrator || '—'}</div>
-                                            </div>
-                                            <div style={{ flex: '1 1 auto', minWidth: '80px' }}>
-                                                <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>DL Editor</div>
-                                                <div style={{ color: '#334155', fontWeight: '600', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{p.dlEditor || '—'}</div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                                                {p.projectStatus ? (
-                                                    <span className="ys-status-badge" style={{ color: statusColor, borderColor: statusColor + '33', background: statusColor + '11', padding: '3px 10px', fontSize: '0.7rem' }}>
-                                                        {p.projectStatus}
-                                                    </span>
-                                                ) : <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>No status</span>}
-                                                
-                                                {p.risk && (
-                                                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: p.risk.includes('High') ? '#ef4444' : '#f59e0b', background: p.risk.includes('High') ? '#fef2f2' : '#fffbeb', padding: '3px 8px', borderRadius: '4px', border: `1px solid ${p.risk.includes('High') ? '#fecaca' : '#fde68a'}` }}>
-                                                        {p.risk}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            
-                                            {p.briefLinks ? (
-                                                <a href={p.briefLinks} target="_blank" rel="noopener noreferrer" className="ys-brief-chip" style={{ background: 'white', border: '1px solid #cbd5e1' }}>
-                                                    <ExternalLink size={12} />
-                                                    {p.briefLinksLabel || 'Brief'}
-                                                </a>
-                                            ) : null}
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                            
+                                </div>
+                            ))}
                             {filteredProjects.length === 0 && (
-                                <div className="ys-empty" style={{ padding: 'var(--space-8)' }}>
+                                <div className="card ys-empty" style={{ padding: 'var(--space-8)', overflow: 'hidden' }}>
                                     <Inbox size={40} style={{ color: 'var(--gray-300)' }} />
                                     <p>No projects match the current filter</p>
                                 </div>
                             )}
                         </div>
-                    </>
+
+                        {/* Mobile View */}
+                            <div className="mobile-only" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+                                {projectGroups.map(group => (
+                                    <div key={group.title} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+                                        <div style={{ fontWeight: 600, color: 'var(--gray-800)', fontSize: '1.05rem', padding: '0 var(--space-2)', borderBottom: '1px solid var(--gray-200)', paddingBottom: '8px' }}>
+                                            {group.title}
+                                        </div>
+                                        {group.data.map((p, index) => {
+                                            const isIll = matchesUser(p.illustrator, userName)
+                                            const isEd = matchesUser(p.editor, userName)
+                                            const roleLabel = isIll && isEd ? 'Both' : isIll ? 'Illustrator' : 'Editor'
+                                            const statusColor = getTaskColor(p.projectStatus, p.risk, p.projectName, index) || '#9ca3af'
+
+                                            return (
+                                                <div key={p.rowIndex} style={{ background: '#ffffff', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                                        <div>
+                                                            <div style={{ color: 'var(--gray-500)', fontSize: '0.7rem', fontWeight: 700, marginBottom: '4px' }}>#{p.no} {p.clients ? `• ${p.clients}` : ''}</div>
+                                                            <div style={{ fontWeight: 600, color: 'var(--gray-900)', fontSize: '0.95rem', lineHeight: 1.3, marginBottom: '4px' }}>{p.projectName}</div>
+                                                            {p.projectNotes && (
+                                                                <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)', fontStyle: 'italic' }}>"{p.projectNotes}"</div>
+                                                            )}
+                                                        </div>
+                                                        <span className={`ys-role-badge ${isIll ? 'ys-role-ill' : 'ys-role-ed'}`} style={{ flexShrink: 0, marginLeft: '8px' }}>
+                                                            {roleLabel}
+                                                        </span>
+                                                    </div>
+
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '12px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                                                        <div style={{ flex: '1 1 auto', minWidth: '80px' }}>
+                                                            <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>DL Illustrator</div>
+                                                            <div style={{ color: '#334155', fontWeight: '600', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{p.dlIllustrator || '—'}</div>
+                                                        </div>
+                                                        <div style={{ flex: '1 1 auto', minWidth: '80px' }}>
+                                                            <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#64748b', fontWeight: '700', marginBottom: '4px' }}>DL Editor</div>
+                                                            <div style={{ color: '#334155', fontWeight: '600', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{p.dlEditor || '—'}</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
+                                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                                            {p.projectStatus ? (
+                                                                <span className="ys-status-badge" style={{ color: statusColor, borderColor: statusColor + '33', background: statusColor + '11', padding: '3px 10px', fontSize: '0.7rem' }}>
+                                                                    {p.projectStatus}
+                                                                </span>
+                                                            ) : <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>No status</span>}
+
+                                                            {p.risk && (
+                                                                <span style={{ fontSize: '0.7rem', fontWeight: 700, color: p.risk.includes('High') ? '#ef4444' : '#f59e0b', background: p.risk.includes('High') ? '#fef2f2' : '#fffbeb', padding: '3px 8px', borderRadius: '4px', border: `1px solid ${p.risk.includes('High') ? '#fecaca' : '#fde68a'}` }}>
+                                                                    {p.risk}
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {p.briefLinks ? (
+                                                            <a href={p.briefLinks} target="_blank" rel="noopener noreferrer" className="ys-brief-chip" style={{ background: 'white', border: '1px solid #cbd5e1' }}>
+                                                                <ExternalLink size={12} />
+                                                                {p.briefLinksLabel || 'Brief'}
+                                                            </a>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                ))}
+
+                                {filteredProjects.length === 0 && (
+                                    <div className="card ys-empty" style={{ padding: 'var(--space-8)' }}>
+                                        <Inbox size={40} style={{ color: 'var(--gray-300)' }} />
+                                        <p>No projects match the current filter</p>
+                                    </div>
+                                )}
+                            </div>
+                        </>
                 )}
             </div>
 

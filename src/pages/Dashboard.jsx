@@ -19,6 +19,9 @@ import { RESOURCES } from './Resources'
 import { DEFAULT_EDITORS } from '../components/ProgressForm'
 import UpcomingDeadlines from '../components/UpcomingDeadlines'
 import AttendanceCard from '../components/AttendanceCard'
+import YourSchedule from './YourSchedule'
+
+const APPS_SCRIPT_URL = '/api/exec'
 
 const QUICK_ACCESS = [
     {
@@ -58,6 +61,7 @@ const QUICK_ACCESS = [
 function Dashboard() {
     const navigate = useNavigate()
     const [greeting, setGreeting] = useState('Welcome back')
+    const [employeeCount, setEmployeeCount] = useState(DEFAULT_EDITORS.length)
     const userRole = localStorage.getItem('userRole') || 'video_editor'
 
     useEffect(() => {
@@ -67,11 +71,31 @@ function Dashboard() {
         else setGreeting('Good Evening')
     }, [])
 
+    useEffect(() => {
+        const fetchEmployees = async () => {
+            try {
+                const cache = localStorage.getItem('ewo_employees')
+                if (cache) {
+                    setEmployeeCount(JSON.parse(cache).length)
+                }
+                const res = await fetch(`${APPS_SCRIPT_URL}?action=getEmployeeList`)
+                const json = await res.json()
+                if (json.success && json.data?.employees) {
+                    setEmployeeCount(json.data.employees.length)
+                    localStorage.setItem('ewo_employees', JSON.stringify(json.data.employees))
+                }
+            } catch (err) {
+                console.error("Failed to fetch employee list", err)
+            }
+        }
+        fetchEmployees()
+    }, [])
+
     // Auto-computed stats
     const STATS = [
         { label: 'Wiki Articles', value: WIKI_ARTICLES.length, icon: BookOpen, color: 'stat-icon-purple', roleRestricted: true },
         { label: 'Resources', value: RESOURCES.length, icon: Layers, color: 'stat-icon-orange', roleRestricted: true },
-        { label: 'Team Members', value: DEFAULT_EDITORS.length, icon: Users, color: 'stat-icon-blue', roleRestricted: false }
+        { label: 'Team Members', value: employeeCount, icon: Users, color: 'stat-icon-blue', roleRestricted: false }
     ]
 
     const filteredStats = STATS.filter(stat => userRole === 'illustrator' ? !stat.roleRestricted : true)
@@ -108,23 +132,27 @@ function Dashboard() {
             {/* Attendance Section */}
             <AttendanceCard />
 
-            {/* Stats Overview */}
-            <div className="stat-grid">
-                {filteredStats.map((stat) => (
-                    <Card key={stat.label} className="stat-card">
-                        <CardBody>
-                            <div className="stat-card-body">
-                                <div className={`stat-icon-wrapper ${stat.color}`}>
-                                    <stat.icon size={24} />
+            <div className="dashboard-main-content">
+                <YourSchedule isWidget={true} />
+                
+                {/* Stats Overview */}
+                <div className="stat-grid">
+                    {filteredStats.map((stat) => (
+                        <Card key={stat.label} className="stat-card">
+                            <CardBody>
+                                <div className="stat-card-body">
+                                    <div className={`stat-icon-wrapper ${stat.color}`}>
+                                        <stat.icon size={24} />
+                                    </div>
+                                    <div>
+                                        <div className="stat-value">{stat.value}</div>
+                                        <div className="stat-label">{stat.label}</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div className="stat-value">{stat.value}</div>
-                                    <div className="stat-label">{stat.label}</div>
-                                </div>
-                            </div>
-                        </CardBody>
-                    </Card>
-                ))}
+                            </CardBody>
+                        </Card>
+                    ))}
+                </div>
             </div>
 
             {/* Quick Access Top Row */}

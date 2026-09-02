@@ -35,21 +35,7 @@ function AttendanceCard() {
     const DEFAULT_CLIENTS = [
         'Alex', 'Allan', 'Amanda', 'Angelo', 'Bashar', 'Bryan', 'Jordan', 'Jorge', 'Julia', 'Kristin', 'Michael', 'Ryan', 'Simon', 'Wing', 'Yannick', 'Zheng', 'Internal'
     ];
-    const DEFAULT_EDITORS = ['Zayn', 'Dadan', 'Faqih'];
-    const DEFAULT_ILLUSTRATORS = ['Vanda', 'Rosdiana', 'Dayah'];
-
-    // Employee setup dropdown
     const userRole = localStorage.getItem('userRole') || 'video_editor';
-    const isIllustrator = userRole === 'illustrator';
-    const defaultEmployeeList = isIllustrator ? DEFAULT_ILLUSTRATORS : DEFAULT_EDITORS;
-    const customEmployeeStorageKey = isIllustrator ? 'customIllustrators' : 'customEditors';
-    const [customEmployees, setCustomEmployees] = useState(() => {
-        const saved = localStorage.getItem(customEmployeeStorageKey);
-        if (!saved) return [];
-        const parsed = JSON.parse(saved);
-        return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : [];
-    });
-    const employeeList = [...defaultEmployeeList, ...customEmployees];
 
     const [customClients, setCustomClients] = useState(() => {
         const saved = localStorage.getItem('customClients');
@@ -61,8 +47,7 @@ function AttendanceCard() {
     });
     const clientList = [...DEFAULT_CLIENTS, ...customClients];
 
-    const [userName, setUserName] = useState(localStorage.getItem('userName') || '');
-    const [isEditingName, setIsEditingName] = useState(false); // Locked for logged-in user
+    const userName = localStorage.getItem('userName') || 'User';
 
     // Cache all projects for autocomplete
     const [allProjects, setAllProjects] = useState([]);
@@ -186,19 +171,6 @@ function AttendanceCard() {
 
     const formatTime = (dateObj) => {
         return dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-    };
-
-    const handleSaveName = () => {
-        if (userName.trim()) {
-            localStorage.setItem('lastUsedEditor', userName.trim());
-            // Add to custom if not in list
-            if (!employeeList.includes(userName.trim())) {
-                const updatedCustom = [...customEmployees, userName.trim()];
-                setCustomEmployees(updatedCustom);
-                localStorage.setItem(customEmployeeStorageKey, JSON.stringify(updatedCustom));
-            }
-            setIsEditingName(false);
-        }
     };
 
     const handleClientsChange = (newSelectedClients) => {
@@ -347,7 +319,12 @@ function AttendanceCard() {
 
         let computedDuration = '0.00';
         if (clockInTime) {
-            const inTimeObj = new Date(clockInTime);
+            let inTimeObj = new Date(clockInTime);
+            if (isNaN(inTimeObj.getTime()) || inTimeObj.getFullYear() < 2020) {
+                const today = new Date();
+                const parsed = new Date(`${today.toDateString()} ${clockInTime}`);
+                if (!isNaN(parsed.getTime())) inTimeObj = parsed;
+            }
             if (!isNaN(inTimeObj.getTime())) {
                 const diff = (now.getTime() - inTimeObj.getTime()) / (1000 * 60 * 60);
                 if (!isNaN(diff) && diff >= 0) {
@@ -410,51 +387,6 @@ function AttendanceCard() {
         return hours > 9 || (hours === 9 && minutes > 15);
     };
 
-    if (isEditingName) {
-        return (
-            <Card className="attendance-card" style={{ marginBottom: 'var(--space-6)' }}>
-                <CardBody>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', flexWrap: 'wrap' }}>
-                        <div style={{ flex: 1, minWidth: '200px' }}>
-                            <h3 style={{ margin: '0 0 var(--space-2)' }}>Employee Setup</h3>
-                            <p style={{ margin: 0, color: 'var(--gray-500)', fontSize: 'var(--text-sm)' }}>
-                                Please enter your name first so we can track your attendance correctly.
-                            </p>
-                        </div>
-                        <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center' }}>
-                            <div style={{ width: '250px' }}>
-                                <SearchableDropdown
-                                    value={userName}
-                                    onChange={setUserName}
-                                    options={employeeList}
-                                    placeholder="Select or add your name"
-                                    allowCustom={true}
-                                />
-                            </div>
-                            <button
-                                onClick={handleSaveName}
-                                disabled={!userName.trim()}
-                                style={{
-                                    padding: 'var(--space-2) var(--space-4)',
-                                    borderRadius: 'var(--radius-md)',
-                                    background: 'var(--primary-500)',
-                                    color: 'white',
-                                    border: 'none',
-                                    cursor: userName.trim() ? 'pointer' : 'not-allowed',
-                                    fontWeight: 600,
-                                    fontSize: 'var(--text-sm)',
-                                    opacity: userName.trim() ? 1 : 0.6
-                                }}
-                            >
-                                Save Name
-                            </button>
-                        </div>
-                    </div>
-                </CardBody>
-            </Card>
-        );
-    }
-
     return (
         <>
             <Card className="attendance-card" style={{ marginBottom: 'var(--space-6)' }}>
@@ -469,12 +401,6 @@ function AttendanceCard() {
                                     <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 700, color: 'var(--gray-900)', lineHeight: 1.2 }}>
                                         Hello, {userName}!
                                     </h3>
-                                    <button
-                                        onClick={() => setIsEditingName(true)}
-                                        style={{ background: 'white', border: '1px solid var(--gray-200)', color: 'var(--gray-600)', cursor: 'pointer', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '20px', fontWeight: 600, transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}
-                                    >
-                                        Edit
-                                    </button>
                                 </div>
                                 <div style={{ fontSize: '0.85rem', color: 'var(--gray-500)', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 500 }}>
                                     <Clock size={14} /> Schedule: 09:00 AM - 06:00 PM
@@ -497,7 +423,12 @@ function AttendanceCard() {
                                         <div style={{ fontSize: '0.75rem', color: sessionDate !== getTodayKey() ? 'var(--orange-500)' : 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: sessionDate !== getTodayKey() ? 'rgba(255, 152, 0, 0.1)' : 'var(--success-bg)', padding: '4px 10px', borderRadius: '20px' }}>
                                             <CheckCircle2 size={13} />
                                             {(() => {
-                                                const inTimeObj = new Date(clockInTime);
+                                                let inTimeObj = new Date(clockInTime);
+                                                if (isNaN(inTimeObj.getTime()) || inTimeObj.getFullYear() < 2020) {
+                                                    const today = new Date();
+                                                    const parsed = new Date(`${today.toDateString()} ${clockInTime}`);
+                                                    if (!isNaN(parsed.getTime())) inTimeObj = parsed;
+                                                }
                                                 const timeStr = formatTime(inTimeObj);
 
                                                 if (sessionDate !== getTodayKey()) {

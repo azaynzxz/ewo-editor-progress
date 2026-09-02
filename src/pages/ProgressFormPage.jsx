@@ -430,7 +430,12 @@ function ProgressFormPage() {
 
                             let computedDuration = '0.00'
                             if (attendanceData.clockInTime) {
-                                const inTimeObj = new Date(attendanceData.clockInTime)
+                                let inTimeObj = new Date(attendanceData.clockInTime)
+                                if (isNaN(inTimeObj.getTime()) || inTimeObj.getFullYear() < 2020) {
+                                    const today = new Date()
+                                    const parsed = new Date(`${today.toDateString()} ${attendanceData.clockInTime}`)
+                                    if (!isNaN(parsed.getTime())) inTimeObj = parsed
+                                }
                                 if (!isNaN(inTimeObj.getTime())) {
                                     const diff = (now.getTime() - inTimeObj.getTime()) / (1000 * 60 * 60)
                                     if (!isNaN(diff) && diff >= 0) computedDuration = diff.toFixed(2)
