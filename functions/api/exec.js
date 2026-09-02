@@ -43,9 +43,7 @@ export async function onRequest(context) {
     };
     
     if (!isGet) {
-        // Clone the request to read its body securely
-        const clonedRequest = request.clone();
-        init.body = clonedRequest.body;
+        init.body = await request.text();
     }
     
     // Create new headers without Host/Origin to let fetch set them natively
