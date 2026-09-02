@@ -220,8 +220,14 @@ function YourSchedule() {
             .filter(p => p.dlIllustrator && p.dlEditor)
             .map(p => {
                 const start = new Date(p.dlIllustrator)
+                start.setHours(0, 0, 0, 0)
                 let end = new Date(p.dlEditor)
-                if (end <= start) end = new Date(start.getTime() + 86400000)
+                end.setHours(23, 59, 59, 999)
+                
+                if (end <= start) {
+                    end = new Date(start.getTime())
+                    end.setHours(23, 59, 59, 999)
+                }
                 const color = getStatusColor(p.projectStatus)
                 return {
                     id: String(p.rowIndex),
