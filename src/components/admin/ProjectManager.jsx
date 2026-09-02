@@ -214,7 +214,7 @@ function SyncStatusBar({ syncState }) {
 }
 
 // ========== ADD PROJECT FORM ==========
-function AddProjectForm({ onSubmit, onCancel }) {
+function AddProjectForm({ onSubmit, onCancel, illustratorsList = DEFAULT_ILLUSTRATORS, editorsList = DEFAULT_EDITORS }) {
     const [form, setForm] = useState({
         projectName: '', illustrator: [], editor: [], briefLinks: '',
         clients: '', dlIllustrator: '', dlEditor: '', projectNotes: '', risk: '',
@@ -245,11 +245,11 @@ function AddProjectForm({ onSubmit, onCancel }) {
                 </div>
                 <div className="pm-field">
                     <label>Illustrator</label>
-                    <MultiSelectDropdown selectedItems={form.illustrator} onChange={val => set('illustrator', val)} options={DEFAULT_ILLUSTRATORS} placeholder="Select illustrators" />
+                    <MultiSelectDropdown selectedItems={form.illustrator} onChange={val => set('illustrator', val)} options={illustratorsList} placeholder="Select illustrators" />
                 </div>
                 <div className="pm-field">
                     <label>Editor</label>
-                    <MultiSelectDropdown selectedItems={form.editor} onChange={val => set('editor', val)} options={DEFAULT_EDITORS} placeholder="Select editors" />
+                    <MultiSelectDropdown selectedItems={form.editor} onChange={val => set('editor', val)} options={editorsList} placeholder="Select editors" />
                 </div>
                 <div className="pm-field">
                     <label>Brief Links</label>
@@ -338,6 +338,33 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
     const [showAddForm, setShowAddForm] = useState(false)
     const [deleteConfirm, setDeleteConfirm] = useState(null)
     const [statusFilter, setStatusFilter] = useState('')
+    
+    // Dynamic roles from EmployeeManager API
+    const [editorsList, setEditorsList] = useState(DEFAULT_EDITORS)
+    const [illustratorsList, setIllustratorsList] = useState(DEFAULT_ILLUSTRATORS)
+
+    useEffect(() => {
+        const fetchEmps = async () => {
+            try {
+                const res = await fetch('/api/exec', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'getEmployees' })
+                })
+                const result = await res.json()
+                if (result.success && result.data) {
+                    const active = result.data.filter(e => e.status === 'Active')
+                    const eds = active.filter(e => e.role === 'Video Editor' || e.role === 'Admin').map(e => e.name)
+                    const ills = active.filter(e => e.role === 'Illustrator').map(e => e.name)
+                    if (eds.length > 0) setEditorsList(eds)
+                    if (ills.length > 0) setIllustratorsList(ills)
+                }
+            } catch (err) {
+                console.error('Failed to fetch dynamic employee roles', err)
+            }
+        }
+        fetchEmps()
+    }, [])
     const [ganttFullscreen, setGanttFullscreen] = useState(false)
 
     const filtered = useMemo(() => {
@@ -471,6 +498,8 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
                 <AddProjectForm
                     onSubmit={(data) => { onAdd(data); setShowAddForm(false) }}
                     onCancel={() => setShowAddForm(false)}
+                    editorsList={editorsList}
+                    illustratorsList={illustratorsList}
                 />
             )}
 
@@ -527,7 +556,7 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
                                         <td style={{ fontSize: 'var(--text-xs)', minWidth: 160 }}>
                                             <EditableMultiSelectCell
                                                 value={p.illustrator}
-                                                options={DEFAULT_ILLUSTRATORS}
+                                                options={illustratorsList}
                                                 placeholder="Illustrators..."
                                                 onSave={val => handleInlineUpdate(p.rowIndex, 'illustrator', val)}
                                             />
@@ -535,7 +564,7 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
                                         <td style={{ fontSize: 'var(--text-xs)', minWidth: 160 }}>
                                             <EditableMultiSelectCell
                                                 value={p.editor}
-                                                options={DEFAULT_EDITORS}
+                                                options={editorsList}
                                                 placeholder="Editors..."
                                                 onSave={val => handleInlineUpdate(p.rowIndex, 'editor', val)}
                                             />
