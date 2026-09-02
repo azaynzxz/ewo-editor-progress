@@ -792,13 +792,13 @@ select.input {
 
 /* Upcoming Deadlines Table */
 .upcoming-table {
-  overflow: hidden;
+  overflow-x: auto;
   background: var(--gray-50);
 }
 
 .upcoming-header {
   display: grid;
-  grid-template-columns: 1fr 70px 110px 40px 86px 24px;
+  grid-template-columns: minmax(150px, 1fr) 90px 110px 40px 86px 24px;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   background: white;
@@ -809,15 +809,17 @@ select.input {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   align-items: center;
+  min-width: 550px;
 }
 
 .upcoming-header-compact {
-  grid-template-columns: 1fr 70px 86px 24px;
+  grid-template-columns: minmax(150px, 1fr) 90px 86px 24px;
+  min-width: 400px;
 }
 
 .upcoming-row {
   display: grid;
-  grid-template-columns: 1fr 70px 110px 40px 86px 24px;
+  grid-template-columns: minmax(150px, 1fr) 90px 110px 40px 86px 24px;
   gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--gray-100);
@@ -825,10 +827,12 @@ select.input {
   cursor: pointer;
   transition: all 0.15s ease;
   align-items: center;
+  min-width: 550px;
 }
 
 .upcoming-row-compact {
-  grid-template-columns: 1fr 70px 86px 24px;
+  grid-template-columns: minmax(150px, 1fr) 90px 86px 24px;
+  min-width: 400px;
 }
 
 .upcoming-row:last-child {
