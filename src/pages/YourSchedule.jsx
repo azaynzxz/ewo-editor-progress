@@ -393,8 +393,8 @@ function YourSchedule() {
                         )}
                     </div>
                 ) : (
-                    <div style={{ overflow: 'auto' }}>
-                        <table className="ys-table">
+                    <div className="admin-table-wrap">
+                        <table className="admin-table">
                             <thead>
                                 <tr>
                                     <th style={{ width: 40 }}>#</th>
@@ -418,8 +418,8 @@ function YourSchedule() {
                                     return (
                                         <tr key={p.rowIndex}>
                                             <td style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>{p.no}</td>
-                                            <td style={{ fontWeight: 600 }}>{p.projectName}</td>
-                                            <td style={{ fontSize: 'var(--text-xs)' }}>{p.clients || '—'}</td>
+                                            <td style={{ fontWeight: 600, whiteSpace: 'nowrap', minWidth: 180 }}>{p.projectName}</td>
+                                            <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.clients || '—'}</td>
                                             <td>
                                                 <span className={`ys-role-badge ${isIll ? 'ys-role-ill' : 'ys-role-ed'}`}>
                                                     {roleLabel}
