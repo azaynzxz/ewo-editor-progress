@@ -3,54 +3,10 @@ import { List, RefreshCw, Copy, Check, ExternalLink, Users, Maximize2, Minimize2
 import { Gantt, ViewMode } from 'gantt-task-react'
 import 'gantt-task-react/dist/index.css'
 import { fetchAllSheetsProjects } from '../utils/projectFetcher'
+import { CustomTaskListHeader, CustomTaskListTable, CustomTooltip, getTaskColor } from '../utils/ganttUtils'
 
 const APPS_SCRIPT_URL = '/api/exec'
 const CACHE_KEY = 'ewo_upcoming_deadlines'
-
-const ROW_COLORS = [
-    '#3b82f6', // blue
-    '#10b981', // green
-    '#f59e0b', // amber
-    '#8b5cf6', // purple
-    '#ec4899', // pink
-    '#0ea5e9', // sky
-    '#14b8a6', // teal
-    '#f43f5e', // rose
-]
-
-const CustomTaskListHeader = ({ headerHeight, fontFamily, fontSize }) => {
-    return (
-        <div style={{ height: headerHeight, fontFamily, fontSize, display: 'flex', alignItems: 'center', paddingLeft: '16px', borderBottom: '1px solid #e5e7eb', fontWeight: 600, color: '#4b5563', background: '#f9fafb', borderRight: '1px solid #e5e7eb' }}>
-            Project Name
-        </div>
-    );
-};
-
-const CustomTaskListTable = ({ rowHeight, rowWidth, tasks, fontFamily, fontSize }) => {
-    return (
-        <div style={{ borderRight: '1px solid #e5e7eb' }}>
-            {tasks.map(t => {
-                if (t.id === 'today-bounds-fix') return null;
-                return (
-                    <div key={t.id} style={{ height: rowHeight, width: rowWidth, fontFamily, fontSize: '13px', display: 'flex', alignItems: 'center', paddingLeft: '16px', paddingRight: '8px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={t.projectName}>
-                        {t.projectName}
-                    </div>
-                );
-            })}
-        </div>
-    );
-};
-
-const CustomTooltip = ({ task, fontSize, fontFamily }) => {
-    return (
-        <div style={{ backgroundColor: 'white', padding: '12px', border: '1px solid #e5e7eb', borderRadius: '6px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', minWidth: '180px' }}>
-            <b style={{ fontSize: '14px', fontFamily, color: '#111827' }}>{task.projectName}</b>
-            <div style={{ fontSize: '12px', fontFamily, color: '#6b7280', marginTop: '4px' }}>
-                {task.start.toLocaleDateString()} - {task.end.toLocaleDateString()}
-            </div>
-        </div>
-    )
-};
 
 function UpcomingDeadlines({ compact = false }) {
     const [projects, setProjects] = useState(() => {
@@ -146,8 +102,7 @@ function UpcomingDeadlines({ compact = false }) {
                     end = new Date(start.getTime())
                     end.setHours(23, 59, 59, 999)
                 }
-                const isDone = (p.projectStatus || '').toLowerCase() === 'done'
-                const color = isDone ? '#10b981' : (p.risk || '').includes('High') ? '#ef4444' : ROW_COLORS[i % ROW_COLORS.length]
+                const color = getTaskColor(p.projectStatus, p.risk, p.projectName, i)
                 return {
                     id: `dl-${i}`, 
                     name: '',
