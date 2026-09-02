@@ -7,7 +7,7 @@ import Toast from '../components/Toast'
 import SearchableDropdown from '../components/SearchableDropdown'
 
 // CONFIGURATION - UPDATE THIS WITH YOUR APPS SCRIPT WEB APP URL
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
+const APPS_SCRIPT_URL = '/api/exec'
 
 const ALASAN_OPTIONS = [
     { value: 'Cuti Sakit', label: 'Cuti Sakit' },

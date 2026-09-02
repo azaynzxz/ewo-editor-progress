@@ -9,7 +9,7 @@ import UpcomingDeadlines from '../components/UpcomingDeadlines'
 import Toast from '../components/Toast'
 
 // CONFIGURATION - UPDATE THIS WITH YOUR APPS SCRIPT WEB APP URL
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
+const APPS_SCRIPT_URL = '/api/exec'
 
 // Helper: get today's date as YYYY-MM-DD in local timezone (consistent key for localStorage)
 const getTodayKey = () => {

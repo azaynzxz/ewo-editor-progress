@@ -12,6 +12,7 @@ The EWO Editor Hub is an internal management portal for video editors, illustrat
 -   **Authentication**: Custom implementation checking `Employee List` via `Code.gs`. Upon successful login (`LoginPage.jsx`), user data (`userName`, `userEmail`, `userRole`, and `loginTimestamp`) is persisted into standard `localStorage`.
 -   **Session Security**: Managed by `ProtectedRoute.jsx`. Sessions expire after 30 days based on `loginTimestamp` logic. Legacy role-selection mechanisms have been fully purged from the codebase.
 -   **Data Storage (Frontend)**: Highly dependent on `localStorage` for forms state resilience, autocomplete caching (`ewo_all_projects_cache`), custom client entries, and auth credentials.
+-   **API Proxy & Edge Caching**: To hide the Google Apps Script URL from the frontend and prevent network waterfalls, the project uses a **Cloudflare Pages Function** (`functions/api/exec.js`) as a proxy endpoint (`/api/exec`). This proxy aggressively caches all `GET` requests using Cloudflare's Edge Cache for 5 minutes (`s-maxage=300`). Frontend components can bypass this cache and force a fresh fetch by appending `&_refresh=true` to their queries. `POST` requests are never cached.
 
 ## Folder Tree Structure
 ```text

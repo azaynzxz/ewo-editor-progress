@@ -5,7 +5,7 @@ import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import Modal from '../ui/Modal';
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec';
+const APPS_SCRIPT_URL = '/api/exec';
 
 function EmployeeManager() {
     const [employees, setEmployees] = useState([]);

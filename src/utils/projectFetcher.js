@@ -1,25 +1,42 @@
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
+const APPS_SCRIPT_URL = '/api/exec'
 
-export async function fetchAllSheetsProjects() {
+export async function fetchAllSheetsProjects(forceRefresh = false) {
     try {
+        if (!forceRefresh) {
+            const cached = localStorage.getItem('ewo_all_projects_cache')
+            const sheets = localStorage.getItem('ewo_available_sheets')
+            if (cached && sheets) {
+                return {
+                    projects: JSON.parse(cached),
+                    availableSheets: JSON.parse(sheets),
+                    success: true,
+                    isCached: true
+                }
+            }
+        }
+        
         // 1. Fetch current month sheet first to get list of available sheets
-        const res = await fetch(`${APPS_SCRIPT_URL}?action=getAdminProjects`)
+        const res = await fetch(`${APPS_SCRIPT_URL}?action=getAdminProjects${forceRefresh ? '&_refresh=true' : ''}`)
         const json = await res.json()
+        
         if (!json.success) throw new Error(json.message || 'Failed to fetch initial sheet')
         
         let allProjects = json.data?.projects || []
-        const currentSheetName = json.data?.sheetName
+        const currentSheetName = json.data?.sheetName || json.data?.currentSheet
         const availableSheets = json.data?.availableSheets || []
         
         // Mark each project with its source sheet name
         allProjects = allProjects.map(p => ({ ...p, sourceSheet: currentSheetName }))
         
+        // Save available sheets to cache
+        localStorage.setItem('ewo_available_sheets', JSON.stringify(availableSheets))
+
         // 2. Fetch all other sheets in parallel (tolerant to individual failures)
         const otherSheets = availableSheets.filter(s => s !== currentSheetName)
         if (otherSheets.length > 0) {
             const fetchPromises = otherSheets.map(async (sheetName) => {
                 try {
-                    const r = await fetch(`${APPS_SCRIPT_URL}?action=getAdminProjects&month=${encodeURIComponent(sheetName)}`)
+                    const r = await fetch(`${APPS_SCRIPT_URL}?action=getAdminProjects&month=${encodeURIComponent(sheetName)}${forceRefresh ? '&_refresh=true' : ''}`)
                     const resJson = await r.json()
                     if (resJson.success && resJson.data?.projects) {
                         return resJson.data.projects.map(p => ({ ...p, sourceSheet: sheetName }))

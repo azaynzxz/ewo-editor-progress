@@ -7,7 +7,7 @@ import jsPDF from 'jspdf'
 import '../styles/script-editor.css'
 import Toast from '../components/Toast'
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
+const APPS_SCRIPT_URL = '/api/exec'
 
 const EditorMarkup = memo(({ html, onUpdate, onSelection, onClick, updateVersion, textSize }) => {
     const timeoutRef = useRef(null);

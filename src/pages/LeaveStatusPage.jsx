@@ -3,7 +3,7 @@ import { ClipboardList, Clock, CheckCircle2, XCircle, AlertCircle, Calendar, Ref
 import { motion, AnimatePresence } from 'framer-motion'
 import { PageHeader } from '../components/layout'
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
+const APPS_SCRIPT_URL = '/api/exec'
 
 function LeaveStatusPage() {
     const userName = localStorage.getItem('lastUsedEditor') || localStorage.getItem('userName') || ''
@@ -32,7 +32,7 @@ function LeaveStatusPage() {
         setError(null)
 
         try {
-            const url = `${APPS_SCRIPT_URL}?action=getLeaveStatus&name=${encodeURIComponent(userName)}`
+            const url = `${APPS_SCRIPT_URL}?action=getLeaveStatus&name=${encodeURIComponent(userName)}${forceRefresh ? '&_refresh=true' : ''}`
             const response = await fetch(url)
             const result = await response.json()
 

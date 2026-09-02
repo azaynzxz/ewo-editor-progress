@@ -9,7 +9,7 @@ import EmployeeManager from '../components/admin/EmployeeManager'
 import DailyReportModal from '../components/DailyReportModal'
 import { fetchAllSheetsProjects } from '../utils/projectFetcher'
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
+const APPS_SCRIPT_URL = '/api/exec'
 
 const TABS = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -62,10 +62,10 @@ function AdminPage() {
     const [loadingReportProjects, setLoadingReportProjects] = useState(false)
 
     // Fetch helpers
-    const fetchOverview = useCallback(async () => {
+    const fetchOverview = useCallback(async (forceRefresh = false) => {
         setOverviewLoading(true)
         try {
-            const res = await fetch(`${APPS_SCRIPT_URL}?action=getAdminOverview`)
+            const res = await fetch(`${APPS_SCRIPT_URL}?action=getAdminOverview${forceRefresh ? '&_refresh=true' : ''}`)
             const json = await res.json()
             if (json.success) setOverviewData(json.data)
         } catch (err) {
@@ -74,10 +74,10 @@ function AdminPage() {
         setOverviewLoading(false)
     }, [])
 
-    const fetchAttendance = useCallback(async (date) => {
+    const fetchAttendance = useCallback(async (date, forceRefresh = false) => {
         setAttendanceLoading(true)
         try {
-            const res = await fetch(`${APPS_SCRIPT_URL}?action=getAdminAttendance&date=${encodeURIComponent(date)}`)
+            const res = await fetch(`${APPS_SCRIPT_URL}?action=getAdminAttendance&date=${encodeURIComponent(date)}${forceRefresh ? '&_refresh=true' : ''}`)
             const json = await res.json()
             if (json.success) setAttendance(json.data.attendance || [])
         } catch (err) {
@@ -86,7 +86,7 @@ function AdminPage() {
         setAttendanceLoading(false)
     }, [])
 
-    const fetchProgress = useCallback(async (filters) => {
+    const fetchProgress = useCallback(async (filters, forceRefresh = false) => {
         setProgressLoading(true)
         try {
             const params = new URLSearchParams({ action: 'getAdminProgress' })
@@ -94,6 +94,7 @@ function AdminPage() {
             if (filters.endDate) params.set('endDate', filters.endDate)
             if (filters.editor) params.set('editor', filters.editor)
             if (filters.client) params.set('client', filters.client)
+            if (forceRefresh) params.set('_refresh', 'true')
             const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`)
             const json = await res.json()
             if (json.success) setProgress(json.data.progress || [])
@@ -103,11 +104,12 @@ function AdminPage() {
         setProgressLoading(false)
     }, [])
 
-    const fetchLeaves = useCallback(async (status) => {
+    const fetchLeaves = useCallback(async (status, forceRefresh = false) => {
         setLeavesLoading(true)
         try {
             const params = new URLSearchParams({ action: 'getAdminLeaves' })
             if (status) params.set('status', status)
+            if (forceRefresh) params.set('_refresh', 'true')
             const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`)
             const json = await res.json()
             if (json.success) setLeaves(json.data.leaves || [])
@@ -117,11 +119,12 @@ function AdminPage() {
         setLeavesLoading(false)
     }, [])
 
-    const fetchProjects = useCallback(async (month) => {
+    const fetchProjects = useCallback(async (month, forceRefresh = false) => {
         setProjectsLoading(true)
         try {
             const params = new URLSearchParams({ action: 'getAdminProjects' })
             if (month) params.set('month', month)
+            if (forceRefresh) params.set('_refresh', 'true')
             const res = await fetch(`${APPS_SCRIPT_URL}?${params.toString()}`)
             const json = await res.json()
             if (json.success) {
@@ -135,22 +138,22 @@ function AdminPage() {
         setProjectsLoading(false)
     }, [])
 
-    const fetchAll = useCallback(async () => {
+    const fetchAll = useCallback(async (forceRefresh = false) => {
         setRefreshing(true)
         await Promise.all([
-            fetchOverview(),
-            fetchAttendance(attendanceDate),
-            fetchProgress(progressFilters),
-            fetchLeaves(leaveStatusFilter),
-            fetchProjects(projectMonth),
-            fetchAllSheetsProjects(),
+            fetchOverview(forceRefresh),
+            fetchAttendance(attendanceDate, forceRefresh),
+            fetchProgress(progressFilters, forceRefresh),
+            fetchLeaves(leaveStatusFilter, forceRefresh),
+            fetchProjects(projectMonth, forceRefresh),
+            fetchAllSheetsProjects(forceRefresh),
         ])
         setInitialLoaded(true)
         setTimeout(() => setRefreshing(false), 300)
-    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [attendanceDate, progressFilters, leaveStatusFilter, projectMonth]) // eslint-disable-line react-hooks/exhaustive-deps
 
     // Fetch data when authenticated
-    useEffect(() => { if (isAuthed) fetchAll() }, [isAuthed]) // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { if (isAuthed) fetchAll(false) }, [isAuthed]) // eslint-disable-line react-hooks/exhaustive-deps
 
     // Re-fetch only when filters change
     useEffect(() => { if (initialLoaded) fetchAttendance(attendanceDate) }, [attendanceDate]) // eslint-disable-line
@@ -216,7 +219,7 @@ function AdminPage() {
 
     // Refresh = re-fetch everything
     const handleRefresh = async () => {
-        await fetchAll()
+        await fetchAll(true)
     }
 
     // ===== PROJECT CRUD (optimistic) =====

@@ -4,7 +4,7 @@ import { Gantt, ViewMode } from 'gantt-task-react'
 import 'gantt-task-react/dist/index.css'
 import { fetchAllSheetsProjects } from '../utils/projectFetcher'
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
+const APPS_SCRIPT_URL = '/api/exec'
 const CACHE_KEY = 'ewo_upcoming_deadlines'
 
 function UpcomingDeadlines({ compact = false }) {
@@ -26,10 +26,11 @@ function UpcomingDeadlines({ compact = false }) {
             return new Date(a.deadline) - new Date(b.deadline)
         })
 
-    const fetchProjects = async () => {
+    const fetchProjects = async (forceRefresh = false) => {
         setIsLoading(true)
         try {
-            const result = await fetchAllSheetsProjects()
+            const isForced = forceRefresh === true;
+            const result = await fetchAllSheetsProjects(isForced)
             if (result.success || result.projects?.length > 0) {
                 // Filter to only projects from the current month's sheet
                 const today = new Date()
@@ -130,7 +131,7 @@ function UpcomingDeadlines({ compact = false }) {
                                 <Maximize2 size={12} />
                             </button>
                         )}
-                        <button type="button" className="refresh-btn" onClick={fetchProjects} disabled={isLoading} aria-label="Refresh">
+                        <button type="button" className="refresh-btn" onClick={() => fetchProjects(true)} disabled={isLoading} aria-label="Refresh">
                             <RefreshCw size={14} className={isLoading ? 'spin' : ''} />
                         </button>
                     </div>

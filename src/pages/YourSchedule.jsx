@@ -6,7 +6,7 @@ import {
     ExternalLink, Maximize2, Minimize2, User
 } from 'lucide-react'
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZpWsJEOFlOQkDA55JyjV1q6CkpO37VNbFi7bxrJsB2LeheFwSrDQHbm_oR5D1hl0TKQ/exec'
+const APPS_SCRIPT_URL = '/api/exec'
 const CACHE_KEY = 'ewo_my_schedule'
 
 const STATUS_COLORS = {
@@ -99,10 +99,12 @@ function YourSchedule() {
         try { return localStorage.getItem('ewo_my_schedule_ts') || '' } catch { return '' }
     })
 
-    const fetchProjects = useCallback(async () => {
+    const fetchProjects = useCallback(async (forceRefresh = false) => {
         setIsLoading(true)
         try {
-            const result = await fetchAllSheetsProjects()
+            // Note: The UI's onClick passes an Event object, so check if it's explicitly true
+            const isForced = forceRefresh === true;
+            const result = await fetchAllSheetsProjects(isForced)
             if (result.success || result.projects?.length > 0) {
                 const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
                 localStorage.setItem('ewo_my_schedule_ts', now)
@@ -307,7 +309,7 @@ function YourSchedule() {
                             </button>
                         </>
                     )}
-                    <button onClick={fetchProjects} disabled={isLoading} className="ys-refresh-btn">
+                    <button onClick={() => fetchProjects(true)} disabled={isLoading} className="ys-refresh-btn">
                         <RefreshCw size={14} className={isLoading ? 'spin' : ''} />
                         {isLoading ? 'Fetching…' : 'Refresh'}
                     </button>
