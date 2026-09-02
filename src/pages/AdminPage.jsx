@@ -6,7 +6,6 @@ import ProgressLog from '../components/admin/ProgressLog'
 import LeaveManager from '../components/admin/LeaveManager'
 import ProjectManager from '../components/admin/ProjectManager'
 import EmployeeManager from '../components/admin/EmployeeManager'
-import AdminAuthGate from '../components/admin/AdminAuthGate'
 import DailyReportModal from '../components/DailyReportModal'
 import { fetchAllSheetsProjects } from '../utils/projectFetcher'
 
@@ -26,7 +25,11 @@ function todayStr() {
 }
 
 function AdminPage() {
-    const [isAuthed, setIsAuthed] = useState(() => sessionStorage.getItem('adminAuth') === 'true')
+    const [isAuthed] = useState(() => {
+        const rawRole = localStorage.getItem('userRoleRaw') || '';
+        const allowedAdmins = ['Sr. Video Editor', 'CEO', 'Finance', 'Sr. Illustrator'];
+        return allowedAdmins.includes(rawRole);
+    })
     const [activeTab, setActiveTab] = useState('overview')
     const [refreshing, setRefreshing] = useState(false)
 
@@ -154,14 +157,20 @@ function AdminPage() {
     useEffect(() => { if (initialLoaded) fetchProgress(progressFilters) }, [progressFilters]) // eslint-disable-line
     useEffect(() => { if (initialLoaded) fetchLeaves(leaveStatusFilter) }, [leaveStatusFilter]) // eslint-disable-line
 
-    // Auth gate — show PIN screen if not authenticated
+    // Strict role-based auth gate
     if (!isAuthed) {
-        return <AdminAuthGate onSuccess={() => setIsAuthed(true)} />
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column' }}>
+                <Shield size={48} color="#ef4444" style={{ marginBottom: '16px' }} />
+                <h2 style={{ color: '#111827', marginBottom: '8px' }}>Access Denied</h2>
+                <p style={{ color: '#6b7280' }}>You do not have permission to view the admin panel.</p>
+            </div>
+        )
     }
 
     const handleLogout = () => {
-        sessionStorage.removeItem('adminAuth')
-        setIsAuthed(false)
+        localStorage.clear()
+        window.location.href = '/login'
     }
 
     const getPreviousMonthSheet = (currentSheet, available) => {

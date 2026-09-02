@@ -10,7 +10,9 @@ import {
     CalendarDays,
     ClipboardList,
     GraduationCap,
-    FileText
+    FileText,
+    Shield,
+    LogOut
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -51,8 +53,20 @@ const QUICK_LINKS = [
 function Sidebar({ isOpen, onClose }) {
     const userRole = localStorage.getItem('userRole') || 'video_editor'
     const userName = localStorage.getItem('userName') || 'Employee'
+    const userRoleRaw = localStorage.getItem('userRoleRaw') || userRole.replace('_', ' ')
 
-    const filteredNavItems = NAV_ITEMS.filter(section => {
+    const allowedAdmins = ['Sr. Video Editor', 'CEO', 'Finance', 'Sr. Illustrator']
+    const isAdmin = allowedAdmins.includes(userRoleRaw)
+
+    const filteredNavItems = NAV_ITEMS.map(section => {
+        if (section.section === 'Main' && isAdmin) {
+            return {
+                ...section,
+                items: [...section.items, { path: '/admin', icon: Shield, label: 'Admin Panel' }]
+            }
+        }
+        return section
+    }).filter(section => {
         if (userRole === 'illustrator' && section.section === 'Resources') {
             return false
         }
@@ -133,37 +147,39 @@ function Sidebar({ isOpen, onClose }) {
 
                 {/* Switch Role Footer */}
                 <div className="sidebar-footer" style={{ padding: 'var(--space-4)', borderTop: '1px solid var(--gray-200)' }}>
-                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', margin: '0 0 var(--space-2)' }}>
-                        Logged in as: <strong style={{ textTransform: 'capitalize' }}>{userName}</strong> ({userRole.replace('_', ' ')})
-                    </p>
-                    <button
-                        onClick={() => {
-                            localStorage.clear();
-                            window.location.href = '/login';
-                        }}
-                        style={{
-                            width: '100%',
-                            padding: 'var(--space-2)',
-                            borderRadius: 'var(--radius-md)',
-                            border: '1px solid var(--gray-300)',
-                            background: 'transparent',
-                            color: '#dc2626',
-                            cursor: 'pointer',
-                            fontSize: 'var(--text-sm)',
-                            fontWeight: 600,
-                            transition: 'background 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#fef2f2'
-                            e.currentTarget.style.borderColor = '#fca5a5'
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent'
-                            e.currentTarget.style.borderColor = 'var(--gray-300)'
-                        }}
-                    >
-                        Log Out
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                            <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--gray-900)', margin: '0 0 2px 0', textTransform: 'capitalize' }}>
+                                {userName}
+                            </p>
+                            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', margin: 0 }}>
+                                {userRoleRaw}
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => {
+                                localStorage.clear();
+                                window.location.href = '/login';
+                            }}
+                            title="Log Out"
+                            style={{
+                                padding: 'var(--space-2)',
+                                borderRadius: 'var(--radius-md)',
+                                border: 'none',
+                                background: 'transparent',
+                                color: '#dc2626',
+                                cursor: 'pointer',
+                                transition: 'background 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = '#fef2f2' }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                        >
+                            <LogOut size={20} />
+                        </button>
+                    </div>
                 </div>
             </aside>
         </>
