@@ -326,17 +326,8 @@ function AdminPage() {
     return (
         <div className="admin-page">
             {/* Header */}
-            <div className="admin-header" style={{ position: 'relative' }}>
-                <button
-                    className={`admin-refresh-btn ${refreshing ? 'spinning' : ''}`}
-                    onClick={handleRefresh}
-                    disabled={refreshing}
-                    style={{ position: 'absolute', top: 'var(--space-5)', right: 'var(--space-5)', padding: '8px', borderRadius: '50%' }}
-                    title="Refresh All"
-                >
-                    <RefreshCw size={16} />
-                </button>
-                <div className="admin-header-content" style={{ paddingRight: '40px' }}>
+            <div className="admin-header">
+                <div className="admin-header-content">
                     <div>
                         <h1><Shield size={28} /> Admin Panel</h1>
                         <p>Monitor team activity, attendance, progress, and leave requests</p>
@@ -349,6 +340,15 @@ function AdminPage() {
                             style={{ background: '#2563eb', color: 'white', borderColor: '#2563eb' }}
                         >
                             {loadingReportProjects ? 'Loading…' : 'Daily Report'}
+                        </button>
+                        <button
+                            className={`admin-refresh-btn ${refreshing ? 'spinning' : ''}`}
+                            onClick={handleRefresh}
+                            disabled={refreshing}
+                            style={{ padding: '8px', borderRadius: '50%' }}
+                            title="Refresh All"
+                        >
+                            <RefreshCw size={16} />
                         </button>
                     </div>
                 </div>

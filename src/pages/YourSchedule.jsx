@@ -325,17 +325,8 @@ function YourSchedule() {
     return (
         <div className="ys-page">
             {/* Header */}
-            <div className="admin-header" style={{ marginBottom: 'var(--space-6)', position: 'relative' }}>
-                <button 
-                    onClick={() => fetchProjects(true)} 
-                    disabled={isLoading} 
-                    className={`admin-refresh-btn ${isLoading ? 'spinning' : ''}`}
-                    style={{ position: 'absolute', top: 'var(--space-5)', right: 'var(--space-5)', padding: '8px', borderRadius: '50%' }}
-                    title="Refresh Schedule"
-                >
-                    <RefreshCw size={16} />
-                </button>
-                <div className="admin-header-content" style={{ paddingRight: '40px' }}>
+            <div className="admin-header" style={{ marginBottom: 'var(--space-6)' }}>
+                <div className="admin-header-content">
                     <div>
                         <h1><CalendarDays size={24} /> Your Schedule</h1>
                         <p style={{ marginTop: 'var(--space-2)' }}>
@@ -361,11 +352,20 @@ function YourSchedule() {
                                     <option value={ViewMode.Week} style={{ color: 'black' }}>Week</option>
                                     <option value={ViewMode.Month} style={{ color: 'black' }}>Month</option>
                                 </select>
-                                <button onClick={() => setGanttFullscreen(true)} className="admin-refresh-btn" title="Fullscreen" style={{ padding: '8px' }}>
+                                <button onClick={() => setGanttFullscreen(true)} className="admin-refresh-btn" title="Fullscreen" style={{ padding: '8px', borderRadius: '50%' }}>
                                     <Maximize2 size={16} />
                                 </button>
                             </>
                         )}
+                        <button 
+                            onClick={() => fetchProjects(true)} 
+                            disabled={isLoading} 
+                            className={`admin-refresh-btn ${isLoading ? 'spinning' : ''}`}
+                            style={{ padding: '8px', borderRadius: '50%' }}
+                            title="Refresh Schedule"
+                        >
+                            <RefreshCw size={16} />
+                        </button>
                     </div>
                 </div>
             </div>

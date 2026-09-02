@@ -22,8 +22,31 @@ const STATUS_COLORS = {
 }
 
 function getStatusColor(status) {
-    return STATUS_COLORS[(status || '').toLowerCase()] || '#9ca3af'
+    return STATUS_COLORS[(status || '').toLowerCase()] || '#3b82f6'
 }
+
+const CustomTaskListHeader = ({ headerHeight, fontFamily, fontSize }) => {
+    return (
+        <div style={{ height: headerHeight, fontFamily, fontSize, display: 'flex', alignItems: 'center', paddingLeft: '16px', borderBottom: '1px solid #e5e7eb', fontWeight: 600, color: '#4b5563', background: '#f9fafb', borderRight: '1px solid #e5e7eb' }}>
+            Project Name
+        </div>
+    );
+};
+
+const CustomTaskListTable = ({ rowHeight, rowWidth, tasks, fontFamily, fontSize }) => {
+    return (
+        <div style={{ borderRight: '1px solid #e5e7eb' }}>
+            {tasks.map(t => {
+                if (t.id === 'today-bounds-fix') return null;
+                return (
+                    <div key={t.id} style={{ height: rowHeight, width: rowWidth, fontFamily, fontSize: '13px', display: 'flex', alignItems: 'center', paddingLeft: '16px', paddingRight: '8px', borderBottom: '1px solid #e5e7eb', color: '#1f2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={t.name}>
+                        {t.name}
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
 
 // ========== EDITABLE CELL ==========
 function EditableCell({ value, onSave, style }) {
@@ -281,11 +304,13 @@ function GanttFullscreen({ tasks, viewMode, onClose }) {
             <div style={{ flex: 1, overflow: 'auto', padding: '0 var(--space-4) var(--space-4)' }}>
                 {tasks.length > 0 ? (
                     <Gantt
-                        tasks={tasks} viewMode={vm} listCellWidth=""
+                        tasks={tasks} viewMode={vm} listCellWidth="240px"
+                        TaskListHeader={CustomTaskListHeader}
+                        TaskListTable={CustomTaskListTable}
                         columnWidth={vm === ViewMode.Month ? 200 : vm === ViewMode.Week ? 100 : 50}
-                        barCornerRadius={4} barFill={65} fontSize="12"
+                        barCornerRadius={6} barFill={70} fontSize="12"
                         headerHeight={50} rowHeight={38}
-                        todayColor="rgba(59, 130, 246, 0.08)"
+                        todayColor="rgba(59, 130, 246, 0.2)"
                     />
                 ) : (
                     <div className="admin-empty"><Inbox size={40} /><p>No valid Gantt data</p></div>
@@ -310,12 +335,18 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
     }, [projects, statusFilter])
 
     const ganttTasks = useMemo(() => {
-        return filtered
+        let tasks = filtered
             .filter(p => p.dlIllustrator && p.dlEditor)
             .map(p => {
                 const start = new Date(p.dlIllustrator)
+                start.setHours(0, 0, 0, 0)
                 let end = new Date(p.dlEditor)
-                if (end <= start) end = new Date(start.getTime() + 86400000)
+                end.setHours(23, 59, 59, 999)
+                
+                if (end <= start) {
+                    end = new Date(start.getTime())
+                    end.setHours(23, 59, 59, 999)
+                }
                 const color = getStatusColor(p.projectStatus)
                 return {
                     id: String(p.rowIndex),
@@ -329,6 +360,25 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
                     },
                 }
             })
+            
+        if (tasks.length > 0) {
+            const now = new Date()
+            now.setHours(0,0,0,0)
+            tasks.push({
+                id: 'today-bounds-fix',
+                name: '',
+                start: now,
+                end: now,
+                type: 'task',
+                progress: 0,
+                isDisabled: true,
+                styles: { 
+                    backgroundColor: 'transparent', backgroundSelectedColor: 'transparent',
+                    progressColor: 'transparent', progressSelectedColor: 'transparent' 
+                }
+            })
+        }
+        return tasks
     }, [filtered])
 
     const statuses = useMemo(() => {
@@ -418,11 +468,13 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
                 <div style={{ padding: '0 var(--space-2) var(--space-4)', overflow: 'auto' }}>
                     {ganttTasks.length > 0 ? (
                         <Gantt
-                            tasks={ganttTasks} viewMode={viewMode} listCellWidth=""
+                            tasks={ganttTasks} viewMode={viewMode} listCellWidth="240px"
+                            TaskListHeader={CustomTaskListHeader}
+                            TaskListTable={CustomTaskListTable}
                             columnWidth={viewMode === ViewMode.Month ? 200 : viewMode === ViewMode.Week ? 100 : 50}
-                            barCornerRadius={4} barFill={65} fontSize="12"
+                            barCornerRadius={6} barFill={70} fontSize="12"
                             headerHeight={50} rowHeight={38}
-                            todayColor="rgba(59, 130, 246, 0.08)"
+                            todayColor="rgba(59, 130, 246, 0.2)"
                         />
                     ) : (
                         <div className="admin-empty"><Inbox size={40} /><p>No projects with valid dates for Gantt view</p></div>
