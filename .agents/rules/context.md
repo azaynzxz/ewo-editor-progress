@@ -1,7 +1,7 @@
 # Ewo Hub - Project Context
 
 ## Project Overview
-The Ewo Hub is an internal management portal for video editors, illustrators, and ads design teams. It serves as a unified workspace offering daily progress reporting, attendance logging (clock-in/out), schedule viewing, leave application, and team resources/wiki.
+The Ewo Hub is an internal management portal for video editors, illustrators, and ads design teams. It serves as a unified workspace offering daily progress reporting, attendance logging (clock-in/out), schedule viewing, leave application, team resources/wiki, and client moodboard guidelines.
 
 ## Tech Stack
 -   **Frontend**: React.js, Vite, React Router DOM, Framer Motion (for animations), Lucide React (for icons).
@@ -22,7 +22,9 @@ D:\Praktek\Progress Editor Ewo\
 │   └── Code.gs                 # The core backend logic (Google Apps Script). MUST NOT be ignored.
 ├── public/                     # Static assets (Favicons, PDFs, illustrations)
 │   ├── login-illustration.png  # Parallax hero image for LoginPage
-│   └── logo.jpg
+│   ├── logo.jpg
+│   └── moodboard/              # Client moodboard static reference assets
+│       └── images/             # Extracted reference images (image1.png - image19.png)
 ├── src/
 │   ├── components/
 │   │   ├── admin/              # Admin pages modules (LeaveManager, ProjectManager, ProgressLog, AttendancePanel)
@@ -32,21 +34,101 @@ D:\Praktek\Progress Editor Ewo\
 │   │   ├── ProgressForm.jsx
 │   │   └── UpcomingDeadlines.jsx
 │   ├── data/                   # Static data stores
+│   │   ├── lessons.json        # Learning courses & lesson curriculum data
+│   │   └── clientMoodboardData.js # Client moodboard schema & profiles database
 │   ├── hooks/                  # Global React hooks
 │   ├── pages/                  # Top-level application routes
 │   │   ├── AdminPage.jsx       # Admin dashboard & unified view for tables
+│   │   ├── ClientMoodboard.jsx # Client moodboard gallery, rules, specs & AI prompts
 │   │   ├── Dashboard.jsx       # User landing page with daily overview
 │   │   ├── LoginPage.jsx       # Custom-branded 2-pane authentication wall
 │   │   ├── ProgressFormPage.jsx# Daily tasks tracking submission UI
 │   │   └── (Other operational pages like Learn, Wiki, Resources, Schedule)
 │   ├── styles/                 # Master CSS stylesheets logically split by concern
 │   │   ├── variables.css       # Color palettes, spaces, radiuses, shadows
+│   │   ├── clientMoodboard.css # Client moodboard & anti-stretch gallery styles
 │   │   └── *.css               # Feature-specific stylesheets
 │   ├── utils/                  # Helper logic modules
 │   ├── App.jsx                 # Route declarations & AnimatePresence provider
 │   └── main.jsx                # React DOM Mount node
 └── vite.config.js              # Vite compiler config
 ```
+
+## Client Moodboard Module (`/client-moodboard`)
+
+### Overview
+The Client Moodboard serves as an interactive visual reference guide for illustrators and video editors at PT. MATA TERBUKA LEBAR. It provides client-specific character styles, background requirements, narrator ratios, turnaround deadlines, gore/sexual censorship rules, Gemini AI background prompts, scene generation spreadsheets, and video reference links.
+
+### How to Add More Client Data Later
+When new client briefs and moodboard references are finalized (e.g. for `Bryan`, `Christen`, `Damian`, `Dena`, `Lukas`, `Meisha`, `Bryian`, `Miguel`, `Patyrick`, or entirely new clients):
+
+1. **Add Reference Images**:
+   - Place all visual reference images into `public/moodboard/images/` (e.g., `bryan-char.png`, `bryan-bg1.png`, etc.).
+   - Standard image dimensions and non-standard sizes (e.g., ultra-wide panoramas, square icons, 16:9 shots) are automatically handled without stretching.
+
+2. **Update the Database in `src/data/clientMoodboardData.js`**:
+   Find the client entry in `CLIENTS_DATA` (or add a new object to the array) and configure:
+   ```javascript
+   {
+       id: 'bryan',                              // Unique lowercase slug
+       name: 'Bryan',                            // Client display name
+       channel: 'Bryan Channel',                 // Channel name (optional)
+       status: CLIENT_STATUS.ACTIVE,             // Switch from COMING_SOON to ACTIVE
+       badge: 'Anime 2D Cel',                    // Style tag badge
+       folderUrl: 'https://drive.google.com/...',// Client asset root folder
+       sampleDriveUrl: 'https://drive.google.com/...', // Video sample link
+       specs: {
+           characterStyle: '2D Cel Shading Anime',
+           backgroundStyle: 'Hand-painted 2D Background (No AI)',
+           narratorRequirement: 'Tidak Ada',
+           hasThumbnail: true,                   // true | false
+           projectDuration: '10 menit - 15 menit',
+           turnaroundTime: '7 Hari',
+           violenceGore: 'Diperbolehkan luka minim',
+           sexualContent: 'Sensor Kreatif Minimalis',
+           specialNotes: 'Catatan teknis khusus atau arahan ending.',
+           bgPrompt: 'Optional: prompt teks Gemini AI jika klien menggunakan background AI',
+           sheetUrl: 'Optional: link Google Sheet scene generation',
+           competitorRef: {                      // Optional competitor benchmark
+               title: 'Competitor Video Title',
+               channel: '@ChannelHandle',
+               url: 'https://youtube.com/...'
+           }
+       },
+       images: [
+           {
+               id: 'bryan-char',
+               src: '/moodboard/images/bryan-char.png',
+               category: 'character',            // 'character' | 'narrator' | 'background' | 'sample'
+               label: 'Karakter: 2D Cel Anime',
+               aspectRatio: 1.78,                // Width divided by Height (e.g. 1920/1080 = 1.78)
+               resolution: '1920 × 1080 px',
+               tag: '2D Cel Shading',
+               description: 'Penjelasan style lineart dan shading karakter.'
+           },
+           {
+               id: 'bryan-bg',
+               src: '/moodboard/images/bryan-bg.png',
+               category: 'background',
+               label: 'Background: Scene Utama',
+               aspectRatio: 1.78,
+               resolution: '1920 × 1080 px',
+               tag: 'Hand-painted',
+               description: 'Latar belakang dengan palet warna hangat.'
+           }
+       ]
+   }
+   ```
+3. **Automatic UI Propagation**:
+   - The UI automatically adds the client to the tab filter buttons, search index, specs matrix, AI prompt copy card, and anti-stretch gallery with zero component changes required!
+   - Ultra-wide reference strips (`aspectRatio > 2.2`) will automatically span across 2 grid columns for optimal legibility.
+   - All images are automatically wired to the full-resolution Interactive Lightbox Modal with zoom and arrow key navigation.
+
+### Non-Standard Image Presentation Standard
+To prevent visual distortion or stretching across varied image sizes:
+- All cards utilize `object-fit: contain` within framed containers with `background: #090d16`.
+- A blurred replica backdrop (`filter: blur(24px); opacity: 0.35`) provides depth without clipping actual reference content.
+- Native aspect ratios (`X:1`) and exact pixel dimensions are displayed on every card and in the lightbox viewer.
 
 ## Important Development Rules
 1. **Forms Validation**: Always lock inputs logically whenever the value comes from an authenticated user context (e.g., locking the editor name field using `userName`). 

@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { AnimatePresence } from 'framer-motion'
 import { Layout, ProtectedRoute } from './components/layout'
 import { PageWrapper } from './components/layout/PageWrapper'
-import { LoginPage, Dashboard, Wiki, Resources, Onboarding, ProgressFormPage, LeaveFormPage, LeaveStatusPage, AdminPage, YourSchedule, Learn, ScriptEditor } from './pages'
+import { LoginPage, Dashboard, Wiki, Resources, Onboarding, ProgressFormPage, LeaveFormPage, LeaveStatusPage, AdminPage, YourSchedule, Learn, ScriptEditor, ClientMoodboard } from './pages'
 import NotFoundPage from './pages/NotFoundPage'
 
 import './styles/variables.css'
@@ -12,6 +12,7 @@ import './styles/wiki.css'
 import './styles/dashboard.css'
 import './styles/admin.css'
 import './styles/learn.css'
+import './styles/clientMoodboard.css'
 import './styles/App.css'
 
 function AnimatedRoutes() {
@@ -66,6 +67,11 @@ function AnimatedRoutes() {
                         <Route path="/script-editor" element={
                             <PageWrapper>
                                 <ScriptEditor />
+                            </PageWrapper>
+                        } />
+                        <Route path="/client-moodboard" element={
+                            <PageWrapper>
+                                <ClientMoodboard />
                             </PageWrapper>
                         } />
 
