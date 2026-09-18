@@ -166,7 +166,7 @@ function AdminAuthGate({ onSuccess }) {
             sessionStorage.setItem('adminAuth', 'true')
             onSuccess()
         } else {
-            setError('PIN Salah! Silakan coba lagi.')
+            setError('Incorrect PIN. Please try again.')
             setShake(true)
             setTimeout(() => {
                 setShake(false)
@@ -180,21 +180,35 @@ function AdminAuthGate({ onSuccess }) {
     if (checkingStatus) {
         return (
             <div style={{
-                position: 'fixed', inset: 0, zIndex: 9999,
+                position: 'fixed', inset: 0, zIndex: 99999,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)',
+                background: 'radial-gradient(circle at 50% 20%, rgba(30, 41, 59, 0.95), #060911)',
+                backdropFilter: 'blur(16px)',
                 padding: 'var(--space-4)',
             }}>
                 <div style={{
-                    background: 'white', borderRadius: 'var(--radius-2xl)',
-                    padding: 'var(--space-8)', maxWidth: 380, width: '100%',
-                    textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+                    background: 'rgba(17, 24, 39, 0.85)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '24px',
+                    padding: '36px 28px', maxWidth: 380, width: '100%',
+                    textAlign: 'center',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
                 }}>
-                    <Loader2 size={36} color="var(--primary-600)" className="spin" style={{ margin: '0 auto var(--space-4)' }} />
-                    <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--gray-800)', margin: '0 0 6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '24px' }}>
+                        <img
+                            src="/logo.jpg"
+                            alt="EWO Logo"
+                            style={{ height: '36px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.15)' }}
+                        />
+                        <span style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '1px', color: '#f8fafc' }}>
+                            EWO HUB
+                        </span>
+                    </div>
+                    <Loader2 size={36} color="var(--primary-400, #60a5fa)" className="spin" style={{ margin: '0 auto 16px' }} />
+                    <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#f1f5f9', margin: '0 0 6px' }}>
                         Memeriksa Status Akun...
                     </h3>
-                    <p style={{ fontSize: '13px', color: 'var(--gray-500)', margin: 0 }}>
+                    <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>
                         Memverifikasi otorisasi di Employee Database
                     </p>
                 </div>
@@ -202,112 +216,285 @@ function AdminAuthGate({ onSuccess }) {
         )
     }
 
-    // 2. INACTIVE EMPLOYEE: Full lockdown & prominent security warning
+    // 2. INACTIVE EMPLOYEE: Full-screen lockdown with EWO Logo & one-click session purge
     if (userAccessState === 'inactive') {
+        const currentName = employeeInfo?.name || localStorage.getItem('userName') || 'Employee'
+        const currentEmail = employeeInfo?.email || localStorage.getItem('userEmail') || ''
+        const currentRole = employeeInfo?.role || localStorage.getItem('userRoleRaw') || 'Staff'
+
         return (
             <div style={{
-                position: 'fixed', inset: 0, zIndex: 9999,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(10px)',
-                padding: 'var(--space-4)',
+                position: 'fixed',
+                inset: 0,
+                zIndex: 99999,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'radial-gradient(circle at 50% 15%, rgba(239, 68, 68, 0.18) 0%, transparent 65%), radial-gradient(circle at 85% 85%, rgba(220, 38, 38, 0.08) 0%, transparent 50%), linear-gradient(180deg, #07090e 0%, #0d121f 100%)',
+                backdropFilter: 'blur(20px)',
+                padding: 'clamp(16px, 4vw, 32px)',
+                overflowY: 'auto',
+                boxSizing: 'border-box',
             }}>
                 <div style={{
-                    background: 'white',
-                    borderRadius: '24px',
-                    padding: '40px 32px',
-                    maxWidth: 460,
+                    background: 'rgba(15, 23, 42, 0.88)',
+                    backdropFilter: 'blur(28px) saturate(190%)',
+                    WebkitBackdropFilter: 'blur(28px) saturate(190%)',
+                    border: '1.5px solid rgba(239, 68, 68, 0.4)',
+                    borderRadius: '28px',
+                    padding: 'clamp(28px, 6vw, 44px) clamp(20px, 5vw, 36px)',
+                    maxWidth: '520px',
                     width: '100%',
                     textAlign: 'center',
-                    boxShadow: '0 25px 50px -12px rgba(220, 38, 38, 0.35)',
-                    border: '1.5px solid #fecaca',
+                    boxShadow: '0 30px 70px -15px rgba(0, 0, 0, 0.85), 0 0 50px -10px rgba(239, 68, 68, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+                    margin: 'auto',
+                    boxSizing: 'border-box',
+                    position: 'relative',
                 }}>
+                    {/* Header with EWO Logo & Subtitle */}
                     <div style={{
-                        width: 72, height: 72, borderRadius: '20px',
-                        background: '#fef2f2',
-                        border: '2px solid #fee2e2',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        margin: '0 auto 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '12px',
+                        marginBottom: '24px'
                     }}>
-                        <ShieldAlert size={36} color="#dc2626" />
+                        <img
+                            src="/logo.jpg"
+                            alt="EWO Hub Logo"
+                            style={{
+                                height: '40px',
+                                borderRadius: '10px',
+                                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+                                border: '1px solid rgba(255, 255, 255, 0.15)'
+                            }}
+                        />
+                        <div style={{ textAlign: 'left' }}>
+                            <div style={{
+                                fontSize: '13px',
+                                fontWeight: 800,
+                                letterSpacing: '1px',
+                                color: '#f8fafc',
+                                textTransform: 'uppercase'
+                            }}>
+                                EWO HUB
+                            </div>
+                            <div style={{
+                                fontSize: '10.5px',
+                                color: '#94a3b8',
+                                letterSpacing: '0.5px',
+                                fontWeight: 500
+                            }}>
+                                ADMIN GATEWAY
+                            </div>
+                        </div>
                     </div>
 
-                    <h2 style={{
-                        fontSize: '22px',
-                        fontWeight: 800,
-                        color: '#991b1b',
-                        margin: '0 0 8px',
-                        letterSpacing: '-0.3px',
-                    }}>
-                        Akses Ditolak: Akun Nonaktif
-                    </h2>
-
+                    {/* Concentric Pulsing Shield Icon */}
                     <div style={{
-                        display: 'inline-block',
-                        background: '#fee2e2',
-                        color: '#b91c1c',
-                        padding: '4px 12px',
-                        borderRadius: '20px',
-                        fontSize: '12px',
+                        position: 'relative',
+                        width: 80,
+                        height: 80,
+                        margin: '0 auto 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}>
+                        <div style={{
+                            position: 'absolute',
+                            inset: -8,
+                            borderRadius: '50%',
+                            background: 'radial-gradient(circle, rgba(239, 68, 68, 0.4) 0%, transparent 70%)',
+                            animation: 'securityPulse 2.4s ease-in-out infinite'
+                        }} />
+                        <div style={{
+                            width: 76,
+                            height: 76,
+                            borderRadius: '24px',
+                            background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.3), rgba(153, 27, 27, 0.15))',
+                            border: '1.5px solid rgba(248, 113, 113, 0.5)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 8px 30px rgba(239, 68, 68, 0.35)'
+                        }}>
+                            <ShieldAlert size={40} color="#f87171" />
+                        </div>
+                    </div>
+
+                    {/* Status Pill Badge */}
+                    <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: 'rgba(239, 68, 68, 0.15)',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        color: '#fca5a5',
+                        padding: '6px 14px',
+                        borderRadius: '30px',
+                        fontSize: '11px',
                         fontWeight: 700,
+                        letterSpacing: '0.8px',
                         textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
                         marginBottom: '16px',
                     }}>
-                        Status: Inactive
+                        <span style={{
+                            width: 6, height: 6, borderRadius: '50%',
+                            background: '#ef4444', display: 'inline-block',
+                            boxShadow: '0 0 8px #ef4444'
+                        }} />
+                        Account Inactive
                     </div>
 
-                    <p style={{
-                        fontSize: '14px',
-                        color: '#4b5563',
-                        lineHeight: 1.6,
-                        margin: '0 0 24px',
+                    {/* Heading */}
+                    <h2 style={{
+                        fontSize: 'clamp(20px, 4vw, 24px)',
+                        fontWeight: 800,
+                        color: '#ffffff',
+                        margin: '0 0 10px',
+                        letterSpacing: '-0.5px',
+                        lineHeight: 1.3,
                     }}>
-                        Akun Anda {employeeInfo?.name ? <strong>({employeeInfo.name})</strong> : ''} tercatat berstatus <strong>NONAKTIF</strong> di database karyawan. 
-                        Untuk melindungi keamanan data dan kerahasiaan perusahaan, seluruh akses ke sistem ini diblokir.
+                        Access Restricted
+                    </h2>
+
+                    <p style={{
+                        fontSize: '13.5px',
+                        color: '#cbd5e1',
+                        lineHeight: 1.6,
+                        margin: '0 0 20px',
+                    }}>
+                        This account is currently deactivated. Access to internal projects, schedules, and administrative tools has been paused.
                     </p>
 
+                    {/* Inset User Identity Card */}
                     <div style={{
-                        background: '#fef2f2',
-                        border: '1px solid #fca5a5',
-                        borderRadius: '12px',
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '16px',
+                        padding: '14px 18px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        margin: '0 0 20px',
+                        textAlign: 'left',
+                        boxSizing: 'border-box'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                            <div style={{
+                                width: 42,
+                                height: 42,
+                                borderRadius: '12px',
+                                background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(185, 28, 28, 0.15))',
+                                border: '1px solid rgba(239, 68, 68, 0.4)',
+                                color: '#fca5a5',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 800,
+                                fontSize: '16px',
+                                flexShrink: 0
+                            }}>
+                                {currentName[0]?.toUpperCase() || 'U'}
+                            </div>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                                <div style={{
+                                    color: '#ffffff',
+                                    fontWeight: 700,
+                                    fontSize: '14px',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis'
+                                }}>
+                                    {currentName}
+                                </div>
+                                <div style={{
+                                    color: '#94a3b8',
+                                    fontSize: '12px',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis'
+                                }}>
+                                    {currentEmail || currentRole}
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{
+                            background: 'rgba(239, 68, 68, 0.2)',
+                            border: '1px solid rgba(239, 68, 68, 0.45)',
+                            color: '#fca5a5',
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            letterSpacing: '0.5px',
+                            flexShrink: 0
+                        }}>
+                            INACTIVE
+                        </div>
+                    </div>
+
+                    {/* Explanatory Notice Callout */}
+                    <div style={{
+                        background: 'rgba(220, 38, 38, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        borderRadius: '14px',
                         padding: '12px 16px',
-                        marginBottom: '28px',
+                        marginBottom: '26px',
                         fontSize: '12.5px',
-                        color: '#991b1b',
+                        color: '#fca5a5',
                         textAlign: 'left',
                         lineHeight: 1.5,
                         display: 'flex',
-                        gap: '10px',
-                        alignItems: 'center',
+                        gap: '12px',
+                        alignItems: 'flex-start',
                     }}>
-                        <AlertTriangle size={18} color="#dc2626" style={{ flexShrink: 0 }} />
-                        <span>Silakan hubungi tim HR atau Administrator jika Anda merasa ada kesalahan.</span>
+                        <AlertTriangle size={18} color="#f87171" style={{ flexShrink: 0, marginTop: 2 }} />
+                        <div>
+                            <span>Please reach out to your team administrator or HR if you need this account reactivated.</span>
+                        </div>
                     </div>
 
+                    {/* Sign Out Button */}
                     <button
                         onClick={handlePurgeLogout}
                         style={{
                             width: '100%',
-                            padding: '12px 16px',
-                            background: '#dc2626',
-                            color: 'white',
+                            padding: '14px 20px',
+                            borderRadius: '14px',
+                            background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                            color: '#ffffff',
                             border: 'none',
-                            borderRadius: '10px',
-                            fontWeight: 600,
-                            fontSize: '14px',
+                            fontWeight: 700,
+                            fontSize: '14.5px',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '8px',
-                            transition: 'background 0.2s',
+                            gap: '10px',
+                            boxShadow: '0 8px 24px -4px rgba(220, 38, 38, 0.45)',
+                            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                         }}
-                        onMouseOver={e => e.currentTarget.style.background = '#b91c1c'}
-                        onMouseOut={e => e.currentTarget.style.background = '#dc2626'}
+                        onMouseOver={e => {
+                            e.currentTarget.style.transform = 'translateY(-1px)'
+                            e.currentTarget.style.boxShadow = '0 12px 30px -4px rgba(220, 38, 38, 0.6)'
+                        }}
+                        onMouseOut={e => {
+                            e.currentTarget.style.transform = 'translateY(0)'
+                            e.currentTarget.style.boxShadow = '0 8px 24px -4px rgba(220, 38, 38, 0.45)'
+                        }}
                     >
-                        <LogOut size={16} /> Keluar & Bersihkan Sesi
+                        <LogOut size={18} /> Sign Out
                     </button>
                 </div>
+
+                <style>{`
+                    @keyframes securityPulse {
+                        0%, 100% { transform: scale(1); opacity: 0.4; }
+                        50% { transform: scale(1.15); opacity: 0.8; }
+                    }
+                `}</style>
             </div>
         )
     }
@@ -316,40 +503,57 @@ function AdminAuthGate({ onSuccess }) {
     if (userAccessState === 'unauthorized') {
         return (
             <div style={{
-                position: 'fixed', inset: 0, zIndex: 9999,
+                position: 'fixed', inset: 0, zIndex: 99999,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)',
+                background: 'radial-gradient(circle at 50% 20%, rgba(30, 41, 59, 0.9), #060911)',
+                backdropFilter: 'blur(16px)',
                 padding: 'var(--space-4)',
             }}>
                 <div style={{
-                    background: 'white', borderRadius: '24px',
-                    padding: '40px 32px', maxWidth: 420, width: '100%',
-                    textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+                    background: 'rgba(15, 23, 42, 0.88)',
+                    backdropFilter: 'blur(24px)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: '24px',
+                    padding: '40px 32px', maxWidth: 440, width: '100%',
+                    textAlign: 'center',
+                    boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 40px -10px rgba(245, 158, 11, 0.15)',
                 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '20px' }}>
+                        <img
+                            src="/logo.jpg"
+                            alt="EWO Logo"
+                            style={{ height: '36px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.15)' }}
+                        />
+                        <span style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '1px', color: '#f8fafc' }}>
+                            EWO HUB
+                        </span>
+                    </div>
                     <div style={{
                         width: 64, height: 64, borderRadius: '20px',
-                        background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'rgba(245, 158, 11, 0.15)',
+                        border: '1.5px solid rgba(245, 158, 11, 0.4)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
                         margin: '0 auto 18px',
                     }}>
-                        <Shield size={32} color="#d97706" />
+                        <Shield size={32} color="#fbbf24" />
                     </div>
-                    <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--gray-900)', margin: '0 0 8px' }}>
-                        Akses Khusus Admin
+                    <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#ffffff', margin: '0 0 8px' }}>
+                        Admin Access Required
                     </h2>
-                    <p style={{ fontSize: '13.5px', color: 'var(--gray-600)', lineHeight: 1.5, margin: '0 0 24px' }}>
-                        Halaman ini hanya dapat diakses oleh peran kepemimpinan atau administrator (Sr. Video Editor, Sr. Illustrator, Finance, CEO).
+                    <p style={{ fontSize: '13.5px', color: '#94a3b8', lineHeight: 1.5, margin: '0 0 24px' }}>
+                        This section is restricted to team leads and administrators.
                     </p>
                     <button
                         onClick={() => navigate('/')}
                         style={{
                             width: '100%', padding: '12px',
-                            background: 'var(--primary-600)', color: 'white',
-                            border: 'none', borderRadius: '10px',
+                            background: 'var(--primary-600, #2563eb)', color: 'white',
+                            border: 'none', borderRadius: '12px',
                             fontWeight: 600, fontSize: '14px', cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                         }}
                     >
-                        <ArrowLeft size={16} /> Kembali ke Dashboard
+                        <ArrowLeft size={16} /> Back to Dashboard
                     </button>
                 </div>
             </div>
@@ -361,12 +565,12 @@ function AdminAuthGate({ onSuccess }) {
         <div style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 9999,
+            zIndex: 99999,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(15, 23, 42, 0.7)',
-            backdropFilter: 'blur(8px)',
+            background: 'radial-gradient(circle at 50% 20%, rgba(30, 41, 59, 0.9), #060911)',
+            backdropFilter: 'blur(16px)',
             padding: 'var(--space-4)',
         }}>
             <div style={{
@@ -376,7 +580,7 @@ function AdminAuthGate({ onSuccess }) {
                 maxWidth: 420,
                 width: '100%',
                 textAlign: 'center',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                 position: 'relative',
             }}>
                 <button
@@ -388,18 +592,37 @@ function AdminAuthGate({ onSuccess }) {
                         display: 'flex', alignItems: 'center', gap: 4,
                         fontSize: '12.5px', fontWeight: 500, padding: 4,
                     }}
-                    title="Kembali ke Dashboard"
+                    title="Back to Dashboard"
                 >
                     <ArrowLeft size={16} /> Dashboard
                 </button>
 
+                {/* EWO Logo in PIN View */}
                 <div style={{
-                    width: 64, height: 64, borderRadius: 'var(--radius-xl)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    marginBottom: '20px',
+                    marginTop: '4px'
+                }}>
+                    <img
+                        src="/logo.jpg"
+                        alt="EWO Logo"
+                        style={{ height: '36px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                    />
+                    <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '1px', color: 'var(--gray-800)' }}>
+                        EWO HUB
+                    </span>
+                </div>
+
+                <div style={{
+                    width: 56, height: 56, borderRadius: 'var(--radius-xl)',
                     background: 'linear-gradient(135deg, var(--gray-800), var(--gray-900))',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    margin: '0 auto var(--space-5)',
+                    margin: '0 auto var(--space-4)',
                 }}>
-                    <Shield size={28} color="white" />
+                    <Shield size={26} color="white" />
                 </div>
 
                 <h2 style={{
@@ -413,7 +636,7 @@ function AdminAuthGate({ onSuccess }) {
                     margin: '0 0 var(--space-6)',
                 }}>
                     <Lock size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                    Masukkan 6-digit PIN Keamanan Admin
+                    Enter your 6-digit PIN
                 </p>
 
                 <div
@@ -466,7 +689,7 @@ function AdminAuthGate({ onSuccess }) {
                 <p style={{
                     fontSize: 'var(--text-xs)', color: 'var(--gray-400)', margin: 0,
                 }}>
-                    PIN diverifikasi otomatis saat 6 digit terisi
+                    Auto-submits when complete
                 </p>
             </div>
 

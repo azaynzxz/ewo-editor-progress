@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, Loader2, Save, X, Eye, EyeOff, Shield, Search, Inbox } from 'lucide-react';
+import { Plus, Edit2, Trash2, Loader2, Save, X, Eye, EyeOff, Shield, Search, Inbox, AlertTriangle, UserCheck, UserX, Lock } from 'lucide-react';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import Modal from '../ui/Modal';
@@ -145,6 +145,47 @@ function EmployeeManager() {
         }
     };
 
+    const handleToggleStatus = async (emp) => {
+        const nextStatus = emp.status === 'Active' ? 'Inactive' : 'Active';
+        const confirmMsg = nextStatus === 'Inactive'
+            ? `Deactivate account for "${emp.name}"? This user will no longer be able to log in.`
+            : `Reactivate account for "${emp.name}"?`;
+
+        if (!window.confirm(confirmMsg)) return;
+
+        // Optimistic update
+        setEmployees(prev => prev.map(e => e.id === emp.id ? { ...e, status: nextStatus } : e));
+
+        try {
+            const response = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'updateEmployee',
+                    id: emp.id,
+                    no: emp.no,
+                    name: emp.name,
+                    role: emp.role,
+                    status: nextStatus,
+                    type: emp.type,
+                    joinDate: emp.joinDate,
+                    endProbation: emp.endProbation,
+                    email: emp.email,
+                    password: emp.password
+                })
+            });
+            const result = await response.json();
+            if (!result.success) {
+                fetchEmployees(); // revert
+                alert(result.message || 'Failed to update status');
+            }
+        } catch (error) {
+            console.error('Error toggling status:', error);
+            fetchEmployees(); // revert
+            alert('Connection error');
+        }
+    };
+
     const handleDelete = async (id) => {
         if (!window.confirm('Are you sure you want to delete this employee?')) return;
 
@@ -238,48 +279,65 @@ function EmployeeManager() {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredEmployees.map((emp) => (
-                                <tr key={emp.id}>
-                                    <td style={{ color: 'var(--gray-500)', whiteSpace: 'nowrap' }}>{emp.no}</td>
-                                    <td style={{ fontWeight: 600 }}>{emp.name}</td>
-                                    <td>
-                                        <span className={`admin-role-pill ${emp.role === 'Video Editor' ? 've' : 'ill'}`}>
-                                            {emp.role === 'Video Editor' ? 'VE' : emp.role === 'Illustrator' ? 'ILL' : emp.role}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <Badge color={emp.status === 'Active' ? 'success' : 'error'}>
-                                            {emp.status}
-                                        </Badge>
-                                    </td>
-                                    <td style={{ color: 'var(--gray-600)' }}>{emp.type}</td>
-                                    <td style={{ color: 'var(--gray-500)' }}>{emp.joinDate || '—'}</td>
-                                    <td style={{ color: 'var(--gray-500)' }}>{emp.endProbation || '—'}</td>
-                                    <td style={{ color: 'var(--gray-500)' }}>{emp.email}</td>
-                                    <td style={{ textAlign: 'right' }}>
-                                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
-                                            <Button
-                                                variant="ghost"
-                                                size="small"
-                                                onClick={() => handleOpenModal(emp)}
-                                                style={{ padding: '6px' }}
-                                                title="Edit"
+                            {filteredEmployees.map((emp) => {
+                                const isInactive = emp.status !== 'Active';
+                                return (
+                                    <tr key={emp.id} style={isInactive ? { background: '#fdf2f2', opacity: 0.85 } : undefined}>
+                                        <td style={{ color: 'var(--gray-500)', whiteSpace: 'nowrap' }}>{emp.no}</td>
+                                        <td style={{ fontWeight: 600, color: isInactive ? '#991b1b' : 'var(--gray-900)' }}>
+                                            {emp.name}
+                                        </td>
+                                        <td>
+                                            <span className={`admin-role-pill ${emp.role === 'Video Editor' ? 've' : 'ill'}`}>
+                                                {emp.role === 'Video Editor' ? 'VE' : emp.role === 'Illustrator' ? 'ILL' : emp.role}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <Badge
+                                                color={isInactive ? 'error' : 'success'}
+                                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
                                             >
-                                                <Edit2 size={14} />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="small"
-                                                onClick={() => handleDelete(emp.id)}
-                                                style={{ padding: '6px', color: 'var(--danger-600)' }}
-                                                title="Delete"
-                                            >
-                                                <Trash2 size={14} />
-                                            </Button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                                                {isInactive ? <><Lock size={11} /> Inactive</> : 'Active'}
+                                            </Badge>
+                                        </td>
+                                        <td style={{ color: 'var(--gray-600)' }}>{emp.type}</td>
+                                        <td style={{ color: 'var(--gray-500)' }}>{emp.joinDate || '—'}</td>
+                                        <td style={{ color: 'var(--gray-500)' }}>{emp.endProbation || '—'}</td>
+                                        <td style={{ color: 'var(--gray-500)' }}>{emp.email}</td>
+                                        <td style={{ textAlign: 'right' }}>
+                                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="small"
+                                                    onClick={() => handleToggleStatus(emp)}
+                                                    style={{ padding: '6px', color: isInactive ? 'var(--success-600, #16a34a)' : 'var(--warning-600, #d97706)' }}
+                                                    title={isInactive ? 'Reactivate Account' : 'Deactivate Account'}
+                                                >
+                                                    {isInactive ? <UserCheck size={15} /> : <UserX size={15} />}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="small"
+                                                    onClick={() => handleOpenModal(emp)}
+                                                    style={{ padding: '6px' }}
+                                                    title="Edit Employee"
+                                                >
+                                                    <Edit2 size={14} />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="small"
+                                                    onClick={() => handleDelete(emp.id)}
+                                                    style={{ padding: '6px', color: 'var(--danger-600)' }}
+                                                    title="Delete Employee"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </Button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 )}
@@ -345,6 +403,26 @@ function EmployeeManager() {
                             </select>
                         </div>
                     </div>
+
+                    {formData.status === 'Inactive' && (
+                        <div style={{
+                            background: '#fef2f2',
+                            border: '1px solid #fca5a5',
+                            borderRadius: '8px',
+                            padding: '10px 14px',
+                            display: 'flex',
+                            gap: '10px',
+                            alignItems: 'center',
+                            color: '#991b1b',
+                            fontSize: '12.5px',
+                            lineHeight: 1.45
+                        }}>
+                            <AlertTriangle size={16} color="#dc2626" style={{ flexShrink: 0 }} />
+                            <span>
+                                Setting this account to <strong>Inactive</strong> will disable login and portal access for this user.
+                            </span>
+                        </div>
+                    )}
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
                         <div>

@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Shield, RefreshCw, BarChart3, Users, FileText, CalendarRange, FolderKanban, LogOut } from 'lucide-react'
+import { Shield, RefreshCw, BarChart3, Users, FileText, CalendarRange, FolderKanban, LogOut, Lock } from 'lucide-react'
 import OverviewStats from '../components/admin/OverviewStats'
 import AttendancePanel from '../components/admin/AttendancePanel'
 import ProgressLog from '../components/admin/ProgressLog'
 import LeaveManager from '../components/admin/LeaveManager'
 import ProjectManager from '../components/admin/ProjectManager'
 import EmployeeManager from '../components/admin/EmployeeManager'
+import AdminAuthGate from '../components/admin/AdminAuthGate'
 import DailyReportModal from '../components/DailyReportModal'
 import { fetchAllSheetsProjects } from '../utils/projectFetcher'
 
@@ -29,6 +30,9 @@ function AdminPage() {
         const rawRole = localStorage.getItem('userRoleRaw') || '';
         const allowedAdmins = ['Sr. Video Editor', 'CEO', 'Finance', 'Sr. Illustrator'];
         return allowedAdmins.includes(rawRole);
+    })
+    const [isAdminUnlocked, setIsAdminUnlocked] = useState(() => {
+        return sessionStorage.getItem('adminAuth') === 'true';
     })
     const [activeTab, setActiveTab] = useState('overview')
     const [refreshing, setRefreshing] = useState(false)
@@ -145,17 +149,17 @@ function AdminPage() {
 
     // Fast initial load: only Overview stats and today's attendance for the landing view
     useEffect(() => {
-        if (isAuthed) {
+        if (isAuthed && isAdminUnlocked) {
             fetchOverview(false)
             fetchAttendance(attendanceDate, false)
             setLoadedTabs(prev => ({ ...prev, overview: true, attendance: true }))
             setInitialLoaded(true)
         }
-    }, [isAuthed]) // eslint-disable-line react-hooks/exhaustive-deps
+    }, [isAuthed, isAdminUnlocked]) // eslint-disable-line react-hooks/exhaustive-deps
 
     // Lazy load tab data on tab switch
     useEffect(() => {
-        if (!isAuthed || !initialLoaded) return
+        if (!isAuthed || !isAdminUnlocked || !initialLoaded) return
         if (activeTab === 'attendance' && !loadedTabs.attendance) {
             fetchAttendance(attendanceDate, false)
             setLoadedTabs(prev => ({ ...prev, attendance: true }))
@@ -176,7 +180,12 @@ function AdminPage() {
     useEffect(() => { if (initialLoaded && loadedTabs.progress) fetchProgress(progressFilters) }, [progressFilters]) // eslint-disable-line
     useEffect(() => { if (initialLoaded && loadedTabs.leaves) fetchLeaves(leaveStatusFilter) }, [leaveStatusFilter]) // eslint-disable-line
 
-    // Strict role-based auth gate
+    // PIN & Inactive Employee gate via AdminAuthGate
+    if (!isAdminUnlocked) {
+        return <AdminAuthGate onSuccess={() => setIsAdminUnlocked(true)} />
+    }
+
+    // Strict role-based auth gate fallback
     if (!isAuthed) {
         return (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', flexDirection: 'column' }}>
@@ -371,6 +380,17 @@ function AdminPage() {
                             title="Refresh All"
                         >
                             <RefreshCw size={16} />
+                        </button>
+                        <button
+                            className="admin-refresh-btn"
+                            onClick={() => {
+                                sessionStorage.removeItem('adminAuth');
+                                setIsAdminUnlocked(false);
+                            }}
+                            style={{ padding: '8px', borderRadius: '50%' }}
+                            title="Kunci Akses Admin (Lock)"
+                        >
+                            <Lock size={16} />
                         </button>
                     </div>
                 </div>

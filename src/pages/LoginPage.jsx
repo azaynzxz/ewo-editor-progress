@@ -37,8 +37,8 @@ function LoginPage() {
         const params = new URLSearchParams(location.search);
         if (params.get('status') === 'inactive' || params.get('inactive') === 'true') {
             setInactiveAlert({
-                title: 'Akses Ditolak — Akun Karyawan Nonaktif',
-                message: 'Akun Anda tercatat berstatus Nonaktif (Inactive) di database karyawan. Akses ke EWO Hub diblokir untuk mencegah pihak tidak berwenang melihat data perusahaan. Hubungi Administrator atau HR.'
+                title: 'Account Inactive',
+                message: 'Your account has been deactivated. Please contact your administrator or HR to restore access.'
             });
         }
     }, [location.search]);
@@ -79,8 +79,8 @@ function LoginPage() {
             // Explicit inactive check from backend
             if (data.data?.isInactive || data.isInactive) {
                 setInactiveAlert({
-                    title: 'Akses Ditolak — Akun Karyawan Nonaktif',
-                    message: data.data?.message || data.message || 'Akun Anda dinonaktifkan (Status: Inactive). Anda tidak memiliki izin untuk masuk atau melihat data demi menjaga keamanan data perusahaan. Silakan hubungi Administrator atau HR.'
+                    title: 'Account Inactive',
+                    message: data.data?.message || data.message || 'Your account has been deactivated. Please contact HR or your administrator.'
                 });
                 return;
             }
@@ -91,8 +91,8 @@ function LoginPage() {
                 // Double check status safety
                 if (user.status && user.status.toLowerCase() !== 'active') {
                     setInactiveAlert({
-                        title: 'Akses Ditolak — Akun Karyawan Nonaktif',
-                        message: 'Akun Anda dinonaktifkan (Status: Inactive). Akses ditutup demi menjaga keamanan data perusahaan.'
+                        title: 'Account Inactive',
+                        message: 'Your account is currently inactive. Please contact HR or your administrator.'
                     });
                     return;
                 }

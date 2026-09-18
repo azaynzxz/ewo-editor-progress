@@ -9,7 +9,13 @@ The Ewo Hub is an internal management portal for video editors, illustrators, an
 -   **Backend**: Serverless Google Apps Script (`appscript/Code.gs`). The app communicates via `doPost` to read and write rows into an internal Google Sheets database.
 
 ## Architecture & Authentication
--   **Authentication**: Custom implementation checking `Employee List` via `Code.gs`. Upon successful login (`LoginPage.jsx`), user data (`userName`, `userEmail`, `userRole`, and `loginTimestamp`) is persisted into standard `localStorage`.
+-   **Authentication**: Custom implementation checking `Employee List` via `Code.gs`. Upon successful login (`LoginPage.jsx`), user data (`userName`, `userEmail`, `userRole`, `userStatus`, and `loginTimestamp`) is persisted into standard `localStorage`.
+-   **Inactive Employee Protection & Data Lockdown**:
+    - **Backend Gate (`Code.gs`)**: `handleLogin` checks employee status in `Employee List` before password validation. Inactive employees are rejected immediately with `{ success: false, isInactive: true, message: 'Your account has been deactivated. Please contact your administrator or HR.' }`.
+    - **Login Warning (`LoginPage.jsx`)**: High-contrast, clean alert banner (`ShieldAlert` with title: **Account Inactive**, body: *Your account has been deactivated. Please contact your administrator or HR to restore access.*) rendered when `isInactive: true` or `?status=inactive` is detected.
+    - **Admin Security Gate (`AdminAuthGate.jsx`)**: Queries employee directory on mount. If an employee is marked Inactive, PIN input is completely disabled and a responsive full-screen dark glassmorphic "Access Restricted — Account Inactive" modal is displayed with the **EWO Hub Logo**, user badge, and a **Sign Out** button (`LogOut`).
+    - **Route Protection (`ProtectedRoute.jsx`)**: Active session monitor that detects inactive status, clears auth storage, and routes to `/login?status=inactive`.
+    - **Employee Directory (`EmployeeManager.jsx`)**: Displays clean `Inactive` status badges with lock icons, provides a 1-click status toggle action with confirmation (`Deactivate account for "..."?`), and alerts admins inside the modal when an account is being deactivated.
 -   **Session Security**: Managed by `ProtectedRoute.jsx`. Sessions expire after 30 days based on `loginTimestamp` logic. Legacy role-selection mechanisms have been fully purged from the codebase.
 -   **Data Storage (Frontend)**: Highly dependent on `localStorage` for forms state resilience, autocomplete caching (`ewo_all_projects_cache`), custom client entries, and auth credentials.
 -   **API Proxy & Edge Caching**: To hide the Google Apps Script URL from the frontend and prevent network waterfalls, the project uses a **Cloudflare Pages Function** (`functions/api/exec.js`) as a proxy endpoint (`/api/exec`). This proxy aggressively caches all `GET` requests using Cloudflare's Edge Cache for 5 minutes (`s-maxage=300`). 
