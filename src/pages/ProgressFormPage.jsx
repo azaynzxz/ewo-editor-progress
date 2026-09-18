@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { Calendar, Upload, Send, X, Users, Hash, Tag, Copy, Clock } from 'lucide-react'
@@ -49,6 +49,8 @@ function ProgressFormPage() {
     const customStorageKey = isIllustrator ? 'customIllustrators' : (isAdsDesign ? 'customDesigners' : 'customEditors')
 
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const isSubmittingRef = useRef(false)
+    const submissionIdRef = useRef(null)
     const [toast, setToast] = useState(null)
 
     // Detect an active attendance session from a prior day (forgotten clock-out)
@@ -320,6 +322,7 @@ function ProgressFormPage() {
         })
         setEntries([])
         setScreenshots([])
+        submissionIdRef.current = null
     }
 
     const fileToBase64 = (file) => {
@@ -340,12 +343,17 @@ function ProgressFormPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        if (isSubmittingRef.current) return
+        isSubmittingRef.current = true
         setIsSubmitting(true)
         setToast(null)
 
-        // Generate a unique ID for this submission attempt.
-        // The backend rejects any second request with the same ID, preventing double-writes.
-        const submissionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        // Generate a stable unique ID for this form submission attempt.
+        // Retrying the same form keeps the same submissionId so the backend ignores double writes.
+        if (!submissionIdRef.current) {
+            submissionIdRef.current = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        }
+        const submissionId = submissionIdRef.current
 
         const userRole = localStorage.getItem('userRole') || 'video_editor'
         localStorage.setItem('lastUsedEditor', formData.editor) // Save to grab for Attendance name
@@ -485,6 +493,7 @@ function ProgressFormPage() {
             console.error('Submission error:', error)
             setToast({ type: 'error', message: error.message || 'Failed to submit. Please try again.' })
         } finally {
+            isSubmittingRef.current = false
             setIsSubmitting(false)
         }
     }

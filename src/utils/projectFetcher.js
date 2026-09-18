@@ -17,8 +17,10 @@ export async function fetchAllSheetsProjects(forceRefresh = false) {
             }
         }
         
+        const refreshParam = forceRefresh ? `&_refresh=true&_t=${Date.now()}` : ''
+        
         // 1. Fetch current month sheet first to get list of available sheets
-        const res = await fetch(`${APPS_SCRIPT_URL}?action=getAdminProjects`)
+        const res = await fetch(`${APPS_SCRIPT_URL}?action=getAdminProjects${refreshParam}`)
         const json = await res.json()
         
         if (!json.success) throw new Error(json.message || 'Failed to fetch initial sheet')
@@ -41,7 +43,7 @@ export async function fetchAllSheetsProjects(forceRefresh = false) {
         if (otherSheets.length > 0) {
             const fetchPromises = otherSheets.map(async (sheetName) => {
                 try {
-                    const r = await fetch(`${APPS_SCRIPT_URL}?action=getAdminProjects&month=${encodeURIComponent(sheetName)}`)
+                    const r = await fetch(`${APPS_SCRIPT_URL}?action=getAdminProjects&month=${encodeURIComponent(sheetName)}${refreshParam}`)
                     const resJson = await r.json()
                     
                     let p = []

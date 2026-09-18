@@ -35,7 +35,10 @@ function AttendanceCard() {
     const DEFAULT_CLIENTS = [
         'Alex', 'Allan', 'Amanda', 'Angelo', 'Bashar', 'Bryan', 'Jordan', 'Jorge', 'Julia', 'Kristin', 'Michael', 'Ryan', 'Simon', 'Wing', 'Yannick', 'Zheng', 'Internal'
     ];
-    const userRole = localStorage.getItem('userRole') || 'video_editor';
+    const rawRole = localStorage.getItem('userRoleRaw') || '';
+    const userRole = rawRole.toLowerCase().includes('editor') 
+        ? 'video_editor' 
+        : (localStorage.getItem('userRole') || 'video_editor');
 
     const [customClients, setCustomClients] = useState(() => {
         const saved = localStorage.getItem('customClients');

@@ -1,13 +1,14 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
-import { Lock, User, Loader2 } from 'lucide-react';
+import { Lock, User, Loader2, ShieldAlert, AlertTriangle } from 'lucide-react';
 
 const APPS_SCRIPT_URL = '/api/exec';
 const MAX_ATTEMPTS = 3;
 
 function LoginPage() {
     const navigate = useNavigate();
+    const location = useLocation();
 
     // Parallax setup
     const x = useMotionValue(0);
@@ -29,6 +30,18 @@ function LoginPage() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [inactiveAlert, setInactiveAlert] = useState(null);
+
+    // Detect inactive redirect in query params
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        if (params.get('status') === 'inactive' || params.get('inactive') === 'true') {
+            setInactiveAlert({
+                title: 'Akses Ditolak — Akun Karyawan Nonaktif',
+                message: 'Akun Anda tercatat berstatus Nonaktif (Inactive) di database karyawan. Akses ke EWO Hub diblokir untuk mencegah pihak tidak berwenang melihat data perusahaan. Hubungi Administrator atau HR.'
+            });
+        }
+    }, [location.search]);
 
     // Check for lockout
     const attempts = parseInt(localStorage.getItem('loginAttempts') || '0', 10);
@@ -49,6 +62,7 @@ function LoginPage() {
 
         setLoading(true);
         setError(null);
+        setInactiveAlert(null);
 
         try {
             const response = await fetch(APPS_SCRIPT_URL, {
@@ -62,11 +76,31 @@ function LoginPage() {
 
             const data = await response.json();
 
+            // Explicit inactive check from backend
+            if (data.data?.isInactive || data.isInactive) {
+                setInactiveAlert({
+                    title: 'Akses Ditolak — Akun Karyawan Nonaktif',
+                    message: data.data?.message || data.message || 'Akun Anda dinonaktifkan (Status: Inactive). Anda tidak memiliki izin untuk masuk atau melihat data demi menjaga keamanan data perusahaan. Silakan hubungi Administrator atau HR.'
+                });
+                return;
+            }
+
             if (data.success && data.data?.user) {
                 const user = data.data.user;
+
+                // Double check status safety
+                if (user.status && user.status.toLowerCase() !== 'active') {
+                    setInactiveAlert({
+                        title: 'Akses Ditolak — Akun Karyawan Nonaktif',
+                        message: 'Akun Anda dinonaktifkan (Status: Inactive). Akses ditutup demi menjaga keamanan data perusahaan.'
+                    });
+                    return;
+                }
+
                 // Save user info
                 localStorage.setItem('userName', user.name);
                 localStorage.setItem('userEmail', user.email);
+                localStorage.setItem('userStatus', user.status || 'Active');
 
                 // Map the human readable role to the internal slug logic
                 let roleSlug = 'video_editor';
@@ -86,7 +120,7 @@ function LoginPage() {
             } else {
                 const newAttempts = attempts + 1;
                 localStorage.setItem('loginAttempts', newAttempts.toString());
-                setError(data.data?.message || 'Invalid credentials');
+                setError(data.data?.message || data.message || 'Invalid credentials');
             }
         } catch (err) {
             console.error(err);
@@ -192,6 +226,42 @@ function LoginPage() {
                         </p>
 
                         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                            <AnimatePresence>
+                                {inactiveAlert && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        style={{
+                                            background: '#fef2f2',
+                                            border: '1.5px solid #f87171',
+                                            borderRadius: '12px',
+                                            padding: '14px 16px',
+                                            display: 'flex',
+                                            gap: '12px',
+                                            alignItems: 'flex-start',
+                                            boxShadow: '0 6px 16px rgba(239, 68, 68, 0.12)'
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: 32, height: 32, borderRadius: '8px',
+                                            background: '#fee2e2', display: 'flex',
+                                            alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                        }}>
+                                            <ShieldAlert size={18} color="#dc2626" />
+                                        </div>
+                                        <div style={{ flex: 1, textAlign: 'left' }}>
+                                            <div style={{ color: '#991b1b', fontWeight: 700, fontSize: '13.5px', marginBottom: 4 }}>
+                                                {inactiveAlert.title}
+                                            </div>
+                                            <div style={{ color: '#b91c1c', fontSize: '12px', lineHeight: 1.5, fontWeight: 500 }}>
+                                                {inactiveAlert.message}
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
                             <div>
                                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--gray-700)', marginBottom: '8px' }}>

@@ -356,6 +356,20 @@
     vertical-align: middle;
 }
 
+.admin-table th.col-num,
+.admin-table td.col-num {
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 60px !important;
+    padding: 10px 4px !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    font-variant-numeric: tabular-nums;
+    box-sizing: border-box;
+}
+
 .admin-table tbody tr {
     transition: background var(--transition-fast);
 }
@@ -652,4 +666,98 @@
     .admin-stats-strip {
         grid-template-columns: 1fr;
     }
+}
+
+/* Global Table Utilities & Schedule Widget */
+.admin-role-pill.both {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+.ys-widget-card {
+    transition: all 0.2s ease;
+}
+
+.ys-widget-card:hover {
+    border-color: var(--primary-300);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.ys-widget-folder-btn {
+    width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-left: 1px solid var(--gray-200);
+    color: var(--primary-600);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    align-self: stretch;
+}
+
+.ys-widget-folder-btn:hover {
+    background: var(--primary-50);
+    color: var(--primary-700);
+}
+
+.ys-widget-folder-btn.disabled {
+    cursor: default;
+    color: var(--gray-300);
+    background: var(--gray-50);
+}
+
+.ys-brief-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    background: var(--primary-50);
+    color: var(--primary-600);
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid var(--primary-100);
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+
+.ys-brief-chip:hover {
+    background: var(--primary-100);
+    color: var(--primary-700);
+}
+
+.ys-table-project-link {
+    display: inline;
+    color: var(--gray-900);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.15s ease;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.ys-table-project-link:hover {
+    color: var(--primary-600);
+    text-decoration: underline;
+}
+
+.ys-table-project-link .ys-link-icon {
+    display: inline-block;
+    vertical-align: -1px;
+    margin-left: 5px;
+    color: var(--primary-500);
+    opacity: 0.7;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    flex-shrink: 0;
+}
+
+.ys-table-project-link:hover .ys-link-icon {
+    opacity: 1;
+    transform: translateY(-1px);
 }

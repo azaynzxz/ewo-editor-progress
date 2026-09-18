@@ -485,7 +485,7 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
                     <table className="admin-table">
                         <thead>
                             <tr>
-                                <th style={{ width: 40 }}>#</th>
+                                <th className="col-num" style={{ width: 48, minWidth: 48, textAlign: 'center', whiteSpace: 'nowrap' }}>#</th>
                                 <th>Project Name</th>
                                 <th>Illustrator</th>
                                 <th>Editor</th>
@@ -505,7 +505,7 @@ function ProjectManager({ projects, loading, availableSheets, currentSheet, onMo
                                 const statusColor = getTaskColor(p.projectStatus, p.risk, p.projectName, index) || '#9ca3af'
                                 return (
                                     <tr key={p.rowIndex}>
-                                        <td style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>{p.no}</td>
+                                        <td className="col-num" style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)', textAlign: 'center', whiteSpace: 'nowrap' }}>{p.no}</td>
                                         <td style={{ fontWeight: 600, maxWidth: 180 }}>
                                             <EditableCell
                                                 value={p.projectName}

@@ -47,6 +47,18 @@ function getStatusBadge(status, clockIn, clockOut) {
     return { label: 'Not Clocked In', className: 'not-in' }
 }
 
+function getRoleBadge(role) {
+    if (!role) return { label: '—', className: 've' }
+    const r = role.toLowerCase().trim()
+    if (r.includes('editor') || r === 've') {
+        return { label: 'VE', className: 've' }
+    }
+    if (r.includes('illustr') || r === 'ill') {
+        return { label: 'ILL', className: 'ill' }
+    }
+    return { label: role, className: 've' }
+}
+
 function AttendancePanel({ attendance, loading, selectedDate, onDateChange }) {
     const [roleFilter, setRoleFilter] = useState('all')
     const [employees, setEmployees] = useState([])
@@ -101,7 +113,12 @@ function AttendancePanel({ attendance, loading, selectedDate, onDateChange }) {
 
     const filtered = roleFilter === 'all'
         ? mergedRows
-        : mergedRows.filter(r => r.role === roleFilter)
+        : mergedRows.filter(r => {
+            const role = (r.role || '').toLowerCase()
+            if (roleFilter === 'Video Editor') return role.includes('editor') || role === 've'
+            if (roleFilter === 'Illustrator') return role.includes('illustr') || role === 'ill'
+            return r.role === roleFilter
+        })
 
     return (
         <div className="admin-panel">
@@ -130,22 +147,23 @@ function AttendancePanel({ attendance, loading, selectedDate, onDateChange }) {
             <div className="admin-table-wrap">
                 {loading ? (
                     <div style={{ padding: 'var(--space-4)' }}>
-                        {[1, 2, 3, 4, 5, 6].map(i => (
+                        {Array.from({ length: 5 }).map((_, i) => (
                             <div key={i} className="admin-skeleton-row">
-                                <div className="admin-skeleton admin-skeleton-cell" style={{ width: '15%' }} />
+                                <div className="admin-skeleton admin-skeleton-cell" style={{ width: '20%' }} />
+                                <div className="admin-skeleton admin-skeleton-cell" style={{ width: '8%' }} />
                                 <div className="admin-skeleton admin-skeleton-cell" style={{ width: '12%' }} />
-                                <div className="admin-skeleton admin-skeleton-cell" style={{ width: '14%' }} />
                                 <div className="admin-skeleton admin-skeleton-cell" style={{ width: '10%' }} />
                                 <div className="admin-skeleton admin-skeleton-cell" style={{ width: '10%' }} />
                                 <div className="admin-skeleton admin-skeleton-cell" style={{ width: '10%' }} />
                                 <div className="admin-skeleton admin-skeleton-cell" style={{ width: '8%' }} />
+                                <div className="admin-skeleton admin-skeleton-cell" style={{ width: '22%' }} />
                             </div>
                         ))}
                     </div>
                 ) : filtered.length === 0 ? (
                     <div className="admin-empty">
                         <Inbox size={40} />
-                        <p>No attendance records found</p>
+                        <p>No attendance records for this date</p>
                     </div>
                 ) : (
                     <table className="admin-table">
@@ -164,12 +182,13 @@ function AttendancePanel({ attendance, loading, selectedDate, onDateChange }) {
                         <tbody>
                             {filtered.map(row => {
                                 const badge = getStatusBadge(row.status, row.clockIn, row.clockOut)
+                                const roleBadge = getRoleBadge(row.role)
                                 return (
                                     <tr key={row.name}>
                                         <td style={{ fontWeight: 600 }}>{row.name}</td>
                                         <td>
-                                            <span className={`admin-role-pill ${row.role === 'Video Editor' ? 've' : 'ill'}`}>
-                                                {row.role === 'Video Editor' ? 'VE' : 'ILL'}
+                                            <span className={`admin-role-pill ${roleBadge.className}`}>
+                                                {roleBadge.label}
                                             </span>
                                         </td>
                                         <td>

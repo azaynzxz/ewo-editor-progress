@@ -5,15 +5,39 @@ const EDITORS = ['Zayn', 'Ari', 'Hendi', 'Rosdiana', 'Dayah', 'Manda', 'Luky', '
 const CLIENTS = ['Alex', 'Allan', 'Amanda', 'Angelo', 'Bashar', 'Bryan', 'Jordan', 'Jorge', 'Julia', 'Kristin', 'Michael', 'Ryan', 'Simon', 'Wing', 'Yannick', 'Zheng']
 const PAGE_SIZE = 15
 
+function getRoleBadge(role) {
+    if (!role) return { label: '—', className: 've' }
+    const r = role.toLowerCase().trim()
+    if (r.includes('editor') || r === 've') return { label: 'VE', className: 've' }
+    if (r.includes('illustr') || r === 'ill') return { label: 'ILL', className: 'ill' }
+    return { label: role, className: 've' }
+}
+
 function ProgressLog({ progress, loading, filters, onFiltersChange }) {
     const [searchQuery, setSearchQuery] = useState('')
     const [sortField, setSortField] = useState('date')
     const [sortDir, setSortDir] = useState('desc')
     const [page, setPage] = useState(1)
+    const [hideDuplicates, setHideDuplicates] = useState(false)
 
-    // Local search and sort
+    // Tag duplicates based on identical date, editor, title, client, and scenes
+    const taggedList = useMemo(() => {
+        const seen = new Set()
+        return progress.map(r => {
+            const key = `${r.date}|${(r.editor || '').toLowerCase().trim()}|${(r.title || '').toLowerCase().trim()}|${(r.client || '').toLowerCase().trim()}|${r.scenes}`
+            const isDuplicate = seen.has(key)
+            seen.add(key)
+            return { ...r, isDuplicate }
+        })
+    }, [progress])
+
+    // Local search, duplicate filter, and sort
     const processed = useMemo(() => {
-        let list = [...progress]
+        let list = [...taggedList]
+
+        if (hideDuplicates) {
+            list = list.filter(r => !r.isDuplicate)
+        }
 
         // Search filter
         if (searchQuery) {
@@ -43,7 +67,7 @@ function ProgressLog({ progress, loading, filters, onFiltersChange }) {
         })
 
         return list
-    }, [progress, searchQuery, sortField, sortDir])
+    }, [taggedList, hideDuplicates, searchQuery, sortField, sortDir])
 
     const totalPages = Math.max(1, Math.ceil(processed.length / PAGE_SIZE))
     const paginated = processed.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -111,6 +135,15 @@ function ProgressLog({ progress, loading, filters, onFiltersChange }) {
                         <option value="">All Clients</option>
                         {CLIENTS.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: 'var(--text-xs)', color: 'var(--gray-600)', cursor: 'pointer', userSelect: 'none', background: 'var(--gray-50)', padding: '6px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-200)' }}>
+                        <input
+                            type="checkbox"
+                            checked={hideDuplicates}
+                            onChange={e => setHideDuplicates(e.target.checked)}
+                            style={{ cursor: 'pointer' }}
+                        />
+                        Hide Duplicates
+                    </label>
                 </div>
             </div>
 
@@ -148,23 +181,33 @@ function ProgressLog({ progress, loading, filters, onFiltersChange }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {paginated.map((row, idx) => (
-                                <tr key={`${row.no}-${idx}`}>
-                                    <td style={{ whiteSpace: 'nowrap' }}>{row.date}</td>
-                                    <td style={{ fontWeight: 600 }}>{row.editor}</td>
-                                    <td>
-                                        <span className={`admin-role-pill ${row.role === 'Video Editor' ? 've' : 'ill'}`}>
-                                            {row.role === 'Video Editor' ? 'VE' : 'ILL'}
-                                        </span>
-                                    </td>
-                                    <td>{row.title}</td>
-                                    <td>{row.client}</td>
-                                    <td style={{ fontWeight: 600, textAlign: 'center' }}>{row.scenes}</td>
-                                    <td style={{ maxWidth: 220, whiteSpace: 'normal', wordBreak: 'break-word', verticalAlign: 'top' }}>
-                                        {row.comment || '—'}
-                                    </td>
-                                </tr>
-                            ))}
+                            {paginated.map((row, idx) => {
+                                const roleBadge = getRoleBadge(row.role)
+                                return (
+                                    <tr key={`${row.no}-${idx}`} style={row.isDuplicate ? { opacity: 0.75, background: 'rgba(254, 243, 199, 0.2)' } : {}}>
+                                        <td style={{ whiteSpace: 'nowrap' }}>{row.date}</td>
+                                        <td style={{ fontWeight: 600 }}>{row.editor}</td>
+                                        <td>
+                                            <span className={`admin-role-pill ${roleBadge.className}`}>
+                                                {roleBadge.label}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span>{row.title}</span>
+                                            {row.isDuplicate && (
+                                                <span style={{ fontSize: '0.65rem', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', padding: '1px 6px', borderRadius: '4px', marginLeft: '6px', fontWeight: 600 }}>
+                                                    Duplicate
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td>{row.client}</td>
+                                        <td style={{ fontWeight: 600, textAlign: 'center' }}>{row.scenes}</td>
+                                        <td style={{ maxWidth: 220, whiteSpace: 'normal', wordBreak: 'break-word', verticalAlign: 'top' }}>
+                                            {row.comment || '—'}
+                                        </td>
+                                    </tr>
+                                )
+                            })}
                         </tbody>
                     </table>
                 )}

@@ -3,13 +3,20 @@ import { Navigate, Outlet } from 'react-router-dom';
 function ProtectedRoute({ allowedRoles }) {
     const userRole = localStorage.getItem('userRole');
     const userName = localStorage.getItem('userName');
+    const userStatus = localStorage.getItem('userStatus');
     const loginTimestamp = localStorage.getItem('loginTimestamp');
     const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+    // Immediately kick out inactive accounts
+    if (userStatus && userStatus.toLowerCase() === 'inactive') {
+        ['userRole', 'userRoleRaw', 'userType', 'userName', 'userEmail', 'userStatus', 'loginTimestamp', 'lastUsedEditor'].forEach(key => localStorage.removeItem(key));
+        return <Navigate to="/login?status=inactive" replace />;
+    }
 
     // Check expiration or missing credentials
     if (!userRole || !userName || !loginTimestamp || (Date.now() - parseInt(loginTimestamp, 10) > THIRTY_DAYS_MS)) {
         // Clear all auth-related local storage, but don't nuke safe app settings like custom customClients
-        ['userRole', 'userRoleRaw', 'userType', 'userName', 'userEmail', 'loginTimestamp', 'lastUsedEditor'].forEach(key => localStorage.removeItem(key));
+        ['userRole', 'userRoleRaw', 'userType', 'userName', 'userEmail', 'userStatus', 'loginTimestamp', 'lastUsedEditor'].forEach(key => localStorage.removeItem(key));
         return <Navigate to="/login" replace />;
     }
 

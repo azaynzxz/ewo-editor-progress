@@ -21,6 +21,14 @@ function matchesUser(field, userName) {
     return normalizedField.split(',').some(part => part.trim() === normalizedUser)
 }
 
+function formatScheduleDate(dateStr) {
+    if (!dateStr) return '—'
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
+}
+
 function getMonthYearFromDateString(dateStr) {
     if (!dateStr) return null
     let date = dateStr
@@ -177,22 +185,39 @@ function YourSchedule({ isWidget = false }) {
     const filteredProjects = useMemo(() => {
         let list = myProjects
 
+        // Category & status check
+        list = list.filter(p => {
+            const s1 = (p.projectStatus || '').toLowerCase()
+            const s2 = (p.progress || '').toLowerCase()
+            const combined = `${s1} ${s2}`
+
+            // Ignore "Ready to Illus" and "Ready to review" categories from showing up
+            if (combined.includes('ready to illus') || combined.includes('ready to review')) {
+                return false
+            }
+
+            // For internal projects: only show if the data says "Ready to Edit" or "Editor on Duty"
+            if (p.clients === 'Internal MMB' || p.sourceSheet === 'Membuka Mata Batin Internal') {
+                const isReadyToEdit = combined.includes('ready to edit')
+                const isEditorOnDuty = combined.includes('editor on duty')
+                if (!isReadyToEdit && !isEditorOnDuty) {
+                    return false
+                }
+            }
+
+            return true
+        })
+
         if (statusFilter === 'active') {
-            const EXCLUDED = ['done', 'on hold', 'under review', 'canceled', 'finished', 'postponed', 'ready to illus tag']
-            const MMB_ACTIVE_PROGRESS = ['on progress', 'need revision', 'ready to edit']
+            const EXCLUDED = ['done', 'on hold', 'under review', 'canceled', 'finished', 'postponed']
             
             list = list.filter(p => {
                 const s1 = (p.projectStatus || '').toLowerCase()
                 const s2 = (p.progress || '').toLowerCase()
-                
-                if (p.clients === 'Internal MMB') {
-                    return MMB_ACTIVE_PROGRESS.includes(s2)
-                }
-                
                 return !EXCLUDED.includes(s1) && !EXCLUDED.includes(s2)
             })
         } else if (statusFilter === 'done') {
-            const EXCLUDED = ['done', 'canceled', 'finished', 'postponed', 'ready to illus tag']
+            const EXCLUDED = ['done', 'canceled', 'finished', 'postponed']
             list = list.filter(p => {
                 const s1 = (p.projectStatus || '').toLowerCase()
                 const s2 = (p.progress || '').toLowerCase()
@@ -344,18 +369,24 @@ function YourSchedule({ isWidget = false }) {
         const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         const currentMonthLabel = `${months[today.getMonth()]} ${today.getFullYear()}`;
 
-        const EXCLUDED_STATUS = ['done', 'on hold', 'under review', 'canceled', 'finished', 'postponed', 'ready to illus tag'];
-        const MMB_ACTIVE_PROGRESS = ['on progress', 'need revision', 'ready to edit'];
+        const EXCLUDED_STATUS = ['done', 'on hold', 'under review', 'canceled', 'finished', 'postponed'];
 
         const sortedProjects = [...myProjects].filter(p => {
             const status = (p.projectStatus || '').toLowerCase();
             const progress = (p.progress || '').toLowerCase();
-            const isInternal = p.clients === 'Internal MMB';
+            const combined = `${status} ${progress}`;
 
-            if (isInternal) {
-                if (!MMB_ACTIVE_PROGRESS.includes(progress)) return false;
-            } else {
-                if (EXCLUDED_STATUS.includes(status) || EXCLUDED_STATUS.includes(progress)) return false;
+            // Exclude done, postponed, canceled, finished, on hold
+            if (EXCLUDED_STATUS.includes(status) || EXCLUDED_STATUS.includes(progress)) return false;
+
+            // Ignore "Ready to Illus" and "Ready to review" categories from showing up
+            if (combined.includes('ready to illus') || combined.includes('ready to review')) return false;
+
+            // For internal projects: only show if the data says "Ready to Edit" or "Editor on Duty"
+            if (p.clients === 'Internal MMB' || p.sourceSheet === 'Membuka Mata Batin Internal') {
+                const isReadyToEdit = combined.includes('ready to edit');
+                const isEditorOnDuty = combined.includes('editor on duty');
+                if (!isReadyToEdit && !isEditorOnDuty) return false;
             }
 
             const isCurrentMonth = ['dlIllustrator', 'dlEditor'].some(key => {
@@ -364,17 +395,18 @@ function YourSchedule({ isWidget = false }) {
                 return parsed && parsed.label === currentMonthLabel;
             });
 
-            return isCurrentMonth || isInternal;
+            return isCurrentMonth || p.clients === 'Internal MMB';
         }).sort((a, b) => {
-            const aIsMMB = a.clients === 'Internal MMB';
-            const bIsMMB = b.clients === 'Internal MMB';
-            if (aIsMMB && !bIsMMB) return 1;
-            if (!aIsMMB && bIsMMB) return -1;
-
+            // Reorder: Client projects first, then Internal projects
+            const isInternalA = (a.clients === 'Internal MMB' || a.sourceSheet === 'Membuka Mata Batin Internal') ? 1 : 0;
+            const isInternalB = (b.clients === 'Internal MMB' || b.sourceSheet === 'Membuka Mata Batin Internal') ? 1 : 0;
+            if (isInternalA !== isInternalB) {
+                return isInternalA - isInternalB; // 0 (Client) comes before 1 (Internal)
+            }
             const dateA = new Date(a.dlEditor || a.dlIllustrator || '2099-01-01');
             const dateB = new Date(b.dlEditor || b.dlIllustrator || '2099-01-01');
             return dateA - dateB;
-        }).slice(0, 4);
+        }).slice(0, 6);
 
         return (
             <div className="card schedule-widget-wrapper" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -402,7 +434,7 @@ function YourSchedule({ isWidget = false }) {
                             <p style={{ margin: 0, fontSize: '0.8rem' }}>All caught up!</p>
                         </div>
                     ) : (
-                        sortedProjects.map((p, idx) => {
+                        sortedProjects.map((p) => {
                             const dlDateStr = p.dlEditor || p.dlIllustrator;
                             let formattedDate = '—';
                             let isOverdue = false;
@@ -422,36 +454,83 @@ function YourSchedule({ isWidget = false }) {
                             }
 
                             return (
-                                <div key={p.rowIndex} style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px 12px', background: 'var(--gray-50)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--gray-200)', borderLeft: p.clients === 'Internal MMB' ? '4px solid #9333ea' : '4px solid #16a34a', transition: 'all 0.2s' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--gray-900)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <div key={p.rowIndex} className="ys-widget-card" style={{
+                                    display: 'flex',
+                                    alignItems: 'stretch',
+                                    background: 'var(--gray-50)',
+                                    borderRadius: 'var(--radius-lg)',
+                                    border: '1px solid var(--gray-200)',
+                                    borderLeft: p.clients === 'Internal MMB' ? '4px solid #9333ea' : '4px solid #16a34a',
+                                    overflow: 'hidden'
+                                }}>
+                                    <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
+                                        {/* Client Name & Deadline (Top Row) */}
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                            <span style={{
+                                                fontSize: '0.68rem',
+                                                fontWeight: 700,
+                                                color: p.clients === 'Internal MMB' ? '#7e22ce' : 'var(--primary-600)',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.5px',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }}>
+                                                {p.clients || 'General'}
+                                            </span>
+
+                                            {/* Deadline (Top Right Corner) */}
+                                            <div style={{ display: 'flex', gap: '5px', alignItems: 'center', flexShrink: 0 }}>
+                                                <span style={{
+                                                    fontSize: '0.7rem',
+                                                    fontWeight: 600,
+                                                    padding: '2px 8px',
+                                                    borderRadius: 'var(--radius-full)',
+                                                    background: isOverdue ? '#fef2f2' : 'white',
+                                                    color: isOverdue ? '#ef4444' : 'var(--gray-600)',
+                                                    border: `1px solid ${isOverdue ? '#fecaca' : 'var(--gray-200)'}`,
+                                                    whiteSpace: 'nowrap'
+                                                }}>
+                                                    {formattedDate}
+                                                </span>
+                                                {isOverdue && (
+                                                    <span title="Overdue" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <AlertCircle size={14} color="#ef4444" strokeWidth={2.5} />
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Project Title (Middle Row) */}
+                                        <div style={{
+                                            fontWeight: 600,
+                                            fontSize: '0.85rem',
+                                            color: 'var(--gray-900)',
+                                            lineHeight: 1.3,
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis'
+                                        }} title={p.projectName}>
                                             {p.projectName}
                                         </div>
-                                        {p.briefLinks && (
-                                            <a href={p.briefLinks} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0, padding: '4px', background: 'white', color: 'var(--primary-600)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--gray-200)', textDecoration: 'none' }} title="Open Google Drive">
-                                                <FolderOpen size={14} />
-                                            </a>
-                                        )}
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '6px' }}>
-                                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                            <span style={{ fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-full)', background: isOverdue ? '#fef2f2' : 'white', color: isOverdue ? '#ef4444' : 'var(--gray-600)', border: `1px solid ${isOverdue ? '#fecaca' : 'var(--gray-200)'}`, whiteSpace: 'nowrap' }}>
-                                                {formattedDate}
-                                            </span>
-                                            {isOverdue && (
-                                                <span title="Overdue" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <AlertCircle size={16} color="#ef4444" strokeWidth={2.5} />
-                                                </span>
-                                            )}
+
+                                    {/* Full-Height Folder Button */}
+                                    {p.briefLinks ? (
+                                        <a
+                                            href={p.briefLinks}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="ys-widget-folder-btn"
+                                            title="Open Google Drive Brief"
+                                        >
+                                            <FolderOpen size={20} />
+                                        </a>
+                                    ) : (
+                                        <div className="ys-widget-folder-btn disabled" title="No folder link">
+                                            <FolderOpen size={20} style={{ opacity: 0.3 }} />
                                         </div>
-                                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                            {p.risk && (
-                                                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: p.risk.includes('High') ? '#ef4444' : '#f59e0b', whiteSpace: 'nowrap' }}>
-                                                    {p.risk}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
                             );
                         })
@@ -624,59 +703,56 @@ function YourSchedule({ isWidget = false }) {
                                         <table className="admin-table">
                                             <thead>
                                                 <tr>
-                                                    <th style={{ width: 80 }}>#</th>
-                                                    <th>Project</th>
-                                                    <th>Client</th>
-                                                    <th>Role</th>
-                                                    <th>Brief</th>
-                                                    <th>DL Illustrator</th>
-                                                    <th>DL Editor</th>
-                                                    <th>Status</th>
-                                                    <th>Risk</th>
-                                                    <th>Notes</th>
+                                                    <th className="col-num" style={{ width: 48, minWidth: 48, textAlign: 'center', whiteSpace: 'nowrap' }}>#</th>
+                                                    <th style={{ minWidth: 200, maxWidth: 360 }}>Project</th>
+                                                    <th style={{ minWidth: 100, maxWidth: 160 }}>Client</th>
+                                                    <th style={{ width: 110, minWidth: 110 }}>DL Illustrator</th>
+                                                    <th style={{ width: 110, minWidth: 110 }}>DL Editor</th>
+                                                    <th style={{ width: 130, minWidth: 130 }}>Status</th>
+                                                    <th style={{ width: 120, minWidth: 120 }}>Risk</th>
+                                                    <th style={{ minWidth: 180, maxWidth: 350 }}>Notes</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {group.data.map((p, index) => {
-                                                    const isIll = matchesUser(p.illustrator, userName)
-                                                    const isEd = matchesUser(p.editor, userName)
-                                                    const roleLabel = isIll && isEd ? 'Both' : isIll ? 'Illustrator' : 'Editor'
                                                     const statusColor = getTaskColor(p.projectStatus, p.risk, p.projectName, index) || '#9ca3af'
                                                     return (
                                                         <tr key={p.rowIndex}>
-                                                            <td style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>{p.no}</td>
-                                                            <td style={{ fontWeight: 600, whiteSpace: 'nowrap', minWidth: 180 }}>{p.projectName}</td>
-                                                            <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.clients || '—'}</td>
-                                                            <td>
-                                                                <span className={`ys-role-badge ${isIll ? 'ys-role-ill' : 'ys-role-ed'}`}>
-                                                                    {roleLabel}
-                                                                </span>
-                                                            </td>
-                                                            <td>
+                                                            <td className="col-num" style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)', textAlign: 'center', whiteSpace: 'nowrap' }}>{p.no}</td>
+                                                            <td style={{ fontWeight: 600, minWidth: 200, maxWidth: 360, wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: 1.4 }}>
                                                                 {p.briefLinks ? (
-                                                                    <a href={p.briefLinks} target="_blank" rel="noopener noreferrer" className="ys-brief-chip">
-                                                                        <ExternalLink size={11} />
-                                                                        {p.briefLinksLabel || 'Open'}
+                                                                    <a
+                                                                        href={p.briefLinks}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="ys-table-project-link"
+                                                                        title={p.briefLinksLabel ? `Open Brief: ${p.briefLinksLabel}` : `Open Brief for ${p.projectName}`}
+                                                                    >
+                                                                        <span>{p.projectName}</span>
+                                                                        <ExternalLink size={12} className="ys-link-icon" />
                                                                     </a>
-                                                                ) : '—'}
+                                                                ) : (
+                                                                    <span>{p.projectName}</span>
+                                                                )}
                                                             </td>
-                                                            <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlIllustrator || '—'}</td>
-                                                            <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{p.dlEditor || '—'}</td>
-                                                            <td>
+                                                            <td style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--gray-700)', minWidth: 100, maxWidth: 160, wordBreak: 'break-word', whiteSpace: 'normal' }}>{p.clients || '—'}</td>
+                                                            <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{formatScheduleDate(p.dlIllustrator)}</td>
+                                                            <td style={{ fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{formatScheduleDate(p.dlEditor)}</td>
+                                                            <td style={{ whiteSpace: 'nowrap' }}>
                                                                 {p.projectStatus ? (
                                                                     <span className="ys-status-badge" style={{ color: statusColor, borderColor: statusColor + '33', background: statusColor + '11' }}>
                                                                         {p.projectStatus}
                                                                     </span>
                                                                 ) : '—'}
                                                             </td>
-                                                            <td>
+                                                            <td style={{ width: 120, minWidth: 120, whiteSpace: 'nowrap' }}>
                                                                 {p.risk ? (
                                                                     <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: p.risk.includes('High') ? '#ef4444' : '#f59e0b' }}>
                                                                         {p.risk}
                                                                     </span>
                                                                 ) : '—'}
                                                             </td>
-                                                            <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                                            <td style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-500)', minWidth: 180, maxWidth: 350, wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: 1.4 }}
                                                                 title={p.projectNotes}>
                                                                 {p.projectNotes || '—'}
                                                             </td>
@@ -714,7 +790,23 @@ function YourSchedule({ isWidget = false }) {
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                                                         <div>
                                                             <div style={{ color: 'var(--gray-500)', fontSize: '0.7rem', fontWeight: 700, marginBottom: '4px' }}>#{p.no} {p.clients ? `• ${p.clients}` : ''}</div>
-                                                            <div style={{ fontWeight: 600, color: 'var(--gray-900)', fontSize: '0.95rem', lineHeight: 1.3, marginBottom: '4px' }}>{p.projectName}</div>
+                                                            {p.briefLinks ? (
+                                                                <a
+                                                                    href={p.briefLinks}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="ys-table-project-link"
+                                                                    style={{ fontSize: '0.95rem', lineHeight: 1.3, marginBottom: '4px', display: 'inline-flex' }}
+                                                                    title={p.briefLinksLabel ? `Open Brief: ${p.briefLinksLabel}` : `Open Brief for ${p.projectName}`}
+                                                                >
+                                                                    <span>{p.projectName}</span>
+                                                                    <ExternalLink size={13} className="ys-link-icon" />
+                                                                </a>
+                                                            ) : (
+                                                                <div style={{ fontWeight: 600, color: 'var(--gray-900)', fontSize: '0.95rem', lineHeight: 1.3, marginBottom: '4px' }}>
+                                                                    {p.projectName}
+                                                                </div>
+                                                            )}
                                                             {p.projectNotes && (
                                                                 <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)', fontStyle: 'italic' }}>"{p.projectNotes}"</div>
                                                             )}
@@ -749,13 +841,6 @@ function YourSchedule({ isWidget = false }) {
                                                                 </span>
                                                             )}
                                                         </div>
-
-                                                        {p.briefLinks ? (
-                                                            <a href={p.briefLinks} target="_blank" rel="noopener noreferrer" className="ys-brief-chip" style={{ background: 'white', border: '1px solid #cbd5e1' }}>
-                                                                <ExternalLink size={12} />
-                                                                {p.briefLinksLabel || 'Brief'}
-                                                            </a>
-                                                        ) : null}
                                                     </div>
                                                 </div>
                                             )
@@ -865,36 +950,6 @@ function YourSchedule({ isWidget = false }) {
                     justify-content: center; padding: var(--space-8); gap: var(--space-2);
                     color: var(--gray-400); font-size: var(--text-sm);
                 }
-                .ys-table {
-                    width: 100%; border-collapse: collapse; font-size: var(--text-sm);
-                }
-                .ys-table th {
-                    text-align: left; padding: 10px 12px; font-size: var(--text-xs);
-                    font-weight: 600; color: var(--gray-500); text-transform: uppercase;
-                    letter-spacing: 0.05em; border-bottom: 2px solid var(--gray-100);
-                    background: var(--gray-50); white-space: nowrap;
-                }
-                .ys-table td {
-                    padding: 10px 12px; border-bottom: 1px solid var(--gray-100);
-                    vertical-align: middle;
-                }
-                .ys-table tbody tr:hover { background: var(--gray-50); }
-                .ys-role-badge {
-                    display: inline-block; padding: 2px 8px; border-radius: var(--radius-full);
-                    font-size: 10px; font-weight: 700; white-space: nowrap;
-                }
-                .ys-role-ill { background: #fef3c7; color: #92400e; }
-                .ys-role-ed { background: #dbeafe; color: #1e40af; }
-                .ys-brief-chip {
-                    display: inline-flex; align-items: center; gap: 4px;
-                    padding: 2px 8px; border-radius: var(--radius-full);
-                    background: var(--primary-50); color: var(--primary-600);
-                    font-size: 11px; font-weight: 600; text-decoration: none;
-                    border: 1px solid var(--primary-100);
-                    max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-                    transition: all 0.15s;
-                }
-                .ys-brief-chip:hover { background: var(--primary-100); }
                 .ys-status-badge {
                     display: inline-block; padding: 2px 8px; border-radius: var(--radius-full);
                     font-size: 11px; font-weight: 600; border: 1px solid;

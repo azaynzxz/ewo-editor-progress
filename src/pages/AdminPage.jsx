@@ -61,13 +61,18 @@ function AdminPage() {
     const [reportProjects, setReportProjects] = useState([])
     const [loadingReportProjects, setLoadingReportProjects] = useState(false)
 
+    const [loadedTabs, setLoadedTabs] = useState({ overview: false, attendance: false, progress: false, leaves: false, projects: false })
+
     // Fetch helpers
     const fetchOverview = useCallback(async (forceRefresh = false) => {
         setOverviewLoading(true)
         try {
             const res = await fetch(`${APPS_SCRIPT_URL}?action=getAdminOverview${forceRefresh ? '&_refresh=true' : ''}`)
             const json = await res.json()
-            if (json.success) setOverviewData(json.data)
+            if (json.success) {
+                setOverviewData(json.data)
+                try { localStorage.setItem('admin_overview_cache', JSON.stringify(json.data)) } catch {}
+            }
         } catch (err) {
             console.error('Failed to fetch overview:', err)
         }
@@ -138,27 +143,38 @@ function AdminPage() {
         setProjectsLoading(false)
     }, [])
 
-    const fetchAll = useCallback(async (forceRefresh = false) => {
-        setRefreshing(true)
-        await Promise.all([
-            fetchOverview(forceRefresh),
-            fetchAttendance(attendanceDate, forceRefresh),
-            fetchProgress(progressFilters, forceRefresh),
-            fetchLeaves(leaveStatusFilter, forceRefresh),
-            fetchProjects(projectMonth, forceRefresh),
-            fetchAllSheetsProjects(forceRefresh),
-        ])
-        setInitialLoaded(true)
-        setTimeout(() => setRefreshing(false), 300)
-    }, [attendanceDate, progressFilters, leaveStatusFilter, projectMonth]) // eslint-disable-line react-hooks/exhaustive-deps
+    // Fast initial load: only Overview stats and today's attendance for the landing view
+    useEffect(() => {
+        if (isAuthed) {
+            fetchOverview(false)
+            fetchAttendance(attendanceDate, false)
+            setLoadedTabs(prev => ({ ...prev, overview: true, attendance: true }))
+            setInitialLoaded(true)
+        }
+    }, [isAuthed]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Fetch data when authenticated
-    useEffect(() => { if (isAuthed) fetchAll(false) }, [isAuthed]) // eslint-disable-line react-hooks/exhaustive-deps
+    // Lazy load tab data on tab switch
+    useEffect(() => {
+        if (!isAuthed || !initialLoaded) return
+        if (activeTab === 'attendance' && !loadedTabs.attendance) {
+            fetchAttendance(attendanceDate, false)
+            setLoadedTabs(prev => ({ ...prev, attendance: true }))
+        } else if (activeTab === 'progress' && !loadedTabs.progress) {
+            fetchProgress(progressFilters, false)
+            setLoadedTabs(prev => ({ ...prev, progress: true }))
+        } else if (activeTab === 'leaves' && !loadedTabs.leaves) {
+            fetchLeaves(leaveStatusFilter, false)
+            setLoadedTabs(prev => ({ ...prev, leaves: true }))
+        } else if (activeTab === 'projects' && !loadedTabs.projects) {
+            fetchProjects(projectMonth, false)
+            setLoadedTabs(prev => ({ ...prev, projects: true }))
+        }
+    }, [activeTab, isAuthed, initialLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Re-fetch only when filters change
-    useEffect(() => { if (initialLoaded) fetchAttendance(attendanceDate) }, [attendanceDate]) // eslint-disable-line
-    useEffect(() => { if (initialLoaded) fetchProgress(progressFilters) }, [progressFilters]) // eslint-disable-line
-    useEffect(() => { if (initialLoaded) fetchLeaves(leaveStatusFilter) }, [leaveStatusFilter]) // eslint-disable-line
+    // Re-fetch when specific tab filters change
+    useEffect(() => { if (initialLoaded && loadedTabs.attendance) fetchAttendance(attendanceDate) }, [attendanceDate]) // eslint-disable-line
+    useEffect(() => { if (initialLoaded && loadedTabs.progress) fetchProgress(progressFilters) }, [progressFilters]) // eslint-disable-line
+    useEffect(() => { if (initialLoaded && loadedTabs.leaves) fetchLeaves(leaveStatusFilter) }, [leaveStatusFilter]) // eslint-disable-line
 
     // Strict role-based auth gate
     if (!isAuthed) {
@@ -217,9 +233,15 @@ function AdminPage() {
         setShowReportModal(true)
     }
 
-    // Refresh = re-fetch everything
+    // Targeted refresh based on active tab with fresh bypass
     const handleRefresh = async () => {
-        await fetchAll(true)
+        setRefreshing(true)
+        const promises = [fetchOverview(true), fetchAttendance(attendanceDate, true)]
+        if (activeTab === 'progress') promises.push(fetchProgress(progressFilters, true))
+        else if (activeTab === 'leaves') promises.push(fetchLeaves(leaveStatusFilter, true))
+        else if (activeTab === 'projects') promises.push(fetchProjects(projectMonth, true))
+        await Promise.all(promises)
+        setTimeout(() => setRefreshing(false), 300)
     }
 
     // ===== PROJECT CRUD (optimistic) =====
