@@ -4,14 +4,16 @@ import { Clock, LogIn, LogOut, CheckCircle2, X, ClipboardList, Users, StickyNote
 import { useNavigate } from 'react-router-dom';
 import MultiSelectDropdown from './MultiSelectDropdown';
 import SearchableDropdown from './SearchableDropdown';
+import {
+    getTodayKey,
+    parseAttendanceTime,
+    formatAttendanceTime,
+    formatSessionDateLabel,
+    calculateDurationHours,
+    cleanupStaleAttendanceKeys
+} from '../utils/attendanceUtils';
 
 const APPS_SCRIPT_URL = '/api/exec';
-
-// Helper: get today's date as YYYY-MM-DD in local timezone (consistent key for localStorage)
-const getTodayKey = () => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
 
 function AttendanceCard() {
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -84,55 +86,59 @@ function AttendanceCard() {
 
     const [sessionDate, setSessionDate] = useState(getTodayKey());
 
-    // Load initial state from localStorage, then verify against server as fallback
+    // Load initial state from localStorage, then verify against server in the background
     useEffect(() => {
         const todayStr = getTodayKey();
 
-        // Find if there is any active session in localStorage (even from previous days)
-        let activeKeyStr = todayStr;
+        // 1. Prioritize today's session in localStorage
         let savedAttendance = localStorage.getItem(`attendance_${todayStr}`);
+        let parsedToday = null;
+        if (savedAttendance) {
+            try {
+                parsedToday = JSON.parse(savedAttendance);
+            } catch (e) { }
+        }
 
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('attendance_')) {
-                try {
-                    const data = JSON.parse(localStorage.getItem(key));
-                    if (data.isClockedIn) {
-                        activeKeyStr = key.replace('attendance_', '');
-                        savedAttendance = localStorage.getItem(key);
-                        break;
-                    }
-                } catch (e) { }
+        if (parsedToday && parsedToday.isClockedIn) {
+            setSessionDate(todayStr);
+            setIsClockedIn(true);
+            setClockInTime(parsedToday.clockInTime);
+            setAttendanceId(parsedToday.attendanceId);
+            cleanupStaleAttendanceKeys(todayStr, todayStr);
+        } else if (parsedToday && parsedToday.clockOutTime) {
+            setSessionDate(todayStr);
+            setIsClockedIn(false);
+            setClockInTime(parsedToday.clockInTime);
+            setClockOutTime(parsedToday.clockOutTime);
+        } else {
+            // Check if there is an unclosed session from yesterday/prior days
+            let foundPrior = false;
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('attendance_') && key !== `attendance_${todayStr}`) {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        if (data && data.isClockedIn) {
+                            const activeKeyStr = key.replace('attendance_', '');
+                            setSessionDate(activeKeyStr);
+                            setIsClockedIn(true);
+                            setClockInTime(data.clockInTime);
+                            setAttendanceId(data.attendanceId);
+                            foundPrior = true;
+                            break;
+                        }
+                    } catch (e) { }
+                }
+            }
+            if (!foundPrior) {
+                setSessionDate(todayStr);
             }
         }
 
-        setSessionDate(activeKeyStr);
-        let restoredFromLocal = false;
-
-        if (savedAttendance) {
-            try {
-                const data = JSON.parse(savedAttendance);
-                if (data.isClockedIn) {
-                    setIsClockedIn(true);
-                    setClockInTime(data.clockInTime);
-                    setAttendanceId(data.attendanceId);
-                    restoredFromLocal = true;
-                } else if (data.clockOutTime && activeKeyStr === todayStr) {
-                    // Already clocked out today — show the label
-                    setIsClockedIn(false);
-                    setClockInTime(data.clockInTime);
-                    setClockOutTime(data.clockOutTime);
-                    restoredFromLocal = true;
-                }
-            } catch { /* corrupted data, will fall through to server check */ }
-        }
-
-        // SERVER VERIFICATION FALLBACK: If localStorage has no active clock-in,
-        // ask the backend if this user already clocked in today.
-        // This protects against cleared cache, different browser, etc.
-        if (!restoredFromLocal && userName) {
+        // 2. ALWAYS verify against the server in the background to resolve desyncs
+        if (userName) {
             const role = localStorage.getItem('userRole') || 'video_editor';
-            const checkUrl = `${APPS_SCRIPT_URL}?action=checkAttendance&name=${encodeURIComponent(userName)}&role=${encodeURIComponent(role)}&date=${encodeURIComponent(todayStr)}`;
+            const checkUrl = `${APPS_SCRIPT_URL}?action=checkAttendance&name=${encodeURIComponent(userName)}&role=${encodeURIComponent(role)}&date=${encodeURIComponent(todayStr)}&_refresh=true&_t=${Date.now()}`;
             fetch(checkUrl)
                 .then(res => res.json())
                 .then(result => {
@@ -143,14 +149,13 @@ function AttendanceCard() {
                             setClockInTime(result.data.clockInTime);
                             setAttendanceId(result.data.attendanceId);
                             setSessionDate(sDate);
-                            // Re-persist to localStorage so subsequent reloads are instant
                             localStorage.setItem(`attendance_${sDate}`, JSON.stringify({
                                 isClockedIn: true,
                                 clockInTime: result.data.clockInTime,
                                 attendanceId: result.data.attendanceId
                             }));
+                            cleanupStaleAttendanceKeys(todayStr, sDate);
                         } else if (result.data.clockOutTime) {
-                            // Already clocked out — restore label from server
                             const sDate = result.data.sessionDate || todayStr;
                             setIsClockedIn(false);
                             setClockInTime(result.data.clockInTime);
@@ -161,10 +166,19 @@ function AttendanceCard() {
                                 clockInTime: result.data.clockInTime,
                                 clockOutTime: result.data.clockOutTime
                             }));
+                            cleanupStaleAttendanceKeys(todayStr, sDate);
+                        } else {
+                            // Server says no attendance record today
+                            if (parsedToday && parsedToday.isClockedIn) {
+                                setIsClockedIn(false);
+                                setClockInTime(null);
+                                setAttendanceId(null);
+                                localStorage.removeItem(`attendance_${todayStr}`);
+                            }
                         }
                     }
                 })
-                .catch(() => { /* silently fail — user can still clock in manually */ });
+                .catch(() => { /* silently fail */ });
         }
 
         // Live clock
@@ -277,10 +291,9 @@ function AttendanceCard() {
 
             if (result.success) {
                 setIsClockedIn(true);
-                setClockInTime(now);
+                setClockInTime(now.toISOString());
                 setClockOutTime(null);
                 setAttendanceId(newAttendanceId);
-                // Use consistent ISO date key (YYYY-MM-DD) so restore logic can find it
                 const todayKey = getTodayKey();
                 setSessionDate(todayKey);
                 localStorage.setItem(`attendance_${todayKey}`, JSON.stringify({
@@ -288,13 +301,19 @@ function AttendanceCard() {
                     clockInTime: now.toISOString(),
                     attendanceId: newAttendanceId
                 }));
-                // Clear the progress token so they are FORCED to submit a new progress form for this new session
-                localStorage.removeItem('lastProgressDate');
+                cleanupStaleAttendanceKeys(todayKey, todayKey);
+
+                // Only remove lastProgressDate if it was from a previous day
+                const lastProg = localStorage.getItem('lastProgressDate');
+                if (lastProg && lastProg !== todayKey) {
+                    localStorage.removeItem('lastProgressDate');
+                }
+
                 setStatusMessage('Clocked in successfully!');
                 setShowTodoModal(false);
                 setTimeout(() => setStatusMessage(''), 3000);
             } else {
-                setStatusMessage('Error: ' + result.data.message);
+                setStatusMessage('Error: ' + (result.data?.message || 'Clock in failed'));
             }
         } catch (error) {
             console.error('Clock in error:', error);
@@ -304,11 +323,11 @@ function AttendanceCard() {
         }
     };
 
-    const handleClockOut = async () => {
+    const handleClockOut = async (forceProceed = false) => {
         const todayStr = getTodayKey();
         const lastProgressDate = localStorage.getItem('lastProgressDate');
 
-        if (lastProgressDate !== todayStr) {
+        if (!forceProceed && lastProgressDate !== todayStr) {
             setShowClockOutWarning(true);
             return;
         }
@@ -318,23 +337,8 @@ function AttendanceCard() {
 
         const now = new Date();
         const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); // e.g. "Mar 13, 2026"
-        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }); // e.g. "10:30 PM"
-
-        let computedDuration = '0.00';
-        if (clockInTime) {
-            let inTimeObj = new Date(clockInTime);
-            if (isNaN(inTimeObj.getTime()) || inTimeObj.getFullYear() < 2020) {
-                const today = new Date();
-                const parsed = new Date(`${today.toDateString()} ${clockInTime}`);
-                if (!isNaN(parsed.getTime())) inTimeObj = parsed;
-            }
-            if (!isNaN(inTimeObj.getTime())) {
-                const diff = (now.getTime() - inTimeObj.getTime()) / (1000 * 60 * 60);
-                if (!isNaN(diff) && diff >= 0) {
-                    computedDuration = diff.toFixed(2);
-                }
-            }
-        }
+        const timeStr = formatAttendanceTime(now);
+        const computedDuration = calculateDurationHours(clockInTime, sessionDate, now);
 
         try {
             const response = await fetch(APPS_SCRIPT_URL, {
@@ -356,22 +360,22 @@ function AttendanceCard() {
             if (result.success) {
                 setIsClockedIn(false);
                 setClockOutTime(now.toISOString());
-                // Use the sessionDate key (which could be from a previous day if they forgot to clock out)
                 localStorage.setItem(`attendance_${sessionDate}`, JSON.stringify({
                     isClockedIn: false,
                     clockInTime: clockInTime,
                     clockOutTime: now.toISOString()
                 }));
+                cleanupStaleAttendanceKeys(todayStr, sessionDate);
                 setStatusMessage('Clocked out successfully! Great job today.');
                 setTimeout(() => setStatusMessage(''), 5000);
             } else {
-                setStatusMessage('Error: ' + result.data.message);
-                // Fix for desynced states: if the server says they didn't clock in, reset the local frontend state
+                setStatusMessage('Error: ' + (result.data?.message || 'Clock out failed'));
                 if (result.data && result.data.message && result.data.message.includes("No Clock In record found")) {
                     localStorage.removeItem(`attendance_${sessionDate}`);
                     setIsClockedIn(false);
                     setClockInTime(null);
                     setAttendanceId(null);
+                    cleanupStaleAttendanceKeys(todayStr, null);
                     setStatusMessage('Local state was stuck. Your session has been reset.');
                 }
             }
@@ -416,27 +420,30 @@ function AttendanceCard() {
                             {/* Left Col: Clock & Date */}
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--gray-900)', fontFamily: 'var(--font-heading)', letterSpacing: '-0.5px', lineHeight: 1.2 }}>
-                                    {formatTime(currentTime)}
+                                    {formatAttendanceTime(currentTime)}
                                 </div>
                                 <div style={{ fontSize: '0.85rem', color: 'var(--gray-500)', fontWeight: 500, marginBottom: clockInTime ? '0.5rem' : '0' }}>
                                     {currentTime.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                                 </div>
                                 {clockInTime && (
                                     <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
-                                        <div style={{ fontSize: '0.75rem', color: sessionDate !== getTodayKey() ? 'var(--orange-500)' : 'var(--success)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: sessionDate !== getTodayKey() ? 'rgba(255, 152, 0, 0.1)' : 'var(--success-bg)', padding: '4px 10px', borderRadius: '20px' }}>
+                                        <div style={{
+                                            fontSize: '0.75rem',
+                                            color: sessionDate !== getTodayKey() ? 'var(--orange-500)' : 'var(--success)',
+                                            fontWeight: 600,
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '0.3rem',
+                                            background: sessionDate !== getTodayKey() ? 'rgba(255, 152, 0, 0.1)' : 'var(--success-bg)',
+                                            padding: '4px 10px',
+                                            borderRadius: '20px'
+                                        }}>
                                             <CheckCircle2 size={13} />
                                             {(() => {
-                                                let inTimeObj = new Date(clockInTime);
-                                                if (isNaN(inTimeObj.getTime()) || inTimeObj.getFullYear() < 2020) {
-                                                    const today = new Date();
-                                                    const parsed = new Date(`${today.toDateString()} ${clockInTime}`);
-                                                    if (!isNaN(parsed.getTime())) inTimeObj = parsed;
-                                                }
-                                                const timeStr = formatTime(inTimeObj);
-
+                                                const timeStr = formatAttendanceTime(clockInTime, sessionDate);
                                                 if (sessionDate !== getTodayKey()) {
-                                                    const dateStr = inTimeObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                                                    return `Since ${dateStr}, ${timeStr}`;
+                                                    const dateLabel = formatSessionDateLabel(clockInTime, sessionDate);
+                                                    return `Since ${dateLabel}, ${timeStr}`;
                                                 }
                                                 return `In at ${timeStr}`;
                                             })()}
@@ -445,12 +452,10 @@ function AttendanceCard() {
                                             <div style={{ fontSize: '0.75rem', color: 'var(--gray-600)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'var(--gray-100)', padding: '4px 10px', borderRadius: '20px' }}>
                                                 <LogOut size={13} />
                                                 {(() => {
-                                                    const outTimeObj = new Date(clockOutTime);
-                                                    const timeStr = formatTime(outTimeObj);
-
+                                                    const timeStr = formatAttendanceTime(clockOutTime, sessionDate);
                                                     if (sessionDate !== getTodayKey()) {
-                                                        const dateStr = outTimeObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                                                        return `Out on ${dateStr}, ${timeStr}`;
+                                                        const dateLabel = formatSessionDateLabel(clockOutTime, sessionDate);
+                                                        return `Out on ${dateLabel}, ${timeStr}`;
                                                     }
                                                     return `Out at ${timeStr}`;
                                                 })()}
@@ -554,13 +559,28 @@ function AttendanceCard() {
                             </p>
 
                             {/* Actions */}
-                            <div style={{ display: 'flex', gap: '0.75rem', width: '100%' }}>
+                            <div style={{ display: 'flex', gap: '0.75rem', width: '100%', flexWrap: 'wrap' }}>
                                 <button
                                     className="btn btn-ghost"
                                     onClick={() => setShowClockOutWarning(false)}
-                                    style={{ flex: 1, padding: '0.6rem', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: '0.9rem' }}
+                                    style={{ flex: '1 1 70px', padding: '0.6rem', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: '0.85rem' }}
                                 >
                                     Nanti
+                                </button>
+                                <button
+                                    className="btn"
+                                    onClick={() => {
+                                        setShowClockOutWarning(false);
+                                        handleClockOut(true);
+                                    }}
+                                    style={{
+                                        flex: '1 1 120px', padding: '0.6rem', borderRadius: 'var(--radius-md)',
+                                        background: 'var(--gray-200)', color: 'var(--gray-800)', border: 'none',
+                                        fontWeight: 600, fontSize: '0.85rem',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}
+                                >
+                                    Tetap Clock Out
                                 </button>
                                 <button
                                     className="btn"
@@ -569,9 +589,9 @@ function AttendanceCard() {
                                         navigate('/progress');
                                     }}
                                     style={{
-                                        flex: 2, padding: '0.6rem', borderRadius: 'var(--radius-md)',
+                                        flex: '2 1 150px', padding: '0.6rem', borderRadius: 'var(--radius-md)',
                                         background: 'var(--primary-500)', color: 'white', border: 'none',
-                                        fontWeight: 600, fontSize: '0.9rem',
+                                        fontWeight: 600, fontSize: '0.85rem',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
                                     }}
                                 >

@@ -71,10 +71,15 @@ function getMonthYearFromDateString(dateStr) {
     return null
 }
 
+function getMonthYearFromDateStr(dateStr) {
+    const res = getMonthYearFromDateString(dateStr)
+    return res ? res.label : ''
+}
+
 function matchesUser(field, userName) {
     if (!field || !userName) return false
-    const normalizedField = field.toLowerCase().trim()
-    const normalizedUser = userName.toLowerCase().trim()
+    const normalizedField = String(field).toLowerCase().trim()
+    const normalizedUser = String(userName).toLowerCase().trim()
     return normalizedField.split(',').some(part => part.trim() === normalizedUser)
 }
 
@@ -138,74 +143,96 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
     const rCol = getRoleColors()
 
     const [isRefreshingData, setIsRefreshingData] = useState(false)
+    const [refreshSuccess, setRefreshSuccess] = useState(false)
 
-    const handleRefreshModalData = async () => {
-        setIsRefreshingData(true)
-        const result = await fetchAllSheetsProjects()
-        if (result.success || result.projects?.length > 0) {
-            const currentReportMonth = getMonthYearFromDateStr(reportDate)
-
-            // Filter out ignored statuses
-            const ignoredStatuses = ['under review', 'on hold', 'canceled', 'done']
-            let projectsList = (result.projects || []).filter(p => !ignoredStatuses.includes((p.projectStatus || '').toLowerCase().trim()))
-
-            // Filter by logged-in user if not admin
-            const loggedInUser = localStorage.getItem('lastUsedEditor') || localStorage.getItem('userName') || ''
-            if (loggedInUser && !isAdminMode) {
-                projectsList = projectsList.filter(p => {
-                    if (userRole === 'illustrator') {
-                        return matchesUser(p.illustrator, loggedInUser)
-                    } else if (userRole === 'ads_design') {
-                        return matchesUser(p.editor, loggedInUser) || matchesUser(p.illustrator, loggedInUser)
-                    } else {
-                        return matchesUser(p.editor, loggedInUser)
-                    }
-                })
-            }
-
-            const mapped = projectsList.map((p, idx) => {
-                const defaultPlan = []
-                const status = (p.projectStatus || '').toLowerCase()
-                if (status === 'done') defaultPlan.push('SUBMIT')
-                else defaultPlan.push('CICIL')
-
-                let people = ''
-                if (userRole === 'illustrator') {
-                    people = p.illustrator || ''
-                } else if (userRole === 'ads_design') {
-                    people = p.editor || p.illustrator || ''
-                } else {
-                    people = p.editor || ''
-                }
-
-                const illMonth = getMonthYearFromDateString(p.dlIllustrator)
-                const edMonth = getMonthYearFromDateString(p.dlEditor)
-                const projectMonths = []
-                if (illMonth) projectMonths.push(illMonth.label)
-                if (edMonth) projectMonths.push(edMonth.label)
-
-                const isCurrentMonth = projectMonths.includes(currentReportMonth)
-
-                const illustratorsArray = p.illustrator ? p.illustrator.split(',').map(e => e.trim()).filter(Boolean) : []
-
-                return {
-                    id: p.rowIndex ? `${p.sourceSheet || 'unknown'}-${p.rowIndex}` : `proj-${idx}`,
-                    plan: defaultPlan,
-                    client: p.clients || '',
-                    title: p.projectName || '',
-                    progress: p.progress || '0%',
-                    notes: p.projectNotes || '',
-                    editor: people ? people.split(',').map(e => e.trim()).filter(Boolean) : [],
-                    selected: isCurrentMonth,
-                    projectMonths,
-                    illustratorA: illustratorsArray[0] || '',
-                    illustratorB: illustratorsArray[1] || illustratorsArray.slice(1).join(', ') || '',
-                    kemungkinanSelesai: ''
-                }
-            })
-            setReportRows(mapped)
+    const handleRefreshModalData = async (e) => {
+        if (e && typeof e.stopPropagation === 'function') {
+            e.stopPropagation()
+            e.preventDefault()
         }
-        setIsRefreshingData(false)
+        if (isRefreshingData) return
+
+        setIsRefreshingData(true)
+        setRefreshSuccess(false)
+
+        try {
+            // Pass forceRefresh: true to bypass Cloudflare edge cache and local cache
+            const result = await fetchAllSheetsProjects(true)
+            if (result && (result.success || (result.projects && result.projects.length > 0))) {
+                const currentReportMonth = getMonthYearFromDateStr(reportDate)
+
+                // Filter out ignored statuses
+                const ignoredStatuses = ['under review', 'on hold', 'canceled', 'done']
+                let projectsList = (result.projects || []).filter(p => !ignoredStatuses.includes((p.projectStatus || '').toLowerCase().trim()))
+
+                // Filter by logged-in user if not admin
+                const loggedInUser = localStorage.getItem('lastUsedEditor') || localStorage.getItem('userName') || ''
+                if (loggedInUser && !isAdminMode) {
+                    projectsList = projectsList.filter(p => {
+                        if (userRole === 'illustrator') {
+                            return matchesUser(p.illustrator, loggedInUser)
+                        } else if (userRole === 'ads_design') {
+                            return matchesUser(p.editor, loggedInUser) || matchesUser(p.illustrator, loggedInUser)
+                        } else {
+                            return matchesUser(p.editor, loggedInUser)
+                        }
+                    })
+                }
+
+                if (projectsList.length > 0) {
+                    const mapped = projectsList.map((p, idx) => {
+                        const defaultPlan = []
+                        const status = (p.projectStatus || '').toLowerCase()
+                        if (status === 'done') defaultPlan.push('SUBMIT')
+                        else defaultPlan.push('CICIL')
+
+                        let people = ''
+                        if (userRole === 'illustrator') {
+                            people = String(p.illustrator || '')
+                        } else if (userRole === 'ads_design') {
+                            people = String(p.editor || p.illustrator || '')
+                        } else {
+                            people = String(p.editor || '')
+                        }
+
+                        const illMonth = getMonthYearFromDateString(p.dlIllustrator)
+                        const edMonth = getMonthYearFromDateString(p.dlEditor)
+                        const projectMonths = []
+                        if (illMonth) projectMonths.push(illMonth.label)
+                        if (edMonth) projectMonths.push(edMonth.label)
+
+                        const isCurrentMonth = projectMonths.includes(currentReportMonth)
+
+                        const rawIll = String(p.illustrator || '')
+                        const illustratorsArray = rawIll ? rawIll.split(',').map(e => e.trim()).filter(Boolean) : []
+
+                        return {
+                            id: p.rowIndex ? `${p.sourceSheet || 'unknown'}-${p.rowIndex}` : `proj-${idx}`,
+                            plan: defaultPlan,
+                            client: p.clients || '',
+                            title: p.projectName || '',
+                            progress: p.progress || '0%',
+                            notes: p.projectNotes || '',
+                            editor: people ? people.split(',').map(e => e.trim()).filter(Boolean) : [],
+                            selected: isCurrentMonth,
+                            projectMonths,
+                            illustratorA: illustratorsArray[0] || '',
+                            illustratorB: illustratorsArray[1] || illustratorsArray.slice(1).join(', ') || '',
+                            kemungkinanSelesai: ''
+                        }
+                    })
+                    setReportRows(mapped)
+                } else if (reportRows.length === 0) {
+                    setReportRows([createNewRow()])
+                }
+                setRefreshSuccess(true)
+                setTimeout(() => setRefreshSuccess(false), 2500)
+            }
+        } catch (err) {
+            console.error('Failed to refresh modal projects data from sheets:', err)
+        } finally {
+            setIsRefreshingData(false)
+        }
     }
 
     const getRoleHeaderLabel = () => {
@@ -269,11 +296,11 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 // Editors/Illustrators strictly parsed based on role (no fallback)
                 let people = ''
                 if (userRole === 'illustrator') {
-                    people = p.illustrator || ''
+                    people = String(p.illustrator || '')
                 } else if (userRole === 'ads_design') {
-                    people = p.editor || p.illustrator || ''
+                    people = String(p.editor || p.illustrator || '')
                 } else {
-                    people = p.editor || ''
+                    people = String(p.editor || '')
                 }
 
                 const illMonth = getMonthYearFromDateString(p.dlIllustrator)
@@ -285,7 +312,8 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 // Only auto-select if the project has a deadline in the current report month!
                 const isCurrentMonth = projectMonths.includes(currentReportMonth)
 
-                const illustratorsArray = p.illustrator ? p.illustrator.split(',').map(e => e.trim()).filter(Boolean) : []
+                const rawIll = String(p.illustrator || '')
+                const illustratorsArray = rawIll ? rawIll.split(',').map(e => e.trim()).filter(Boolean) : []
 
                 return {
                     id: p.rowIndex ? `${p.sourceSheet || 'unknown'}-${p.rowIndex}` : `proj-${idx}`,
@@ -312,25 +340,6 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
     }, [isOpen, initialProjects, userRole, isAdminMode])
 
     const [projectMonthFilter, setProjectMonthFilter] = useState('all')
-
-    function getMonthYearFromDateStr(dateStr) {
-        if (!dateStr) return ''
-        const match = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/)
-        if (match) {
-            const year = match[1]
-            const monthNum = parseInt(match[2], 10)
-            const months = [
-                'January', 'February', 'March', 'April', 'May', 'June',
-                'July', 'August', 'September', 'October', 'November', 'December'
-            ]
-            return `${months[monthNum - 1]} ${year}`
-        }
-        const dObj = new Date(dateStr)
-        if (!isNaN(dObj.getTime())) {
-            return `${dObj.toLocaleString('en-US', { month: 'long' })} ${dObj.getFullYear()}`
-        }
-        return ''
-    }
 
     // Sync projectMonthFilter when reportDate changes
     useEffect(() => {
@@ -787,13 +796,18 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                         <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>Daily Report</h2>
                         <button
+                            type="button"
                             onClick={handleRefreshModalData}
                             disabled={isRefreshingData}
-                            className="drm-refresh-btn"
+                            className={`drm-refresh-btn ${refreshSuccess ? 'success' : ''}`}
                             title="Refresh project data from sheets"
                         >
-                            <RefreshCw size={12} className={isRefreshingData ? 'spin' : ''} />
-                            {isRefreshingData ? 'Refreshing...' : 'Refresh Sheet Data'}
+                            {refreshSuccess ? (
+                                <Check size={12} style={{ color: '#16a34a' }} />
+                            ) : (
+                                <RefreshCw size={12} className={isRefreshingData ? 'spin' : ''} />
+                            )}
+                            {isRefreshingData ? 'Refreshing...' : (refreshSuccess ? 'Data Refreshed!' : 'Refresh Sheet Data')}
                         </button>
 
                         {/* Segmented Mode Selector */}
@@ -1961,10 +1975,10 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                 .drm-cancel-btn:hover { background: var(--gray-50); }
                 
                 .drm-refresh-btn {
-                    display: flex;
+                    display: inline-flex;
                     align-items: center;
                     gap: 6px;
-                    padding: 4px 10px;
+                    padding: 5px 12px;
                     border: 1px solid var(--primary-200);
                     border-radius: var(--radius-md);
                     background: var(--primary-50);
@@ -1973,9 +1987,29 @@ function DailyReportModal({ isOpen, onClose, initialProjects = [], isAdminMode =
                     font-size: 11px;
                     font-weight: 600;
                     transition: all 0.2s;
+                    position: relative;
+                    z-index: 5;
+                    user-select: none;
+                    -webkit-user-select: none;
+                    pointer-events: auto;
                 }
-                .drm-refresh-btn:hover {
+                .drm-refresh-btn:hover:not(:disabled) {
                     background: var(--primary-100);
+                    border-color: var(--primary-300);
+                    transform: translateY(-1px);
+                }
+                .drm-refresh-btn:active:not(:disabled) {
+                    transform: translateY(0);
+                    background: var(--primary-200);
+                }
+                .drm-refresh-btn:disabled {
+                    opacity: 0.65;
+                    cursor: not-allowed;
+                }
+                .drm-refresh-btn.success {
+                    background: #f0fdf4;
+                    border-color: #86efac;
+                    color: #15803d;
                 }
                 
                 .spin {

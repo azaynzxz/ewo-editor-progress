@@ -11,11 +11,12 @@ import Toast from '../components/Toast'
 // CONFIGURATION - UPDATE THIS WITH YOUR APPS SCRIPT WEB APP URL
 const APPS_SCRIPT_URL = '/api/exec'
 
-// Helper: get today's date as YYYY-MM-DD in local timezone (consistent key for localStorage)
-const getTodayKey = () => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+import {
+    getTodayKey,
+    formatAttendanceTime,
+    calculateDurationHours,
+    cleanupStaleAttendanceKeys
+} from '../utils/attendanceUtils'
 
 const DEFAULT_CLIENTS = [
     'Alex',
@@ -434,21 +435,9 @@ function ProgressFormPage() {
                         const attendanceData = JSON.parse(attendanceDataStr)
                         if (attendanceData.isClockedIn && attendanceData.attendanceId) {
                             const now = new Date()
-                            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-
-                            let computedDuration = '0.00'
-                            if (attendanceData.clockInTime) {
-                                let inTimeObj = new Date(attendanceData.clockInTime)
-                                if (isNaN(inTimeObj.getTime()) || inTimeObj.getFullYear() < 2020) {
-                                    const today = new Date()
-                                    const parsed = new Date(`${today.toDateString()} ${attendanceData.clockInTime}`)
-                                    if (!isNaN(parsed.getTime())) inTimeObj = parsed
-                                }
-                                if (!isNaN(inTimeObj.getTime())) {
-                                    const diff = (now.getTime() - inTimeObj.getTime()) / (1000 * 60 * 60)
-                                    if (!isNaN(diff) && diff >= 0) computedDuration = diff.toFixed(2)
-                                }
-                            }
+                            const timeStr = formatAttendanceTime(now)
+                            const sessionDate = activeAttendanceKey.replace('attendance_', '')
+                            const computedDuration = calculateDurationHours(attendanceData.clockInTime, sessionDate, now)
 
                             // Dispatch clock out to AppScript
                             await fetch(APPS_SCRIPT_URL, {
@@ -469,6 +458,7 @@ function ProgressFormPage() {
                                 clockInTime: attendanceData.clockInTime,
                                 clockOutTime: now.toISOString()
                             }))
+                            cleanupStaleAttendanceKeys(todayStr, sessionDate)
 
                             autoClockOutSuccess = true
                         }
