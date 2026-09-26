@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { Calendar, Upload, Send, X, Users, Hash, Tag, Copy, Clock } from 'lucide-react'
@@ -42,6 +43,7 @@ const DEFAULT_EDITORS = ['Zayn', 'Dadan', 'Faqih']
 const DEFAULT_ILLUSTRATORS = ['Vanda', 'Rosdiana', 'Dayah']
 
 function ProgressFormPage() {
+    const navigate = useNavigate()
     const userRole = localStorage.getItem('userRole') || 'video_editor'
     const isIllustrator = userRole === 'illustrator'
     const isAdsDesign = userRole === 'ads_design'
@@ -438,6 +440,7 @@ function ProgressFormPage() {
                             const timeStr = formatAttendanceTime(now)
                             const sessionDate = activeAttendanceKey.replace('attendance_', '')
                             const computedDuration = calculateDurationHours(attendanceData.clockInTime, sessionDate, now)
+                            const currentEditorName = formData.editor || localStorage.getItem('userName') || localStorage.getItem('lastUsedEditor') || ''
 
                             // Dispatch clock out to AppScript
                             await fetch(APPS_SCRIPT_URL, {
@@ -445,6 +448,7 @@ function ProgressFormPage() {
                                 body: JSON.stringify({
                                     action: 'clockOut',
                                     attendanceId: attendanceData.attendanceId,
+                                    name: currentEditorName,
                                     role: userRole,
                                     time: timeStr,
                                     durationHrs: computedDuration
@@ -475,7 +479,13 @@ function ProgressFormPage() {
                     setToast({ type: 'success', message: 'Progress submitted successfully!' })
                 }
 
-                setTimeout(resetForm, 1000)
+                // Instruct AttendanceCard on Dashboard to open the To-Do Clock In Modal
+                sessionStorage.setItem('openClockInModal', 'true')
+                setTimeout(() => {
+                    resetForm()
+                    navigate('/', { state: { openClockInModal: true } })
+                    window.dispatchEvent(new CustomEvent('ewo_open_clock_in_modal'))
+                }, 1200)
             } else {
                 throw new Error(result.data?.message || 'Submission failed')
             }

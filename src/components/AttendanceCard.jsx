@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardBody } from './ui';
 import { Clock, LogIn, LogOut, CheckCircle2, X, ClipboardList, Users, StickyNote, Copy } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import MultiSelectDropdown from './MultiSelectDropdown';
 import SearchableDropdown from './SearchableDropdown';
 import {
@@ -33,6 +33,7 @@ function AttendanceCard() {
     const [showClockOutWarning, setShowClockOutWarning] = useState(false);
 
     const navigate = useNavigate();
+    const location = useLocation();
 
     const DEFAULT_CLIENTS = [
         'Alex', 'Allan', 'Amanda', 'Angelo', 'Bashar', 'Bryan', 'Jordan', 'Jorge', 'Julia', 'Kristin', 'Michael', 'Ryan', 'Simon', 'Wing', 'Yannick', 'Zheng', 'Internal'
@@ -186,6 +187,44 @@ function AttendanceCard() {
         return () => clearInterval(timer);
     }, [userName]);
 
+    // Automatically open To-Do Clock In Modal after Progress submission redirect
+    useEffect(() => {
+        const checkOpenClockIn = () => {
+            const shouldOpen = (location.state && location.state.openClockInModal) || sessionStorage.getItem('openClockInModal') === 'true';
+            if (shouldOpen) {
+                sessionStorage.removeItem('openClockInModal');
+                if (location.state?.openClockInModal && window.history.replaceState) {
+                    window.history.replaceState({}, document.title);
+                }
+
+                // Re-sync local attendance state to ensure clocked out state is active
+                const todayStr = getTodayKey();
+                const saved = localStorage.getItem(`attendance_${todayStr}`);
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        if (!parsed.isClockedIn) {
+                            setIsClockedIn(false);
+                            if (parsed.clockOutTime) setClockOutTime(parsed.clockOutTime);
+                        }
+                    } catch (e) { }
+                }
+
+                setStatusMessage('Auto clocked out. Ready to clock in!');
+                openTodoModal();
+            }
+        };
+
+        checkOpenClockIn();
+
+        const handleCustomEvent = () => {
+            checkOpenClockIn();
+        };
+
+        window.addEventListener('ewo_open_clock_in_modal', handleCustomEvent);
+        return () => window.removeEventListener('ewo_open_clock_in_modal', handleCustomEvent);
+    }, [location.state]);
+
     const formatTime = (dateObj) => {
         return dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
     };
@@ -240,6 +279,7 @@ function AttendanceCard() {
     };
 
     const openTodoModal = () => {
+        setShowClockOutWarning(false);
         setEntries([]);
         setAdditionalNotes('');
         setShowTodoModal(true);
@@ -303,11 +343,8 @@ function AttendanceCard() {
                 }));
                 cleanupStaleAttendanceKeys(todayKey, todayKey);
 
-                // Only remove lastProgressDate if it was from a previous day
-                const lastProg = localStorage.getItem('lastProgressDate');
-                if (lastProg && lastProg !== todayKey) {
-                    localStorage.removeItem('lastProgressDate');
-                }
+                // Reset lastProgressDate for this new clock-in session so user must submit progress before next clock-out
+                localStorage.removeItem('lastProgressDate');
 
                 setStatusMessage('Clocked in successfully!');
                 setShowTodoModal(false);
@@ -323,11 +360,12 @@ function AttendanceCard() {
         }
     };
 
-    const handleClockOut = async (forceProceed = false) => {
+    const handleClockOut = async () => {
         const todayStr = getTodayKey();
         const lastProgressDate = localStorage.getItem('lastProgressDate');
 
-        if (!forceProceed && lastProgressDate !== todayStr) {
+        // Attendance card strictly requires user to fill out progress form before clocking out
+        if (lastProgressDate !== todayStr) {
             setShowClockOutWarning(true);
             return;
         }
@@ -547,15 +585,15 @@ function AttendanceCard() {
                                 margin: '0 0 0.5rem', fontSize: '1.15rem', fontWeight: 700,
                                 color: 'var(--gray-900)'
                             }}>
-                                Progress Form Belum Diisi
+                                Progress Form Wajib Diisi
                             </h3>
 
                             {/* Message */}
                             <p style={{
                                 margin: '0 0 1.5rem', fontSize: '0.9rem', color: 'var(--gray-500)',
-                                lineHeight: 1.5, maxWidth: '300px'
+                                lineHeight: 1.5, maxWidth: '320px'
                             }}>
-                                Kamu belum submit progress hari ini. Silakan isi dulu sebelum clock out.
+                                Kamu wajib mengisi dan mengirim progress form sebelum clock out. Setelah submit form, kamu akan otomatis di-clock out!
                             </p>
 
                             {/* Actions */}
@@ -563,24 +601,9 @@ function AttendanceCard() {
                                 <button
                                     className="btn btn-ghost"
                                     onClick={() => setShowClockOutWarning(false)}
-                                    style={{ flex: '1 1 70px', padding: '0.6rem', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: '0.85rem' }}
+                                    style={{ flex: '1 1 80px', padding: '0.65rem', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: '0.85rem' }}
                                 >
                                     Nanti
-                                </button>
-                                <button
-                                    className="btn"
-                                    onClick={() => {
-                                        setShowClockOutWarning(false);
-                                        handleClockOut(true);
-                                    }}
-                                    style={{
-                                        flex: '1 1 120px', padding: '0.6rem', borderRadius: 'var(--radius-md)',
-                                        background: 'var(--gray-200)', color: 'var(--gray-800)', border: 'none',
-                                        fontWeight: 600, fontSize: '0.85rem',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                    }}
-                                >
-                                    Tetap Clock Out
                                 </button>
                                 <button
                                     className="btn"
@@ -589,14 +612,15 @@ function AttendanceCard() {
                                         navigate('/progress');
                                     }}
                                     style={{
-                                        flex: '2 1 150px', padding: '0.6rem', borderRadius: 'var(--radius-md)',
+                                        flex: '2 1 180px', padding: '0.65rem', borderRadius: 'var(--radius-md)',
                                         background: 'var(--primary-500)', color: 'white', border: 'none',
                                         fontWeight: 600, fontSize: '0.85rem',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem'
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                                        cursor: 'pointer'
                                     }}
                                 >
                                     <ClipboardList size={16} />
-                                    Isi Progress Form
+                                    Isi Progress Form Sekarang
                                 </button>
                             </div>
                         </div>
