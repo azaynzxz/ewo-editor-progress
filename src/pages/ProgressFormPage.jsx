@@ -471,20 +471,36 @@ function ProgressFormPage() {
                     }
                 }
 
+                const isPriorDaySession = activeAttendanceKey && activeAttendanceKey !== `attendance_${todayStr}`
+
                 if (autoClockOutSuccess) {
-                    setToast({ type: 'success', message: 'Progress submitted & Automatically Clocked Out!' })
+                    setToast({
+                        type: 'success',
+                        message: isPriorDaySession
+                            ? 'Progress submitted & Prior session closed. Ready to clock in!'
+                            : 'Progress submitted & Automatically Clocked Out!'
+                    })
                     // Clear the prior-day session banner once clock-out succeeds
                     setPriorDaySession(null)
                 } else {
                     setToast({ type: 'success', message: 'Progress submitted successfully!' })
                 }
 
-                // Instruct AttendanceCard on Dashboard to open the To-Do Clock In Modal
-                sessionStorage.setItem('openClockInModal', 'true')
+                // Only instruct AttendanceCard on Dashboard to open the To-Do Clock In Modal
+                // if this submission closed a PRIOR DAY session (i.e. morning catch-up)
+                const shouldPromptClockIn = autoClockOutSuccess && isPriorDaySession
+                if (shouldPromptClockIn) {
+                    sessionStorage.setItem('openClockInModal', 'true')
+                } else {
+                    sessionStorage.removeItem('openClockInModal')
+                }
+
                 setTimeout(() => {
                     resetForm()
-                    navigate('/', { state: { openClockInModal: true } })
-                    window.dispatchEvent(new CustomEvent('ewo_open_clock_in_modal'))
+                    navigate('/', { state: { openClockInModal: shouldPromptClockIn } })
+                    if (shouldPromptClockIn) {
+                        window.dispatchEvent(new CustomEvent('ewo_open_clock_in_modal'))
+                    }
                 }, 1200)
             } else {
                 throw new Error(result.data?.message || 'Submission failed')

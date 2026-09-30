@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardBody } from './ui';
-import { Clock, LogIn, LogOut, CheckCircle2, X, ClipboardList, Users, StickyNote, Copy } from 'lucide-react';
+import { Clock, LogIn, LogOut, CheckCircle2, X, ClipboardList, Users, StickyNote, Copy, RotateCcw } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import MultiSelectDropdown from './MultiSelectDropdown';
 import SearchableDropdown from './SearchableDropdown';
@@ -22,6 +22,7 @@ function AttendanceCard() {
     const [clockOutTime, setClockOutTime] = useState(null);
     const [attendanceId, setAttendanceId] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const isClockingInRef = useRef(false);
     const [statusMessage, setStatusMessage] = useState('');
     const [showTodoModal, setShowTodoModal] = useState(false);
 
@@ -169,12 +170,24 @@ function AttendanceCard() {
                             }));
                             cleanupStaleAttendanceKeys(todayStr, sDate);
                         } else {
-                            // Server says no attendance record today
-                            if (parsedToday && parsedToday.isClockedIn) {
-                                setIsClockedIn(false);
-                                setClockInTime(null);
-                                setAttendanceId(null);
-                                localStorage.removeItem(`attendance_${todayStr}`);
+                            // Server confirms no active clock-in session in the look-back window
+                            setIsClockedIn(false);
+                            setClockInTime(null);
+                            setClockOutTime(null);
+                            setAttendanceId(null);
+                            setSessionDate(todayStr);
+                            cleanupStaleAttendanceKeys(todayStr, null);
+                            // Purge any orphan prior-day attendance keys that falsely report isClockedIn: true
+                            for (let i = 0; i < localStorage.length; i++) {
+                                const k = localStorage.key(i);
+                                if (k && k.startsWith('attendance_')) {
+                                    try {
+                                        const p = JSON.parse(localStorage.getItem(k));
+                                        if (p && p.isClockedIn) {
+                                            localStorage.removeItem(k);
+                                        }
+                                    } catch (e) { }
+                                }
                             }
                         }
                     }
@@ -286,6 +299,8 @@ function AttendanceCard() {
     };
 
     const handleClockIn = async () => {
+        if (isClockingInRef.current) return;
+        isClockingInRef.current = true;
         setIsSubmitting(true);
         setStatusMessage('Clocking in...');
 
@@ -330,23 +345,26 @@ function AttendanceCard() {
             const result = await response.json();
 
             if (result.success) {
+                const finalAttendanceId = result.data?.attendanceId || result.attendanceId || newAttendanceId;
+                const finalClockInTime = result.data?.clockInTime || now.toISOString();
+
                 setIsClockedIn(true);
-                setClockInTime(now.toISOString());
+                setClockInTime(finalClockInTime);
                 setClockOutTime(null);
-                setAttendanceId(newAttendanceId);
+                setAttendanceId(finalAttendanceId);
                 const todayKey = getTodayKey();
                 setSessionDate(todayKey);
                 localStorage.setItem(`attendance_${todayKey}`, JSON.stringify({
                     isClockedIn: true,
-                    clockInTime: now.toISOString(),
-                    attendanceId: newAttendanceId
+                    clockInTime: finalClockInTime,
+                    attendanceId: finalAttendanceId
                 }));
                 cleanupStaleAttendanceKeys(todayKey, todayKey);
 
                 // Reset lastProgressDate for this new clock-in session so user must submit progress before next clock-out
                 localStorage.removeItem('lastProgressDate');
 
-                setStatusMessage('Clocked in successfully!');
+                setStatusMessage(result.data?.message || 'Clocked in successfully!');
                 setShowTodoModal(false);
                 setTimeout(() => setStatusMessage(''), 3000);
             } else {
@@ -357,15 +375,41 @@ function AttendanceCard() {
             setStatusMessage('Failed to connect to server.');
         } finally {
             setIsSubmitting(false);
+            isClockingInRef.current = false;
         }
+    };
+
+    const handleDiscardStuckSession = () => {
+        const todayStr = getTodayKey();
+        cleanupStaleAttendanceKeys(todayStr, null);
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('attendance_')) {
+                try {
+                    const p = JSON.parse(localStorage.getItem(k));
+                    if (p && p.isClockedIn) {
+                        localStorage.removeItem(k);
+                    }
+                } catch (e) { }
+            }
+        }
+        setIsClockedIn(false);
+        setClockInTime(null);
+        setClockOutTime(null);
+        setAttendanceId(null);
+        setSessionDate(todayStr);
+        setStatusMessage('Stuck session cleared. Ready to clock in.');
+        setTimeout(() => setStatusMessage(''), 3000);
     };
 
     const handleClockOut = async () => {
         const todayStr = getTodayKey();
         const lastProgressDate = localStorage.getItem('lastProgressDate');
+        const isPriorDay = sessionDate && sessionDate !== todayStr;
 
-        // Attendance card strictly requires user to fill out progress form before clocking out
-        if (lastProgressDate !== todayStr) {
+        // Attendance card strictly requires user to fill out progress form before clocking out for TODAY's session.
+        // For prior-day unclosed sessions, allow immediate clock out so user is not blocked.
+        if (!isPriorDay && lastProgressDate !== todayStr) {
             setShowClockOutWarning(true);
             return;
         }
@@ -407,14 +451,18 @@ function AttendanceCard() {
                 setStatusMessage('Clocked out successfully! Great job today.');
                 setTimeout(() => setStatusMessage(''), 5000);
             } else {
-                setStatusMessage('Error: ' + (result.data?.message || 'Clock out failed'));
-                if (result.data && result.data.message && result.data.message.includes("No Clock In record found")) {
+                const errMsg = result.data?.message || result.error || 'Clock out failed';
+                setStatusMessage('Error: ' + errMsg);
+                if (errMsg.includes("No Clock In record found") || errMsg.includes("not found")) {
                     localStorage.removeItem(`attendance_${sessionDate}`);
+                    localStorage.removeItem(`attendance_${todayStr}`);
+                    cleanupStaleAttendanceKeys(todayStr, null);
                     setIsClockedIn(false);
                     setClockInTime(null);
+                    setClockOutTime(null);
                     setAttendanceId(null);
-                    cleanupStaleAttendanceKeys(todayStr, null);
-                    setStatusMessage('Local state was stuck. Your session has been reset.');
+                    setSessionDate(todayStr);
+                    setStatusMessage('Local state was stuck and has been reset. You can clock in now.');
                 }
             }
         } catch (error) {
@@ -498,6 +546,29 @@ function AttendanceCard() {
                                                     return `Out at ${timeStr}`;
                                                 })()}
                                             </div>
+                                        )}
+                                        {isClockedIn && sessionDate !== getTodayKey() && (
+                                            <button
+                                                type="button"
+                                                onClick={handleDiscardStuckSession}
+                                                title="Reset stuck session"
+                                                style={{
+                                                    fontSize: '0.75rem',
+                                                    color: 'var(--orange-600)',
+                                                    fontWeight: 600,
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '0.3rem',
+                                                    background: 'rgba(255, 152, 0, 0.08)',
+                                                    border: '1px dashed var(--orange-300)',
+                                                    padding: '3px 8px',
+                                                    borderRadius: '20px',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                <RotateCcw size={12} />
+                                                Reset Stuck
+                                            </button>
                                         )}
                                     </div>
                                 )}
