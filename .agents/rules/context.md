@@ -41,6 +41,12 @@ To prevent duplicate progress logs caused by rapid double-clicks, slow network c
 - **Attendance Sheet Routing**: `AttendanceCard.jsx` checks the raw user role (`userRoleRaw`) for "editor" to ensure video editors are always routed to `Attendance_VideoEditor` regardless of display title.
 - **Admin Attendance Role Resolution**: `handleGetAdminAttendance` in `Code.gs` cross-references the official employee directory in `Employee List` so users (such as "Zayn") receive their true role (`Sr. Video Editor`) instead of default sheet tab inferences.
 
+## Mandatory Progress Form on Clock-Out Policy & Architecture
+- **Strict Anti-Bypass Rule**: EVERY click on the Clock Out button (`AttendanceCard.jsx` or anywhere in the UI) MUST force the user to fill out the Progress Form (`/progress`). Direct clock-out bypassing the progress form is strictly prohibited under all circumstances.
+- **Zero Bypasses**: Bypasses based on `lastProgressDate === todayStr` or `isPriorDay` are strictly prohibited. Even if the user previously submitted a progress report earlier in the day or has an unclosed prior-day session, clicking "Clock Out" MUST ALWAYS require them to fill and submit their progress form.
+- **Official Clock-Out Mechanism**: The sole valid mechanism to complete a clock-out is through the Progress Form submission workflow (`ProgressFormPage.jsx`). Upon submitting progress to Google Sheets, `ProgressFormPage` dispatches `action: 'clockOut'` to Apps Script (`Code.gs`), marks the attendance session as clocked out locally and on the server, and transitions the user back to the dashboard.
+- **AttendanceCard Enforcement**: `handleClockOut` in `AttendanceCard.jsx` must NOT execute a direct backend clock-out request. Instead, it triggers the mandatory `showClockOutWarning` modal instructing the employee that progress reporting is mandatory before leaving, with a direct CTA to navigate to `/progress` ("Isi Progress Form Sekarang").
+
 ## UI Table Styling & Schedule Standards
 - **Global Table Styling (`.admin-table`)**:
   - Unified across `AdminPage.jsx` and `YourSchedule.jsx`. Inline table override styles are avoided.
@@ -175,3 +181,4 @@ To prevent visual distortion or stretching across varied image sizes:
 2. **Branding & UI**: The UI emphasizes rounded corners, subtle interactive gradients, framer-motion micro-animations, and minimal, uncluttered layouts. Adhere to internal CSS variables (i.e., `var(--primary-600)`).
 3. **Admin Backend Deployment**: **Crucial:** Any updates applied to `appscript/Code.gs` MUST be manually redeployed to Google Apps Script as a 'New Deployment' before the frontend can consume the new logic.
 4. **Secrets Management**: DO NOT commit API keys or sensitive credentials into Git history. Adhere strictly to the `.gitignore` exclusions.
+5. **Mandatory Progress Form on Clock-Out**: NEVER allow a user to clock out directly from an attendance button without submitting their progress form. Every Clock Out action MUST force the user to fill out `/progress`. Submitting the progress form is the only authorized pathway that triggers the clock-out API call.

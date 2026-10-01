@@ -402,75 +402,10 @@ function AttendanceCard() {
         setTimeout(() => setStatusMessage(''), 3000);
     };
 
-    const handleClockOut = async () => {
-        const todayStr = getTodayKey();
-        const lastProgressDate = localStorage.getItem('lastProgressDate');
-        const isPriorDay = sessionDate && sessionDate !== todayStr;
-
-        // Attendance card strictly requires user to fill out progress form before clocking out for TODAY's session.
-        // For prior-day unclosed sessions, allow immediate clock out so user is not blocked.
-        if (!isPriorDay && lastProgressDate !== todayStr) {
-            setShowClockOutWarning(true);
-            return;
-        }
-
-        setIsSubmitting(true);
-        setStatusMessage('Clocking out...');
-
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); // e.g. "Mar 13, 2026"
-        const timeStr = formatAttendanceTime(now);
-        const computedDuration = calculateDurationHours(clockInTime, sessionDate, now);
-
-        try {
-            const response = await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify({
-                    action: 'clockOut',
-                    attendanceId: attendanceId,
-                    name: userName,
-                    role: userRole,
-                    date: dateStr,
-                    time: timeStr,
-                    durationHrs: computedDuration
-                }),
-                redirect: 'follow'
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                setIsClockedIn(false);
-                setClockOutTime(now.toISOString());
-                localStorage.setItem(`attendance_${sessionDate}`, JSON.stringify({
-                    isClockedIn: false,
-                    clockInTime: clockInTime,
-                    clockOutTime: now.toISOString()
-                }));
-                cleanupStaleAttendanceKeys(todayStr, sessionDate);
-                setStatusMessage('Clocked out successfully! Great job today.');
-                setTimeout(() => setStatusMessage(''), 5000);
-            } else {
-                const errMsg = result.data?.message || result.error || 'Clock out failed';
-                setStatusMessage('Error: ' + errMsg);
-                if (errMsg.includes("No Clock In record found") || errMsg.includes("not found")) {
-                    localStorage.removeItem(`attendance_${sessionDate}`);
-                    localStorage.removeItem(`attendance_${todayStr}`);
-                    cleanupStaleAttendanceKeys(todayStr, null);
-                    setIsClockedIn(false);
-                    setClockInTime(null);
-                    setClockOutTime(null);
-                    setAttendanceId(null);
-                    setSessionDate(todayStr);
-                    setStatusMessage('Local state was stuck and has been reset. You can clock in now.');
-                }
-            }
-        } catch (error) {
-            console.error('Clock out error:', error);
-            setStatusMessage('Failed to connect to server.');
-        } finally {
-            setIsSubmitting(false);
-        }
+    const handleClockOut = () => {
+        // Enforce strict policy: Every clock-out button click MUST force the user to fill the progress form.
+        // Direct clock-out bypassing the progress form is strictly prohibited.
+        setShowClockOutWarning(true);
     };
 
     const isLate = () => {
@@ -674,7 +609,7 @@ function AttendanceCard() {
                                     onClick={() => setShowClockOutWarning(false)}
                                     style={{ flex: '1 1 80px', padding: '0.65rem', borderRadius: 'var(--radius-md)', fontWeight: 600, fontSize: '0.85rem' }}
                                 >
-                                    Nanti
+                                    Batal
                                 </button>
                                 <button
                                     className="btn"
