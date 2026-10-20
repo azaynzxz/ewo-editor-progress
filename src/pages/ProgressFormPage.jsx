@@ -42,6 +42,31 @@ const DEFAULT_CLIENTS = [
 const DEFAULT_EDITORS = ['Zayn', 'Dadan', 'Faqih']
 const DEFAULT_ILLUSTRATORS = ['Vanda', 'Rosdiana', 'Dayah']
 
+// Returns the date (local, noon) of the most recent active clock-in session.
+// Falls back to today when the user is not clocked in.
+// Example: clocked in Oct 11 09:00, forgot to clock out, submits Oct 12 08:45 -> Oct 11.
+const getDefaultProgressDate = () => {
+    const activeDates = []
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i)
+            if (!key || !key.startsWith('attendance_')) continue
+            const dateStr = key.replace('attendance_', '')
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) continue
+            try {
+                const data = JSON.parse(localStorage.getItem(key))
+                if (data && data.isClockedIn) activeDates.push(dateStr)
+            } catch (e) { }
+        }
+    } catch (e) { }
+
+    if (activeDates.length === 0) return new Date()
+    activeDates.sort()
+    const latest = activeDates[activeDates.length - 1]
+    const d = new Date(`${latest}T12:00:00`)
+    return isNaN(d.getTime()) ? new Date() : d
+}
+
 function ProgressFormPage() {
     const navigate = useNavigate()
     const userRole = localStorage.getItem('userRole') || 'video_editor'
@@ -105,11 +130,11 @@ function ProgressFormPage() {
     // Derived unique client names for the multi-select display
     const selectedClients = [...new Set(entries.map(e => e.client))]
 
-    const [formData, setFormData] = useState({
-        tanggal: new Date(),
+    const [formData, setFormData] = useState(() => ({
+        tanggal: getDefaultProgressDate(),
         editor: localStorage.getItem('userName') || localStorage.getItem('lastUsedEditor') || '',
         comment: ''
-    })
+    }))
 
     // Multi-screenshot state: array of { file, preview, label }
     const [screenshots, setScreenshots] = useState([])
@@ -319,7 +344,7 @@ function ProgressFormPage() {
 
     const resetForm = () => {
         setFormData({
-            tanggal: new Date(),
+            tanggal: getDefaultProgressDate(),
             editor: '',
             comment: ''
         })
@@ -378,8 +403,9 @@ function ProgressFormPage() {
             }
 
             const formatDate = (date) => {
+                // Use local date parts; toISOString() converts to UTC and can shift the day back
                 const d = new Date(date)
-                return d.toISOString().split('T')[0]
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
             }
 
             // Encode frontend data into comma-separated strings
